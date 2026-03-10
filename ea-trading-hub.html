@@ -485,6 +485,7 @@ select option { background:var(--bg4); }
     <div class="form-grid">
       <div class="form-group"><label>Datum *</label><input type="date" id="pnl-date"></div>
       <div class="form-group"><label>Konto *</label><select id="pnl-account"></select></div>
+      <div class="form-group"><label>Typ</label><select id="pnl-type"><option value="trade">Trade</option><option value="deposit">Einzahlung</option><option value="withdrawal">Auszahlung</option><option value="transfer">Transfer</option></select></div>
       <div class="form-group"><label>EA</label><select id="pnl-ea" onchange="fillEAStrategy()"></select></div>
       <div class="form-group"><label>Strategie (überschreibbar)</label><input type="text" id="pnl-strategy" placeholder="aus EA vorbelegt"></div>
       <div class="form-group"><label>P&L ($) *</label><input type="number" id="pnl-value" placeholder="+150" step="0.01"></div>
@@ -1074,6 +1075,7 @@ async function savePnl(fromQuick) {
   const obj = {
     id: editId || Date.now().toString(),
     date,
+    entryType: document.getElementById('pnl-type').value || 'trade',
     accountId,
     eaId: document.getElementById('pnl-ea').value,
     strategy: document.getElementById('pnl-strategy').value.trim(),
@@ -1120,6 +1122,7 @@ function editPnl(id) {
   if (!p) return;
   document.getElementById('pnl-edit-id').value = p.id;
   document.getElementById('pnl-date').value = p.date||'';
+  document.getElementById('pnl-type').value = p.entryType||'trade';
   document.getElementById('pnl-account').value = p.accountId||'';
   document.getElementById('pnl-ea').value = p.eaId||'';
   document.getElementById('pnl-strategy').value = p.strategy||'';
@@ -1180,10 +1183,12 @@ function renderPnlTable() {
     const dd  = parseFloat(e.dd)||0;
     const goal= parseFloat(e.dailyGoal)||0;
     const goalPct = goal ? Math.min(100,(pnl/goal)*100).toFixed(0) : null;
-    return `<tr>
+    const typeLabels = { deposit:'💰 Einzahlung', withdrawal:'💸 Auszahlung', transfer:'🔄 Transfer' };
+    const typeBadge = e.entryType && e.entryType !== 'trade' ? `<span style="font-size:9px;color:var(--text3);display:block">${typeLabels[e.entryType]||e.entryType}</span>` : '';
+    return `<tr${e.entryType && e.entryType !== 'trade' ? ' style="opacity:0.7"' : ''}>
       <td>${fmtDate(e.date)}</td>
       <td style="font-size:10px">${acc?`${acc.number}<br><span class="badge ${acc.type==='Live'?'badge-live':'badge-demo'}" style="font-size:8px">${acc.type}</span>`:'-'}</td>
-      <td style="color:var(--accent)">${ea?ea.name:'–'}</td>
+      <td style="color:var(--accent)">${ea?ea.name:'–'}${typeBadge}</td>
       <td style="color:var(--text2);font-size:10px">${e.strategy||'–'}</td>
       <td class="${pnl>=0?'pos-val':'neg-val'}">${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}</td>
       <td style="color:${dd>0?'var(--neg)':'var(--text3)'}">${dd?'-$'+dd.toFixed(2):'–'}</td>
@@ -1236,7 +1241,7 @@ function autoWeeklySummary() {
   const ws = weekStart.toISOString().split('T')[0];
   const we = today.toISOString().split('T')[0];
 
-  const weekPnl = DB.pnl.filter(p => p.date >= ws && p.date <= we);
+  const weekPnl = DB.pnl.filter(p => p.date >= ws && p.date <= we && (!p.entryType || p.entryType === 'trade'));
   const total = weekPnl.reduce((s,p) => s + (parseFloat(p.pnl)||0), 0);
   const wins = weekPnl.filter(p => parseFloat(p.pnl) > 0).length;
   const maxDD = Math.max(...weekPnl.map(p => parseFloat(p.dd)||0), 0);
@@ -1286,7 +1291,7 @@ function getAccountBalance(acc) {
   // Startkapital + Summe aller P&L Einträge
   const start = parseFloat(acc.startCapital) || 0;
   const totalPnl = DB.pnl
-    .filter(e => e.accountId == acc.id)
+    .filter(e => e.accountId == acc.id && (!e.entryType || e.entryType === 'trade'))
     .reduce((s,e) => s + (parseFloat(e.pnl)||0), 0);
   if (start > 0) return start + totalPnl;
   // Fallback: letzter Equity-Eintrag
@@ -1307,6 +1312,7 @@ function renderSumCards() {
   const ws = weekStart.toISOString().split('T')[0];
   // Filter P&L entries by account type
   const filteredPnl = DB.pnl.filter(p => {
+    if (p.entryType && p.entryType !== 'trade') return false;
     if (PNL_FILTER === 'all') return true;
     const acc = DB.accounts.find(a => a.id == p.accountId);
     return acc && acc.type === PNL_FILTER;
@@ -1367,6 +1373,7 @@ function renderGoalProgress() {
 
   const livePnl = DB.pnl.filter(p => {
     if (p.date !== today) return false;
+    if (p.entryType && p.entryType !== 'trade') return false;
     const acc = DB.accounts.find(a => a.id == p.accountId);
     return acc && acc.type === 'Live';
   }).reduce((s,p) => s + (parseFloat(p.pnl)||0), 0);
@@ -1397,7 +1404,7 @@ function renderAnalytics() {
   const fType = document.getElementById('an-type').value;
   const fAcc  = document.getElementById('an-account').value;
 
-  let entries = [...DB.pnl];
+  let entries = [...DB.pnl].filter(e => !e.entryType || e.entryType === 'trade');
   if (fAcc) entries = entries.filter(e => e.accountId == fAcc);
   if (fType) entries = entries.filter(e => {
     const acc = DB.accounts.find(a => a.id == e.accountId);
@@ -1546,7 +1553,7 @@ function renderAnalyticsCharts(entries) {
 }
 
 function renderEquityChart() {
-  let entries = [...DB.pnl];
+  let entries = [...DB.pnl].filter(p => !p.entryType || p.entryType === 'trade');
   if (PNL_FILTER !== 'all') {
     entries = entries.filter(p => {
       const acc = DB.accounts.find(a => a.id == p.accountId);
@@ -1580,7 +1587,7 @@ function renderPnlBarChart() {
   for(let i=29;i>=0;i--){
     const d=new Date(); d.setDate(d.getDate()-i);
     const ds=d.toISOString().split('T')[0];
-    let dayEntries = DB.pnl.filter(p=>p.date===ds);
+    let dayEntries = DB.pnl.filter(p=>p.date===ds && (!p.entryType || p.entryType === 'trade'));
     if (PNL_FILTER !== 'all') {
       dayEntries = dayEntries.filter(p => {
         const acc = DB.accounts.find(a => a.id == p.accountId);
