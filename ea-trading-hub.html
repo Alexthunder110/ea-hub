@@ -339,7 +339,6 @@ select option { background:var(--bg4); }
     <span class="sync-status" id="syncStatus">●&nbsp;Bereit</span>
     <span class="header-date" id="headerDate"></span>
     <button class="btn-icon" onclick="syncNow()" title="Sync">⟳ Sync</button>
-    <button class="btn-icon" onclick="pushAllToSheets()" title="Lokale Daten nach Sheets pushen" style="color:#f59e0b">↑ Push</button>
     <button class="btn-icon" onclick="exportCSV()" title="CSV Export">↓ CSV</button>
     <button class="btn-icon" onclick="openSettings()" title="Einstellungen">⚙</button>
   </div>
@@ -439,7 +438,7 @@ select option { background:var(--bg4); }
 
   <div class="sh">Meine Konten</div>
   <div class="table-wrap">
-    <table><thead><tr><th>#</th><th>Nummer</th><th>Broker</th><th>Bezeichnung</th><th>MT</th><th>Typ</th><th>Guthaben</th><th>Rendite</th><th>Ziel</th><th>Status</th><th>Notiz</th><th></th></tr></thead>
+    <table><thead><tr><th>#</th><th>Nummer</th><th>Broker</th><th>Bezeichnung</th><th>MT</th><th>Typ</th><th>Guthaben</th><th>Ziel</th><th>Status</th><th>Notiz</th><th></th></tr></thead>
     <tbody id="accountsTable"></tbody></table>
   </div>
 </div>
@@ -971,7 +970,6 @@ function renderAccountsTable() {
       <td style="color:var(--text2)">${a.mt}</td>
       <td><span class="badge ${a.type==='Live'?'badge-live':'badge-demo'}">${a.type}</span></td>
       <td style="color:#fff;font-weight:500">$${fmt(getAccountBalance(a))}</td>
-      <td class="${parseFloat(rendite)>=0?'pos-val':'neg-val'}">${rendite!=='–'?rendite+'%':'–'}</td>
       <td>${progress!==null?`<div style="background:var(--bg5);border-radius:3px;height:5px;width:80px"><div style="background:var(--accent);height:100%;width:${progress}%;border-radius:3px"></div></div><span style="font-size:9px;color:var(--text3)">${progress}%</span>`:'–'}</td>
       <td><span class="badge ${statusBadge}">${statusLabel}</span></td>
       <td style="color:var(--text2);font-size:10px">${a.note||'–'}</td>
@@ -1203,7 +1201,7 @@ function renderPnlTable() {
 async function saveDiary() {
   const date = document.getElementById('d-date').value;
   const text = document.getElementById('d-text').value.trim();
-  if (!date || !text) { toast('⚠ Datum und Text sind Pflicht','err'); return; }
+  if (!date) { toast('⚠ Datum ist Pflicht','err'); return; }
   const obj = {
     id: Date.now().toString(), date,
     mood: document.getElementById('d-mood').value,
