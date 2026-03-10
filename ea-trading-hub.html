@@ -339,6 +339,7 @@ select option { background:var(--bg4); }
     <span class="sync-status" id="syncStatus">●&nbsp;Bereit</span>
     <span class="header-date" id="headerDate"></span>
     <button class="btn-icon" onclick="syncNow()" title="Sync">⟳ Sync</button>
+    <button class="btn-icon" onclick="pushAllToSheets()" title="Lokale Daten nach Sheets pushen" style="color:#f59e0b">↑ Push</button>
     <button class="btn-icon" onclick="exportCSV()" title="CSV Export">↓ CSV</button>
     <button class="btn-icon" onclick="openSettings()" title="Einstellungen">⚙</button>
   </div>
@@ -667,7 +668,7 @@ const APP_PASSWORD = 'eahub2026';
 function checkLogin() {
   const pw = document.getElementById('loginPw').value;
   if (pw === APP_PASSWORD) {
-    sessionStorage.setItem(LOGIN_HASH, '1');
+    localStorage.setItem(LOGIN_HASH, '1');
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('loginPw').value = '';
   } else {
@@ -678,7 +679,7 @@ function checkLogin() {
 }
 
 // Check on load
-if (sessionStorage.getItem(LOGIN_HASH) === '1') {
+if (localStorage.getItem(LOGIN_HASH) === '1') {
   document.getElementById('loginOverlay').style.display = 'none';
 } else {
   // Focus password field
@@ -722,6 +723,14 @@ let PNL_FILTER = 'all';
 })();
 
 function saveLocal() { localStorage.setItem('eaHub_v2', JSON.stringify(DB)); }
+
+function normalizeDate(val) {
+  if (!val) return '';
+  if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+  const d = new Date(val);
+  if (isNaN(d)) return '';
+  return d.toISOString().split('T')[0];
+}
 
 function setDefaultDates() {
   const today = new Date().toISOString().split('T')[0];
@@ -803,8 +812,8 @@ async function syncAll() {
     // Only overwrite local data if remote actually has content
     if (accounts && accounts.length > 0) DB.accounts = accounts;
     if (eas && eas.length > 0) DB.eas = eas;
-    if (pnl && pnl.length > 0) DB.pnl = pnl;
-    if (diary && diary.length > 0) DB.diary = diary;
+    if (pnl && pnl.length > 0) DB.pnl = pnl.map(r => ({ ...r, date: normalizeDate(r.date) }));
+    if (diary && diary.length > 0) DB.diary = diary.map(r => ({ ...r, date: normalizeDate(r.date) }));
     if (todos && todos.length > 0) DB.todos = todos;
     saveLocal();
     renderAll();
@@ -816,6 +825,28 @@ async function syncAll() {
 }
 
 async function syncNow() { await syncAll(); }
+
+async function pushAllToSheets() {
+  if (!API_URL) { toast('⚠ Keine API URL','err'); return; }
+  if (!confirm('Alle lokalen Daten nach Google Sheets pushen? Vorhandene Sheet-Daten werden überschrieben.')) return;
+  setSyncStatus('syncing','⟳ Pushe...');
+  try {
+    const sheets = [
+      { name: 'Accounts', data: DB.accounts },
+      { name: 'EAs', data: DB.eas },
+      { name: 'PnL', data: DB.pnl },
+      { name: 'Diary', data: DB.diary },
+      { name: 'Todos', data: DB.todos },
+    ];
+    for (const s of sheets) {
+      await api('pushAll', s.name, s.data);
+    }
+    setSyncStatus('ready','● Bereit');
+    toast('✅ Alle Daten nach Sheets gepusht');
+  } catch(e) {
+    setSyncStatus('error','✕ Push Fehler');
+  }
+}
 
 function setSyncStatus(cls, txt) {
   const el = document.getElementById('syncStatus');
