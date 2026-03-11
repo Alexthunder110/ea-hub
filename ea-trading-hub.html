@@ -724,6 +724,7 @@ let IS_ONLINE = true;
 let PENDING_SYNC = [];
 let charts = {};
 let PNL_FILTER = 'all';
+let INCOME_FILTER = 'all';
 
 // ============================================================
 // INIT
@@ -819,7 +820,7 @@ async function api(action, sheet, data, id) {
   try {
     const payload = encodeURIComponent(JSON.stringify({ action, sheet, data, id }));
     const url = API_URL + '?payload=' + payload;
-    const res = await fetch(url, { method:'GET' });
+    const res = await fetch(url, { method:'GET', redirect:'follow' });
     const json = await res.json();
     setSyncStatus('ready','● Bereit');
     if (!json.ok) throw new Error(json.error);
@@ -1927,7 +1928,6 @@ function toast(msg, type) {
 // ============================================================
 // EINKOMMEN
 // ============================================================
-let INCOME_FILTER = 'all';
 
 function setIncomeFilter(type, btn) {
   INCOME_FILTER = type;
