@@ -351,6 +351,7 @@ select option { background:var(--bg4); }
   <button class="nav-tab" onclick="showView('eas',this)">🤖 EAs</button>
   <button class="nav-tab" onclick="showView('pnl',this)">📈 P&amp;L</button>
   <button class="nav-tab" onclick="showView('analytics',this)">📉 Analyse</button>
+  <button class="nav-tab" onclick="showView('income',this)">💰 Einkommen</button>
   <button class="nav-tab" onclick="showView('diary',this)">📓 Tagebuch</button>
   <button class="nav-tab" onclick="showView('todos',this)">✅ To Dos</button>
 </nav>
@@ -369,21 +370,10 @@ select option { background:var(--bg4); }
   </div>
   <div class="sum-grid" id="sumCards"></div>
 
-  <!-- Tagesziel -->
+  <!-- Ziele Fortschritt -->
   <div class="form-panel" style="margin-bottom:22px">
-    <div class="sh">Tagesziel Live</div>
-    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-      <div class="form-group">
-        <label>Datum</label>
-        <input type="date" id="goal-date-live" style="width:150px">
-      </div>
-      <div class="form-group">
-        <label>Ziel ($)</label>
-        <input type="number" id="goal-amount-live" placeholder="z.B. 100" style="width:120px" step="0.01">
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="saveGoal('live')">Speichern</button>
-    </div>
-    <div id="goalProgressLive" style="margin-top:12px"></div>
+    <div class="sh">Ziele <span style="font-size:9px;color:var(--text3);font-weight:400;margin-left:8px">→ Einstellungen im Einkommen-Tab</span></div>
+    <div id="goalProgressLive"></div>
   </div>
 
   <div class="grid-2">
@@ -569,6 +559,45 @@ select option { background:var(--bg4); }
       </div>
     </div>
   </div>
+</div>
+
+<!-- ===== EINKOMMEN ===== -->
+<div class="view" id="view-income">
+  <!-- Filter -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+    <span style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text3)">Filter:</span>
+    <div style="display:flex;gap:6px">
+      <button class="pnl-filter-btn active" id="inc-btn-all" onclick="setIncomeFilter('all',this)">Alle</button>
+      <button class="pnl-filter-btn" id="inc-btn-live" onclick="setIncomeFilter('Live',this)">📈 Live</button>
+      <button class="pnl-filter-btn" id="inc-btn-demo" onclick="setIncomeFilter('Demo',this)">🧪 Demo</button>
+    </div>
+  </div>
+
+  <!-- Ziele setzen -->
+  <div class="form-panel" style="margin-bottom:22px">
+    <div class="sh">Ziele setzen</div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
+      <div class="form-group">
+        <label>Tagesziel ($)</label>
+        <input type="number" id="inc-goal-day" placeholder="z.B. 75" step="0.01" style="width:130px">
+      </div>
+      <div class="form-group">
+        <label>Wochenziel ($)</label>
+        <input type="number" id="inc-goal-week" placeholder="z.B. 375" step="0.01" style="width:130px">
+      </div>
+      <div class="form-group">
+        <label>Monatsziel ($)</label>
+        <input type="number" id="inc-goal-month" placeholder="z.B. 1200" step="0.01" style="width:130px">
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="saveIncomeGoals()">💾 Speichern</button>
+    </div>
+  </div>
+
+  <!-- Fortschritt -->
+  <div id="incomeProgress" style="margin-bottom:22px"></div>
+
+  <!-- Einkommen Übersicht -->
+  <div id="incomeStats"></div>
 </div>
 
 <!-- ===== TAGEBUCH ===== -->
@@ -879,6 +908,7 @@ function renderAll() {
   renderCharts();
   renderTodayRows();
   renderGoalProgress();
+  renderIncome();
 }
 
 // ============================================================
@@ -1366,35 +1396,53 @@ function saveGoal(type) {
 
 function renderGoalProgress() {
   const today = new Date().toISOString().split('T')[0];
-  const goals = DB.settings.goals && DB.settings.goals[today];
-  const liveGoal = goals && (typeof goals === 'object' ? goals['live'] : null);
+  const month = today.substring(0,7);
+  const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+  const ws = weekStart.toISOString().split('T')[0];
   const el = document.getElementById('goalProgressLive');
   if (!el) return;
 
-  const livePnl = DB.pnl.filter(p => {
-    if (p.date !== today) return false;
+  const goals = DB.settings && DB.settings.incomeGoals || {};
+  const gDay = goals.day || 0;
+  const gWeek = goals.week || 0;
+  const gMonth = goals.month || 0;
+
+  const liveTrades = DB.pnl.filter(p => {
     if (p.entryType && p.entryType !== 'trade') return false;
     const acc = DB.accounts.find(a => a.id == p.accountId);
     return acc && acc.type === 'Live';
-  }).reduce((s,p) => s + (parseFloat(p.pnl)||0), 0);
+  });
 
-  if (!liveGoal) {
-    el.innerHTML = '<span style="color:var(--text3);font-size:10px">Kein Tagesziel gesetzt.</span>';
+  const dayPnl   = liveTrades.filter(p => p.date === today).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
+  const weekPnl  = liveTrades.filter(p => p.date >= ws && p.date <= today).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
+  const monthPnl = liveTrades.filter(p => p.date && p.date.startsWith(month)).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
+
+  if (!gDay && !gWeek && !gMonth) {
+    el.innerHTML = '<span style="color:var(--text3);font-size:10px">Keine Ziele gesetzt – im <b>Einkommen</b>-Tab eintragen.</span>';
     return;
   }
-  const pct  = Math.min(100, Math.max(0, (livePnl / liveGoal) * 100));
-  const done = livePnl >= liveGoal;
-  el.innerHTML = `
-    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:6px">
-      <span>Live heute: <span class="${livePnl>=0?'pos-val':'neg-val'}">${livePnl>=0?'+':''}$${livePnl.toFixed(2)}</span></span>
-      <span>Ziel: $${liveGoal.toFixed(2)}</span>
-    </div>
-    <div class="goal-bar-bg" style="height:8px">
-      <div class="goal-bar-fill ${done?'done':livePnl<0?'neg':''}" style="width:${pct}%"></div>
-    </div>
-    <div style="font-size:9px;color:${done?'var(--pos)':'var(--text3)'};margin-top:5px">
-      ${done ? '🎯 Live-Tagesziel erreicht!' : pct.toFixed(0) + '% des Live-Tagesziels'}
+
+  const bars = [
+    { label:'Heute (Live)',  pnl:dayPnl,   goal:gDay },
+    { label:'Woche (Live)',  pnl:weekPnl,  goal:gWeek },
+    { label:'Monat (Live)',  pnl:monthPnl, goal:gMonth },
+  ].filter(b => b.goal > 0);
+
+  el.innerHTML = `<div style="display:grid;gap:10px">` + bars.map(b => {
+    const pct  = Math.min(100, Math.max(0, (b.pnl / b.goal) * 100));
+    const done = b.pnl >= b.goal;
+    const cls  = b.pnl >= 0 ? 'pos-val' : 'neg-val';
+    return `<div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:5px">
+        <span>${b.label}: <span class="${cls}">${b.pnl>=0?'+':''}$${b.pnl.toFixed(2)}</span></span>
+        <span>Ziel: $${b.goal.toFixed(2)}</span>
+      </div>
+      <div class="goal-bar-bg" style="height:6px">
+        <div class="goal-bar-fill ${done?'done':b.pnl<0?'neg':''}" style="width:${pct}%"></div>
+      </div>
+      <div style="font-size:9px;color:${done?'var(--pos)':'var(--text3)'};margin-top:3px">${done ? '🎯 Ziel erreicht!' : pct.toFixed(0)+'%'}</div>
     </div>`;
+  }).join('') + `</div>`;
 }
 
 // ============================================================
@@ -1874,6 +1922,119 @@ function toast(msg, type) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.className = 'toast show'+(type?' '+type:'');
   setTimeout(() => el.className='toast', 2800);
+}
+
+// ============================================================
+// EINKOMMEN
+// ============================================================
+let INCOME_FILTER = 'all';
+
+function setIncomeFilter(type, btn) {
+  INCOME_FILTER = type;
+  document.querySelectorAll('#inc-btn-all,#inc-btn-live,#inc-btn-demo').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderIncome();
+}
+
+function saveIncomeGoals() {
+  const day   = parseFloat(document.getElementById('inc-goal-day').value) || 0;
+  const week  = parseFloat(document.getElementById('inc-goal-week').value) || 0;
+  const month = parseFloat(document.getElementById('inc-goal-month').value) || 0;
+  if (!DB.settings) DB.settings = {};
+  if (!DB.settings.incomeGoals) DB.settings.incomeGoals = {};
+  DB.settings.incomeGoals = { day, week, month };
+  saveLocal();
+  renderIncome();
+  renderGoalProgress();
+  toast('✅ Ziele gespeichert');
+}
+
+function getIncomePnl() {
+  return DB.pnl.filter(p => {
+    if (p.entryType && p.entryType !== 'trade') return false;
+    if (INCOME_FILTER === 'all') return true;
+    const acc = DB.accounts.find(a => a.id == p.accountId);
+    return acc && acc.type === INCOME_FILTER;
+  });
+}
+
+function renderIncome() {
+  // Load saved goals into inputs
+  const goals = DB.settings && DB.settings.incomeGoals || {};
+  if (goals.day)   document.getElementById('inc-goal-day').value   = goals.day;
+  if (goals.week)  document.getElementById('inc-goal-week').value  = goals.week;
+  if (goals.month) document.getElementById('inc-goal-month').value = goals.month;
+
+  const today = new Date().toISOString().split('T')[0];
+  const month = today.substring(0,7);
+  const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+  const ws = weekStart.toISOString().split('T')[0];
+
+  const entries = getIncomePnl();
+  const dayPnl   = entries.filter(p => p.date === today).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
+  const weekPnl  = entries.filter(p => p.date >= ws && p.date <= today).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
+  const monthPnl = entries.filter(p => p.date && p.date.startsWith(month)).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
+  const allPnl   = entries.reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
+
+  const gDay   = goals.day   || 0;
+  const gWeek  = goals.week  || 0;
+  const gMonth = goals.month || 0;
+
+  const filterLabel = INCOME_FILTER === 'all' ? 'Alle Konten' : INCOME_FILTER;
+
+  // Progress bars
+  const progressEl = document.getElementById('incomeProgress');
+  const bars = [
+    { label:'Heute', pnl:dayPnl,   goal:gDay,   period:'Tag' },
+    { label:'Woche', pnl:weekPnl,  goal:gWeek,  period:'Woche' },
+    { label:'Monat', pnl:monthPnl, goal:gMonth, period:'Monat' },
+  ];
+
+  progressEl.innerHTML = `<div style="display:grid;gap:14px">` + bars.map(b => {
+    const pct  = b.goal ? Math.min(100, Math.max(0, (b.pnl / b.goal) * 100)) : 0;
+    const done = b.goal && b.pnl >= b.goal;
+    const cls  = b.pnl >= 0 ? 'var(--pos)' : 'var(--neg)';
+    return `<div class="form-panel" style="padding:14px 18px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text3)">${b.label}</span>
+        <div style="display:flex;gap:16px;align-items:center">
+          <span style="font-size:18px;font-weight:700;color:${cls};font-family:var(--font-mono)">${b.pnl>=0?'+':''}\$${Math.abs(b.pnl).toFixed(2)}</span>
+          ${b.goal ? `<span style="font-size:11px;color:var(--text3)">Ziel: \$${b.goal.toFixed(2)}</span>` : '<span style="font-size:10px;color:var(--text3)">Kein Ziel</span>'}
+        </div>
+      </div>
+      ${b.goal ? `<div class="goal-bar-bg" style="height:6px"><div class="goal-bar-fill ${done?'done':b.pnl<0?'neg':''}" style="width:${pct}%"></div></div>
+      <div style="font-size:9px;color:${done?'var(--pos)':'var(--text3)'};margin-top:4px">${done ? '🎯 Ziel erreicht!' : pct.toFixed(0)+'% des '+b.period+'sziels'}</div>` : ''}
+    </div>`;
+  }).join('') + `</div>`;
+
+  // Stats table
+  const statsEl = document.getElementById('incomeStats');
+  // Group by month for history
+  const byMonth = {};
+  entries.forEach(p => {
+    if (!p.date) return;
+    const m = p.date.substring(0,7);
+    if (!byMonth[m]) byMonth[m] = 0;
+    byMonth[m] += parseFloat(p.pnl)||0;
+  });
+  const months = Object.keys(byMonth).sort().reverse();
+
+  statsEl.innerHTML = `
+    <div class="sh">Monatsübersicht <span style="font-size:9px;color:var(--text3);font-weight:400">${filterLabel}</span></div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Monat</th><th>Einkommen</th><th>${gMonth?'% Monatsziel':''}</th></tr></thead>
+      <tbody>${months.map(m => {
+        const val = byMonth[m];
+        const pct = gMonth ? ((val/gMonth)*100).toFixed(0)+'%' : '';
+        const d = new Date(m+'-01');
+        const label = d.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
+        return `<tr>
+          <td>${label}</td>
+          <td class="${val>=0?'pos-val':'neg-val'}">${val>=0?'+':''}\$${Math.abs(val).toFixed(2)}</td>
+          <td style="color:var(--text3)">${pct}</td>
+        </tr>`;
+      }).join('')}</tbody></table>
+    </div>`;
 }
 </script>
 </body>
