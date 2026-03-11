@@ -818,9 +818,11 @@ async function api(action, sheet, data, id) {
   if (!API_URL) return null;
   setSyncStatus('syncing','⟳ Sync...');
   try {
-    const payload = encodeURIComponent(JSON.stringify({ action, sheet, data, id }));
-    const url = API_URL + '?payload=' + payload;
-    const res = await fetch(url, { method:'GET', redirect:'follow' });
+    const url = API_URL;
+    const res = await fetch(url, {
+      method: 'POST',
+      body: JSON.stringify({ action, sheet, data, id }),
+    });
     const json = await res.json();
     setSyncStatus('ready','● Bereit');
     if (!json.ok) throw new Error(json.error);
