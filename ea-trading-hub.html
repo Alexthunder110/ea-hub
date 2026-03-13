@@ -512,6 +512,7 @@ select option { background:var(--bg4); }
   <div class="filter-row" style="margin-bottom:18px">
     <select id="an-type" onchange="renderAnalytics()"><option value="">Live + Demo</option><option value="Live">Nur Live</option><option value="Demo">Nur Demo</option></select>
     <select id="an-account" onchange="renderAnalytics()"><option value="">Alle Konten</option></select>
+    <select id="an-ea" onchange="renderAnalytics()"><option value="">Alle EAs</option></select>
   </div>
 
   <div class="sum-grid" id="analyticsCards"></div>
@@ -595,6 +596,9 @@ select option { background:var(--bg4); }
 
   <!-- Fortschritt -->
   <div id="incomeProgress" style="margin-bottom:22px"></div>
+
+  <!-- EA Aufschlüsselung -->
+  <div id="incomeEaBreakdown" style="margin-bottom:22px"></div>
 
   <!-- Einkommen Übersicht -->
   <div id="incomeStats"></div>
@@ -1454,9 +1458,18 @@ function renderGoalProgress() {
 function renderAnalytics() {
   const fType = document.getElementById('an-type').value;
   const fAcc  = document.getElementById('an-account').value;
+  const fEa   = document.getElementById('an-ea').value;
+
+  // Populate EA dropdown
+  const eaSel = document.getElementById('an-ea');
+  const curEa = eaSel.value;
+  eaSel.innerHTML = '<option value="">Alle EAs</option>' + DB.eas.map(ea =>
+    `<option value="${ea.id}" ${ea.id == curEa ? 'selected' : ''}>${ea.name}</option>`
+  ).join('');
 
   let entries = [...DB.pnl].filter(e => !e.entryType || e.entryType === 'trade');
   if (fAcc) entries = entries.filter(e => e.accountId == fAcc);
+  if (fEa)  entries = entries.filter(e => e.eaId == fEa);
   if (fType) entries = entries.filter(e => {
     const acc = DB.accounts.find(a => a.id == e.accountId);
     return acc && acc.type === fType;
@@ -2008,6 +2021,56 @@ function renderIncome() {
       <div style="font-size:9px;color:${done?'var(--pos)':'var(--text3)'};margin-top:4px">${done ? '🎯 Ziel erreicht!' : pct.toFixed(0)+'% des '+b.period+'sziels'}</div>` : ''}
     </div>`;
   }).join('') + `</div>`;
+
+  // EA Aufschlüsselung
+  const eaEl = document.getElementById('incomeEaBreakdown');
+  if (DB.eas.length) {
+    const today2 = today;
+    const eaRows = DB.eas.map(ea => {
+      const eaEntries = entries.filter(p => p.eaId == ea.id);
+      const eaDay   = eaEntries.filter(p => p.date === today2).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
+      const eaWeek  = eaEntries.filter(p => p.date >= ws && p.date <= today2).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
+      const eaMonth = eaEntries.filter(p => p.date && p.date.startsWith(month)).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
+      return { ea, eaDay, eaWeek, eaMonth };
+    }).filter(r => r.eaMonth !== 0 || r.eaWeek !== 0 || r.eaDay !== 0);
+
+    const maxMonth = Math.max(...eaRows.map(r => Math.abs(r.eaMonth)), 1);
+
+    eaEl.innerHTML = `
+      <div class="sh">EA-Beitrag <span style="font-size:9px;color:var(--text3);font-weight:400">${filterLabel}</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>EA</th>
+            <th>Heute</th>
+            <th>Woche</th>
+            <th>Monat</th>
+            ${gMonth ? '<th>% Monatsziel</th>' : ''}
+            <th>Anteil</th>
+          </tr></thead>
+          <tbody>${eaRows.sort((a,b) => b.eaMonth - a.eaMonth).map(r => {
+            const pctGoal = gMonth ? ((r.eaMonth / gMonth) * 100).toFixed(0) + '%' : '';
+            const pctBar  = (Math.abs(r.eaMonth) / maxMonth * 100).toFixed(0);
+            const cls     = v => v >= 0 ? 'pos-val' : 'neg-val';
+            const fmt     = v => (v >= 0 ? '+$' : '-$') + Math.abs(v).toFixed(2);
+            return `<tr>
+              <td style="color:var(--accent);font-weight:500">${r.ea.name}</td>
+              <td class="${cls(r.eaDay)}">${fmt(r.eaDay)}</td>
+              <td class="${cls(r.eaWeek)}">${fmt(r.eaWeek)}</td>
+              <td class="${cls(r.eaMonth)}">${fmt(r.eaMonth)}</td>
+              ${gMonth ? `<td style="color:var(--text3)">${pctGoal}</td>` : ''}
+              <td style="width:120px">
+                <div style="background:var(--bg4);border-radius:3px;height:6px;overflow:hidden">
+                  <div style="width:${pctBar}%;height:100%;background:${r.eaMonth>=0?'var(--pos)':'var(--neg)'};border-radius:3px"></div>
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>`;
+  } else {
+    eaEl.innerHTML = '';
+  }
 
   // Stats table
   const statsEl = document.getElementById('incomeStats');
