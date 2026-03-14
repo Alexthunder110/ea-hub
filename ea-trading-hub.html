@@ -2187,23 +2187,15 @@ function renderIncome() {
   const dayOfMonth = now.getDate();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
 
-  // Yellow = extrapolate current lot performance to end of period
-  const todayLiveEntries  = liveEntries.filter(p => p.date === today);
-  const weekLiveEntries   = liveEntries.filter(p => p.date >= ws && p.date <= today);
-  const monthLiveEntries  = liveEntries.filter(p => p.date && p.date.startsWith(month));
+  // Yellow = current lot, no extrapolation - just what's been earned so far
+  const yellowDay   = dayPnl;
+  const yellowWeek  = weekPnl;
+  const yellowMonth = monthPnl;
 
-  const yellowDay   = dayPnl;  // today is today, no extrapolation needed
-  const yellowWeek  = dayOfWeek > 0 ? (weekPnl  / dayOfWeek)  * 5 : weekPnl;   // 5 trading days
-  const yellowMonth = dayOfMonth > 0 ? (monthPnl / dayOfMonth) * daysInMonth : monthPnl;
-
-  // Orange = target lot scaling applied to current period, then extrapolated
-  const orangeDayRaw   = calcForecastPnl(todayLiveEntries,  forecastCfg);
-  const orangeWeekRaw  = calcForecastPnl(weekLiveEntries,   forecastCfg);
-  const orangeMonthRaw = calcForecastPnl(monthLiveEntries,  forecastCfg);
-
-  const orangeDay   = orangeDayRaw;
-  const orangeWeek  = dayOfWeek  > 0 ? (orangeWeekRaw  / dayOfWeek)  * 5 : orangeWeekRaw;
-  const orangeMonth = dayOfMonth > 0 ? (orangeMonthRaw / dayOfMonth) * daysInMonth : orangeMonthRaw;
+  // Orange = target lot scaling, no extrapolation - sum of EA forecast values
+  const orangeDay   = calcForecastPnl(liveEntries.filter(p => p.date === today), forecastCfg);
+  const orangeWeek  = calcForecastPnl(liveEntries.filter(p => p.date >= ws && p.date <= today), forecastCfg);
+  const orangeMonth = calcForecastPnl(liveEntries.filter(p => p.date && p.date.startsWith(month)), forecastCfg);
 
   // Progress bars
   const progressEl = document.getElementById('incomeProgress');
@@ -2236,14 +2228,14 @@ function renderIncome() {
             <div style="width:52px;font-size:9px;color:var(--pos);text-align:right">${pct.toFixed(0)}%</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:52px;font-size:9px;color:#ffb830;letter-spacing:.5px">FORECAST</div>
-            <div class="goal-bar-bg" style="flex:1;height:6px"><div style="height:100%;border-radius:3px;background:#ffb830;width:${pctYellow}%;transition:width .3s"></div></div>
-            <div style="width:52px;font-size:9px;color:#ffb830;text-align:right">${fmtVal(b.yellow)}</div>
+            <div style="width:52px;font-size:9px;color:#a07820;letter-spacing:.5px">FORECAST</div>
+            <div class="goal-bar-bg" style="flex:1;height:6px"><div style="height:100%;border-radius:3px;background:rgba(255,184,48,0.45);width:${pctYellow}%;transition:width .3s"></div></div>
+            <div style="width:52px;font-size:9px;color:#a07820;text-align:right">${fmtVal(b.yellow)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:52px;font-size:9px;color:#ff8c00;letter-spacing:.5px">ZIEL-LOT</div>
-            <div class="goal-bar-bg" style="flex:1;height:6px"><div style="height:100%;border-radius:3px;background:#ff8c00;width:${pctOrange}%;transition:width .3s"></div></div>
-            <div style="width:52px;font-size:9px;color:#ff8c00;text-align:right">${fmtVal(b.orange)}</div>
+            <div style="width:52px;font-size:9px;color:#a05010;letter-spacing:.5px">ZIEL-LOT</div>
+            <div class="goal-bar-bg" style="flex:1;height:6px"><div style="height:100%;border-radius:3px;background:rgba(255,140,0,0.35);width:${pctOrange}%;transition:width .3s"></div></div>
+            <div style="width:52px;font-size:9px;color:#a05010;text-align:right">${fmtVal(b.orange)}</div>
           </div>
         </div>
         <div style="font-size:9px;color:${done?'var(--pos)':'var(--text3)'};margin-top:6px">${done ? '🎯 Ziel erreicht!' : pct.toFixed(0)+'% des '+b.period+'sziels'}</div>
