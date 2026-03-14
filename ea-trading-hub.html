@@ -2392,7 +2392,7 @@ function renderWithdrawalChart() {
           <span style="font-size:10px;color:var(--text3)">Wöchentliche Auszahlung ($)</span>
           <input type="number" step="10" min="0" value="${weeklyAmount}"
             style="background:var(--bg5);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:12px;padding:4px 10px;width:100px;text-align:right"
-            oninput="saveWithdrawalPlan(this.value)">
+            onchange="saveWithdrawalPlan(this.value)">
         </div>
       </div>
       <canvas id="withdrawalChart" style="width:100%;height:220px"></canvas>
