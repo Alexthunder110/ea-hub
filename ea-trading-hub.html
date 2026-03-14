@@ -618,7 +618,10 @@ select option { background:var(--bg4); }
   <div id="incomeForecast" style="margin-bottom:22px"></div>
 
   <!-- Einkommen Übersicht -->
-  <div id="incomeStats"></div>
+  <div id="incomeStats" style="margin-bottom:22px"></div>
+
+  <!-- Auszahlungsplaner + Balance Chart -->
+  <div id="incomeWithdrawalChart"></div>
 </div>
 
 <!-- ===== TAGEBUCH ===== -->
@@ -1948,6 +1951,7 @@ function fmtDate(ds) {
 }
 function escHtml(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function getWeekKey(d) {
+  if (typeof d === 'string') d = new Date(d);
   const jan1 = new Date(d.getFullYear(),0,1);
   const week = Math.ceil(((d-jan1)/86400000 + jan1.getDay()+1)/7);
   return `${d.getFullYear()}-W${String(week).padStart(2,'0')}`;
@@ -2335,6 +2339,135 @@ function renderIncome() {
         </tr>`;
       }).join('')}</tbody></table>
     </div>`;
+
+  renderWithdrawalChart();
+}
+
+function renderWithdrawalChart() {
+  const el = document.getElementById('incomeWithdrawalChart');
+  if (!el) return;
+
+  const saved = DB.settings && DB.settings.withdrawalPlan || {};
+  const weeklyAmount = saved.weekly || 0;
+
+  // Build daily cumulative P&L from live active accounts
+  const livePnl = DB.pnl.filter(p => {
+    if (p.entryType && p.entryType !== 'trade') return false;
+    const acc = DB.accounts.find(a => a.id == p.accountId);
+    return acc && acc.type === 'Live' && isActive(acc);
+  });
+
+  if (!livePnl.length) { el.innerHTML = ''; return; }
+
+  // Get all dates sorted
+  const allDates = [...new Set(livePnl.map(p => p.date))].filter(Boolean).sort();
+  if (!allDates.length) { el.innerHTML = ''; return; }
+
+  // Build cumulative balance line with weekly withdrawals
+  let cumulative = 0;
+  let lastWithdrawalWeek = null;
+  const dataPoints = [];
+
+  allDates.forEach(date => {
+    const dayPnl = livePnl.filter(p => p.date === date).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
+    cumulative += dayPnl;
+
+    // Check if this is a new week (Monday) and apply withdrawal
+    const d = new Date(date);
+    const weekKey = getWeekKey(date);
+    if (weeklyAmount > 0 && lastWithdrawalWeek && weekKey !== lastWithdrawalWeek) {
+      cumulative -= weeklyAmount;
+    }
+    lastWithdrawalWeek = weekKey;
+
+    dataPoints.push({ date, value: cumulative, dayPnl });
+  });
+
+  // Render
+  el.innerHTML = `
+    <div class="form-panel" style="margin-bottom:0">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div class="sh" style="margin:0">💸 Balance nach Auszahlung</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:10px;color:var(--text3)">Wöchentliche Auszahlung ($)</span>
+          <input type="number" step="10" min="0" value="${weeklyAmount}"
+            style="background:var(--bg5);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:12px;padding:4px 10px;width:100px;text-align:right"
+            oninput="saveWithdrawalPlan(this.value)">
+        </div>
+      </div>
+      <canvas id="withdrawalChart" style="width:100%;height:220px"></canvas>
+    </div>`;
+
+  // Draw chart
+  setTimeout(() => {
+    const canvas = document.getElementById('withdrawalChart');
+    if (!canvas) return;
+    if (charts.withdrawal) { charts.withdrawal.destroy(); delete charts.withdrawal; }
+
+    const labels = dataPoints.map(d => fmtDate(d.date));
+    const values = dataPoints.map(d => d.value);
+
+    charts.withdrawal = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Netto-Balance',
+          data: values,
+          borderColor: '#00ff9d',
+          backgroundColor: 'rgba(0,255,157,0.06)',
+          borderWidth: 2,
+          pointRadius: dataPoints.map((d, i) => {
+            // Show point on Mondays (withdrawal days)
+            if (i === 0) return 2;
+            const prev = dataPoints[i-1];
+            return getWeekKey(d.date) !== getWeekKey(prev.date) && weeklyAmount > 0 ? 6 : 2;
+          }),
+          pointBackgroundColor: dataPoints.map((d, i) => {
+            if (i === 0) return '#00ff9d';
+            const prev = dataPoints[i-1];
+            return getWeekKey(d.date) !== getWeekKey(prev.date) && weeklyAmount > 0 ? '#ff4060' : '#00ff9d';
+          }),
+          pointStyle: dataPoints.map((d, i) => {
+            if (i === 0) return 'circle';
+            const prev = dataPoints[i-1];
+            return getWeekKey(d.date) !== getWeekKey(prev.date) && weeklyAmount > 0 ? 'triangle' : 'circle';
+          }),
+          fill: true,
+          tension: 0.3,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const d = dataPoints[ctx.dataIndex];
+                const isWithdrawal = ctx.dataIndex > 0 && getWeekKey(d.date) !== getWeekKey(dataPoints[ctx.dataIndex-1].date) && weeklyAmount > 0;
+                const lines = [`Balance: $${d.value.toFixed(2)}`];
+                if (isWithdrawal) lines.push(`↓ Auszahlung: -$${weeklyAmount}`);
+                return lines;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { color: '#3d5166', font: { size: 9 }, maxTicksLimit: 10 }, grid: { color: 'rgba(30,45,61,0.5)' } },
+          y: { ticks: { color: '#3d5166', font: { size: 9 }, callback: v => '$'+v.toFixed(0) }, grid: { color: 'rgba(30,45,61,0.5)' } }
+        }
+      }
+    });
+  }, 50);
+}
+
+function saveWithdrawalPlan(value) {
+  if (!DB.settings.withdrawalPlan) DB.settings.withdrawalPlan = {};
+  DB.settings.withdrawalPlan.weekly = parseFloat(value) || 0;
+  saveLocal();
+  renderWithdrawalChart();
 }
 </script>
 </body>
