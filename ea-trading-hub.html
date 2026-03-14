@@ -242,6 +242,20 @@ select option { background:var(--bg4); }
 .perf-bar { height:100%; border-radius:3px; min-width:2px; }
 .perf-val { min-width:80px; text-align:right; font-size:11px; font-weight:500; }
 
+/* FORECAST CARDS */
+.forecast-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(420px,1fr)); gap:16px; }
+.forecast-card { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius); padding:18px; transition:border-color .2s; }
+.forecast-card:hover { border-color:var(--border2); }
+.forecast-ea-name { font-family:var(--font-head); font-size:15px; font-weight:700; color:#fff; }
+.forecast-ea-acc { font-size:10px; color:var(--text3); letter-spacing:.5px; margin-left:8px; }
+.forecast-divider { border:none; border-top:1px solid var(--border); margin:12px 0; }
+.forecast-col-label { font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--text3); margin-bottom:8px; text-align:center; }
+.forecast-val { font-size:13px; font-weight:600; font-family:var(--font-mono); }
+.forecast-input { background:var(--bg5); border:1px solid var(--border2); border-radius:5px; color:var(--text); font-family:var(--font-mono); font-size:12px; padding:4px 8px; width:100%; text-align:right; }
+.forecast-input:focus { outline:none; border-color:var(--accent); }
+.forecast-cap-bar { height:8px; background:var(--bg5); border-radius:4px; overflow:hidden; margin:6px 0 4px; }
+.forecast-cap-fill { height:100%; border-radius:4px; background:var(--accent); transition:width .3s; }
+
 /* P&L FILTER BUTTONS */
 .pnl-filter-btn { background:var(--bg4); border:1px solid var(--border); border-radius:5px; color:var(--text2); font-family:var(--font-mono); font-size:10px; letter-spacing:.5px; padding:5px 14px; cursor:pointer; transition:all .15s; }
 .pnl-filter-btn:hover { border-color:var(--accent); color:var(--accent); }
@@ -599,6 +613,9 @@ select option { background:var(--bg4); }
 
   <!-- EA Aufschlüsselung -->
   <div id="incomeEaBreakdown" style="margin-bottom:22px"></div>
+
+  <!-- Forecast -->
+  <div id="incomeForecast" style="margin-bottom:22px"></div>
 
   <!-- Einkommen Übersicht -->
   <div id="incomeStats"></div>
@@ -1973,7 +1990,155 @@ function getIncomePnl() {
   });
 }
 
+function renderForecast() {
+  const el = document.getElementById('incomeForecast');
+  if (!el) return;
+
+  // Load saved forecast settings
+  const saved = DB.settings.forecastSettings || {};
+
+  const liveEas = DB.eas.filter(ea => {
+    // Only EAs that have at least one live account entry
+    return DB.pnl.some(p => {
+      if (p.entryType && p.entryType !== 'trade') return false;
+      if (p.eaId != ea.id) return false;
+      const acc = DB.accounts.find(a => a.id == p.accountId);
+      return acc && acc.type === 'Live';
+    });
+  });
+
+  if (!liveEas.length) { el.innerHTML = ''; return; }
+
+  const today = new Date().toISOString().split('T')[0];
+  const month = today.substring(0,7);
+  const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+  const ws = weekStart.toISOString().split('T')[0];
+
+  el.innerHTML = `
+    <div class="sh" style="margin-bottom:14px">📈 Forecast <span style="font-size:9px;color:var(--text3);font-weight:400">Nur Live-Konten</span></div>
+    <div class="forecast-grid" id="forecastGrid"></div>`;
+
+  const grid = document.getElementById('forecastGrid');
+
+  liveEas.forEach(ea => {
+    const eaEntries = DB.pnl.filter(p => {
+      if (p.entryType && p.entryType !== 'trade') return false;
+      if (p.eaId != ea.id) return false;
+      const acc = DB.accounts.find(a => a.id == p.accountId);
+      return acc && acc.type === 'Live';
+    });
+
+    // Account linked to this EA
+    const linkedAcc = DB.accounts.find(a => {
+      return a.type === 'Live' && DB.pnl.some(p => p.eaId == ea.id && p.accountId == a.id);
+    });
+    const currentCap = linkedAcc ? (parseFloat(linkedAcc.balance) || parseFloat(linkedAcc.startCapital) || 0) : 0;
+
+    // Performance stats
+    const weekEntries  = eaEntries.filter(p => p.date >= ws && p.date <= today);
+    const monthEntries = eaEntries.filter(p => p.date && p.date.startsWith(month));
+
+    const avgDay   = eaEntries.length ? eaEntries.reduce((s,p)=>s+(parseFloat(p.pnl)||0),0) / Math.max(1, new Set(eaEntries.map(p=>p.date)).size) : 0;
+    const avgWeek  = weekEntries.reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+    const avgMonth = monthEntries.reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+
+    // Saved settings per EA
+    const cfg = saved[ea.id] || {};
+    const curLot    = cfg.curLot    || 0.01;
+    const targetCap = cfg.targetCap || currentCap;
+    const targetLot = cfg.targetLot || curLot;
+
+    const ratio = curLot > 0 ? targetLot / curLot : 1;
+    const fDay   = avgDay   * ratio;
+    const fWeek  = avgWeek  * ratio;
+    const fMonth = avgMonth * ratio;
+    const fYear  = fMonth   * 12;
+
+    const missing = Math.max(0, targetCap - currentCap);
+    const weeksToGoal = (fWeek > 0 && missing > 0) ? Math.ceil(missing / fWeek) : null;
+    const capPct = targetCap > 0 ? Math.min(100, (currentCap / targetCap) * 100) : 100;
+
+    const fmt = v => (v >= 0 ? '+$' : '-$') + Math.abs(v).toFixed(2);
+    const cls = v => v >= 0 ? 'pos-val' : 'neg-val';
+    const accNum = linkedAcc ? linkedAcc.number : '–';
+
+    const card = document.createElement('div');
+    card.className = 'forecast-card';
+    card.innerHTML = `
+      <div style="display:flex;align-items:baseline;margin-bottom:4px">
+        <span class="forecast-ea-name">${ea.name}</span>
+        <span class="forecast-ea-acc">#${accNum}</span>
+      </div>
+      <hr class="forecast-divider">
+
+      <!-- Capital progress -->
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:4px">
+        <span>Kapital aktuell</span><span>Ziel</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:600;color:var(--accent)">$${currentCap.toFixed(2)}</span>
+        <span style="font-size:10px;color:var(--text3)">${missing > 0 ? `fehlen $${missing.toFixed(2)}` : '✅ erreicht'}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:10px;color:var(--text3)">Ziel:</span>
+          <input class="forecast-input" style="width:90px" type="number" step="50" value="${targetCap.toFixed(0)}"
+            onchange="updateForecastCfg('${ea.id}','targetCap',this.value)">
+        </div>
+      </div>
+      <div class="forecast-cap-bar">
+        <div class="forecast-cap-fill" style="width:${capPct}%"></div>
+      </div>
+      ${missing > 0 && weeksToGoal ? `<div style="font-size:9px;color:var(--text3);margin-bottom:10px">🎯 EA erwirtschaftet Fehlbetrag in ca. <strong style="color:var(--warn)">${weeksToGoal} Wochen</strong> bei Forecast-Performance</div>` : '<div style="margin-bottom:10px"></div>'}
+
+      <!-- Lot settings -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div>
+          <div class="forecast-col-label">Aktuelles Lot</div>
+          <input class="forecast-input" type="number" step="0.01" min="0.001" value="${curLot}"
+            onchange="updateForecastCfg('${ea.id}','curLot',this.value)">
+        </div>
+        <div>
+          <div class="forecast-col-label">Ziel-Lot</div>
+          <input class="forecast-input" type="number" step="0.01" min="0.001" value="${targetLot}"
+            onchange="updateForecastCfg('${ea.id}','targetLot',this.value)">
+        </div>
+      </div>
+
+      <!-- Performance comparison -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+        <div style="padding:10px 14px;background:var(--bg4);border-right:1px solid var(--border)">
+          <div class="forecast-col-label" style="text-align:left">📊 Ist (aktuell)</div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--text3);font-size:11px">Tag Ø</span><span class="forecast-val ${cls(avgDay)}">${fmt(avgDay)}</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--text3);font-size:11px">Woche</span><span class="forecast-val ${cls(avgWeek)}">${fmt(avgWeek)}</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--text3);font-size:11px">Monat</span><span class="forecast-val ${cls(avgMonth)}">${fmt(avgMonth)}</span></div>
+          </div>
+        </div>
+        <div style="padding:10px 14px;background:var(--bg3)">
+          <div class="forecast-col-label" style="text-align:left;color:var(--accent)">🚀 Forecast (${targetLot} Lot)</div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--text3);font-size:11px">Tag Ø</span><span class="forecast-val ${cls(fDay)}">${fmt(fDay)}</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--text3);font-size:11px">Woche</span><span class="forecast-val ${cls(fWeek)}">${fmt(fWeek)}</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--text3);font-size:11px">Monat</span><span class="forecast-val ${cls(fMonth)}">${fmt(fMonth)}</span></div>
+            <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:5px;margin-top:2px"><span style="color:var(--text3);font-size:11px">Jahr</span><span class="forecast-val ${cls(fYear)}" style="font-size:14px">${fmt(fYear)}</span></div>
+          </div>
+        </div>
+      </div>`;
+
+    grid.appendChild(card);
+  });
+}
+
+function updateForecastCfg(eaId, key, value) {
+  if (!DB.settings.forecastSettings) DB.settings.forecastSettings = {};
+  if (!DB.settings.forecastSettings[eaId]) DB.settings.forecastSettings[eaId] = {};
+  DB.settings.forecastSettings[eaId][key] = parseFloat(value);
+  saveLocal();
+  renderForecast();
+}
+
 function renderIncome() {
+  renderForecast();
+
   // Load saved goals into inputs
   const goals = DB.settings && DB.settings.incomeGoals || {};
   if (goals.day)   document.getElementById('inc-goal-day').value   = goals.day;
