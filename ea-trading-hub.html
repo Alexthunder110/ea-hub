@@ -2201,10 +2201,14 @@ function renderIncome() {
   const yellowWeek  = dayOfWeek  > 0 ? (liveWeekPnl  / dayOfWeek)  * 5 : liveWeekPnl;
   const yellowMonth = dayOfMonth > 0 ? (liveMonthPnl / dayOfMonth) * daysInMonth : liveMonthPnl;
 
-  // Orange = target lot scaling, no extrapolation - what's been earned so far at target lots
-  const orangeDay   = calcForecastPnl(todayLive, forecastCfg);
-  const orangeWeek  = calcForecastPnl(weekLive,  forecastCfg);
-  const orangeMonth = calcForecastPnl(monthLive, forecastCfg);
+  // Orange = target lot scaling + extrapolated to end of period
+  const orangeDayRaw   = calcForecastPnl(todayLive, forecastCfg);
+  const orangeWeekRaw  = calcForecastPnl(weekLive,  forecastCfg);
+  const orangeMonthRaw = calcForecastPnl(monthLive, forecastCfg);
+
+  const orangeDay   = orangeDayRaw;
+  const orangeWeek  = dayOfWeek  > 0 ? (orangeWeekRaw  / dayOfWeek)  * 5 : orangeWeekRaw;
+  const orangeMonth = dayOfMonth > 0 ? (orangeMonthRaw / dayOfMonth) * daysInMonth : orangeMonthRaw;
 
   // Progress bars
   const progressEl = document.getElementById('incomeProgress');
