@@ -2230,6 +2230,7 @@ function renderForecast() {
             <div style="display:flex;justify-content:space-between"><span style="color:var(--text3);font-size:11px">Tag Ø</span><span class="forecast-val ${cls(avgDay)}">${fmt(avgDay)}</span></div>
             <div style="display:flex;justify-content:space-between"><span style="color:var(--text3);font-size:11px">Woche</span><span class="forecast-val ${cls(avgWeek)}">${fmt(avgWeek)}</span></div>
             <div style="display:flex;justify-content:space-between"><span style="color:var(--text3);font-size:11px">Monat</span><span class="forecast-val ${cls(avgMonth)}">${fmt(avgMonth)}</span></div>
+            <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:5px;margin-top:2px"><span style="color:var(--text3);font-size:10px">Max. Auszahlung/Wo</span><span style="font-size:11px;color:#f0c040">$${(avgDay*5).toFixed(0)}</span></div>
           </div>
         </div>
         <div style="padding:10px 14px;background:var(--bg3)">
@@ -2238,6 +2239,7 @@ function renderForecast() {
             <div style="display:flex;justify-content:space-between"><span style="color:var(--text3);font-size:11px">Tag Ø</span><span class="forecast-val ${cls(fDay)}">${fmt(fDay)}</span></div>
             <div style="display:flex;justify-content:space-between"><span style="color:var(--text3);font-size:11px">Woche</span><span class="forecast-val ${cls(fWeek)}">${fmt(fWeek)}</span></div>
             <div style="display:flex;justify-content:space-between"><span style="color:var(--text3);font-size:11px">Monat</span><span class="forecast-val ${cls(fMonth)}">${fmt(fMonth)}</span></div>
+            <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:5px;margin-top:2px"><span style="color:var(--text3);font-size:10px">Max. Auszahlung/Wo</span><span style="font-size:11px;color:#f0c040">$${(fDay*5).toFixed(0)}</span></div>
             <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:5px;margin-top:2px"><span style="color:var(--text3);font-size:11px">Jahr</span><span class="forecast-val ${cls(fYear)}" style="font-size:14px">${fmt(fYear)}</span></div>
           </div>
         </div>
