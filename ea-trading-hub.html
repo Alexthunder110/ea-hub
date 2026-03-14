@@ -1394,6 +1394,25 @@ function renderSumCards() {
     { label:'P&L Gesamt',      val:(allPnl>=0?'+$':'-$')+Math.abs(allPnl).toFixed(2), sub:`${filteredPnl.length} Einträge`+filterLabel, cls:allPnl>=0?'pos':'neg' },
   ];
 
+  // Calculate max weekly withdrawal from active live EAs
+  const activeLiveAccs = DB.accounts.filter(a => a.type === 'Live' && isActive(a));
+  const activeLiveIds = new Set(activeLiveAccs.map(a => a.id));
+  const activeLivePnl = DB.pnl.filter(p => !p.entryType || p.entryType === 'trade').filter(p => activeLiveIds.has(p.accountId));
+  const forecastCfgCards = DB.settings.forecastSettings || {};
+  let maxIst = 0, maxForecast = 0;
+  DB.eas.forEach(ea => {
+    const entries = activeLivePnl.filter(p => p.eaId == ea.id);
+    if (!entries.length) return;
+    const avgDay = entries.reduce((s,p) => s+(parseFloat(p.pnl)||0), 0) / Math.max(1, new Set(entries.map(p=>p.date)).size);
+    maxIst += avgDay * 5;
+    const cfg = forecastCfgCards[ea.id] || {};
+    const curLot = cfg.curLot || 0.01;
+    const targetLot = cfg.targetLot || curLot;
+    const ratio = curLot > 0 ? targetLot / curLot : 1;
+    maxForecast += avgDay * ratio * 5;
+  });
+  cards.push({ label:'Max. Entnahme/Wo', val:'$'+maxIst.toFixed(0), sub:`Forecast: $${maxForecast.toFixed(0)}`, cls:'warn', special: true });
+
   document.getElementById('sumCards').innerHTML = cards.map(c => {
     const fmtVal = c.val.replace(/^([+\-]?)(\$)/, (m,sign,dollar) =>
       `${sign}<span style="font-size:0.65em;opacity:0.8">${dollar}</span>`);
