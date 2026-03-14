@@ -2032,7 +2032,7 @@ function renderForecast() {
     const linkedAcc = DB.accounts.find(a => {
       return a.type === 'Live' && DB.pnl.some(p => p.eaId == ea.id && p.accountId == a.id);
     });
-    const currentCap = linkedAcc ? (parseFloat(linkedAcc.balance) || parseFloat(linkedAcc.startCapital) || 0) : 0;
+    const currentCap = linkedAcc ? getAccountBalance(linkedAcc) : 0;
 
     // Performance stats
     const weekEntries  = eaEntries.filter(p => p.date >= ws && p.date <= today);
