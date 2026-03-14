@@ -2636,24 +2636,30 @@ function renderWithdrawalChart() {
     if (!canvas) return;
     if (charts.withdrawal) { charts.withdrawal.destroy(); delete charts.withdrawal; }
 
-    const labels = dataPoints.map(d => fmtDate(d.date));
-    const histValues = dataPoints.map(d => d.forecast ? null : d.value);
-    const foreValues = dataPoints.map(d => d.forecast ? d.value : null);
-    // Connect last historical point to first forecast point
-    const lastHistIdx = dataPoints.reduce((last, d, i) => !d.forecast ? i : last, -1);
-    if (lastHistIdx >= 0 && lastHistIdx + 1 < dataPoints.length) {
-      foreValues[lastHistIdx] = dataPoints[lastHistIdx].value;
-    }
+    // Merge dataPoints and istPoints into unified date-sorted label set
+    const allDatesChart = [...new Set([
+      ...dataPoints.map(d => d.date),
+      ...istPoints.map(d => d.date)
+    ])].sort();
 
-    // Map istPoints onto same label axis as dataPoints
-    const istDateMap = {};
-    istPoints.forEach(p => { istDateMap[p.date] = p.value; });
-    const istValues = dataPoints.map(d => {
-      if (!d.forecast) return null;
-      return istDateMap[d.date] !== undefined ? istDateMap[d.date] : null;
-    });
-    // Connect anchor
-    if (lastHistIdx >= 0) istValues[lastHistIdx] = dataPoints[lastHistIdx].value;
+    const dpMap = {}; dataPoints.forEach(d => { dpMap[d.date] = d; });
+    const istMap = {}; istPoints.forEach(d => { istMap[d.date] = d.value; });
+
+    const labels = allDatesChart.map(d => fmtDate(d));
+    const histValues = allDatesChart.map(d => dpMap[d] && !dpMap[d].forecast ? dpMap[d].value : null);
+    const foreValues = allDatesChart.map(d => dpMap[d] && dpMap[d].forecast ? dpMap[d].value : null);
+    const istValues  = allDatesChart.map(d => istMap[d] !== undefined ? istMap[d] : null);
+
+    // Connect last historical point to forecast lines
+    const lastHistIdx = allDatesChart.reduce((last, d, i) => dpMap[d] && !dpMap[d].forecast ? i : last, -1);
+    if (lastHistIdx >= 0) {
+      const anchorVal = dpMap[allDatesChart[lastHistIdx]].value;
+      if (foreValues[lastHistIdx + 1] === null) foreValues[lastHistIdx] = anchorVal;
+      if (istValues[lastHistIdx + 1] === null)  istValues[lastHistIdx]  = anchorVal;
+      // Set anchor explicitly
+      foreValues[lastHistIdx] = foreValues[lastHistIdx] || anchorVal;
+      istValues[lastHistIdx]  = anchorVal;
+    }
 
     charts.withdrawal = new Chart(canvas, {
       type: 'line',
@@ -2666,9 +2672,9 @@ function renderWithdrawalChart() {
             borderColor: '#00ff9d',
             backgroundColor: 'rgba(0,255,157,0.06)',
             borderWidth: 2,
-            pointRadius: dataPoints.map(d => d.isWithdrawal && !d.forecast ? 6 : 2),
-            pointBackgroundColor: dataPoints.map(d => d.isWithdrawal ? '#ff4060' : '#00ff9d'),
-            pointStyle: dataPoints.map(d => d.isWithdrawal ? 'triangle' : 'circle'),
+            pointRadius: allDatesChart.map(d => dpMap[d] && dpMap[d].isWithdrawal && !dpMap[d].forecast ? 6 : 2),
+            pointBackgroundColor: allDatesChart.map(d => dpMap[d] && dpMap[d].isWithdrawal ? '#ff4060' : '#00ff9d'),
+            pointStyle: allDatesChart.map(d => dpMap[d] && dpMap[d].isWithdrawal ? 'triangle' : 'circle'),
             fill: true, tension: 0.3, spanGaps: false,
           },
           {
@@ -2678,7 +2684,7 @@ function renderWithdrawalChart() {
             backgroundColor: 'rgba(240,192,64,0.04)',
             borderWidth: 2,
             segment: { borderDash: () => [6, 4] },
-            pointRadius: dataPoints.map(d => d.isWithdrawal && d.forecast ? 5 : 0),
+            pointRadius: allDatesChart.map(d => dpMap[d] && dpMap[d].isWithdrawal && dpMap[d].forecast ? 5 : 0),
             pointBackgroundColor: '#ff4060',
             pointStyle: 'triangle',
             fill: true, tension: 0.3, spanGaps: true,
