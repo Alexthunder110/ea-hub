@@ -2650,14 +2650,11 @@ function renderWithdrawalChart() {
     const foreValues = allDatesChart.map(d => dpMap[d] && dpMap[d].forecast ? dpMap[d].value : null);
     const istValues  = allDatesChart.map(d => istMap[d] !== undefined ? istMap[d] : null);
 
-    // Connect last historical point to forecast lines
+    // Find last historical index and set anchor for both forecast lines
     const lastHistIdx = allDatesChart.reduce((last, d, i) => dpMap[d] && !dpMap[d].forecast ? i : last, -1);
     if (lastHistIdx >= 0) {
       const anchorVal = dpMap[allDatesChart[lastHistIdx]].value;
-      if (foreValues[lastHistIdx + 1] === null) foreValues[lastHistIdx] = anchorVal;
-      if (istValues[lastHistIdx + 1] === null)  istValues[lastHistIdx]  = anchorVal;
-      // Set anchor explicitly
-      foreValues[lastHistIdx] = foreValues[lastHistIdx] || anchorVal;
+      foreValues[lastHistIdx] = anchorVal;
       istValues[lastHistIdx]  = anchorVal;
     }
 
@@ -2697,7 +2694,7 @@ function renderWithdrawalChart() {
             borderWidth: 2,
             segment: { borderDash: () => [4, 4] },
             pointRadius: 0,
-            fill: false, tension: 0.3, spanGaps: true,
+            fill: false, tension: 0.3, spanGaps: false,
           }
         ]
       },
