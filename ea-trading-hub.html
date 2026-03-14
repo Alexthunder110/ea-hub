@@ -2412,11 +2412,19 @@ function renderWithdrawalChart() {
   const recentDays = [...new Set(recentEntries.map(p=>p.date))].length || 1;
   const avgDailyProfit = recentEntries.reduce((s,p)=>s+(parseFloat(p.pnl)||0),0) / recentDays;
 
-  // Build historical data points
-  let cumulative = 0;
+  // Start from current live balance (pushed by EAs), build forward with P&L + forecast
+  const liveBalance = allLiveAccs.reduce((s,a) => s + (parseFloat(a.balance)||0), 0);
+  let cumulative = liveBalance;
   const dataPoints = [];
 
-  allDates.forEach(date => {
+  // Anchor point: today's live balance as starting value
+  dataPoints.push({ date: today, value: parseFloat(liveBalance.toFixed(2)), isWithdrawal: false, forecast: false });
+
+  // Historical P&L from today onwards (if any entries exist for today, already included via anchor)
+  // We skip past P&L since balance already reflects it – only add future/today entries
+  const futureDates = allDates.filter(d => d >= today);
+  futureDates.forEach(date => {
+    if (date === today) return; // anchor already added
     const dayPnl = livePnl.filter(p => p.date === date).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
     cumulative += dayPnl;
     const d = new Date(date);
@@ -2424,7 +2432,7 @@ function renderWithdrawalChart() {
     const afterStart = !startMonth || date.substring(0,7) >= startMonth;
     const isWithdrawal = isFriday && weeklyAmount > 0 && afterStart;
     if (isWithdrawal) cumulative -= weeklyAmount;
-    dataPoints.push({ date, value: cumulative, isWithdrawal, forecast: false });
+    dataPoints.push({ date, value: parseFloat(cumulative.toFixed(2)), isWithdrawal, forecast: false });
   });
 
   // Add forecast from today to end of year
