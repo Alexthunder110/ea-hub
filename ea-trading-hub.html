@@ -773,6 +773,7 @@ let INCOME_FILTER = 'all';
   setInterval(checkOnline, 30000);
 })();
 
+function isActive(acc) { return acc && acc.status !== 'off' && acc.status !== 'paused'; }
 function saveLocal() { localStorage.setItem('eaHub_v2', JSON.stringify(DB)); }
 
 function normalizeDate(val) {
@@ -1223,7 +1224,7 @@ function renderPnlTable() {
   if (fEA)  entries = entries.filter(e => e.eaId == fEA);
   if (fType) entries = entries.filter(e => {
     const acc = DB.accounts.find(a => a.id == e.accountId);
-    return acc && acc.type === fType;
+    return acc && acc.type === fType && isActive(acc);
   });
   if (fMon) entries = entries.filter(e => e.date && e.date.startsWith(fMon));
 
@@ -1359,7 +1360,7 @@ function renderSumCards() {
   const today = new Date().toISOString().split('T')[0];
   const month = today.substring(0,7);
   const totalBal = DB.accounts.reduce((s,a) => s+getAccountBalance(a),0);
-  const liveBal  = DB.accounts.filter(a=>a.type==='Live').reduce((s,a) => s+getAccountBalance(a),0);
+  const liveBal  = DB.accounts.filter(a=>a.type==='Live' && isActive(a)).reduce((s,a) => s+getAccountBalance(a),0);
   const demoBal  = DB.accounts.filter(a=>a.type==='Demo').reduce((s,a) => s+getAccountBalance(a),0);
   const active   = DB.accounts.filter(a=>a.status==='active').length;
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
@@ -1369,7 +1370,7 @@ function renderSumCards() {
     if (p.entryType && p.entryType !== 'trade') return false;
     if (PNL_FILTER === 'all') return true;
     const acc = DB.accounts.find(a => a.id == p.accountId);
-    return acc && acc.type === PNL_FILTER;
+    return acc && acc.type === PNL_FILTER && isActive(acc);
   });
   const filterLabel = PNL_FILTER === 'all' ? '' : ` (${PNL_FILTER})`;
   const todayPnl = filteredPnl.filter(p=>p.date===today).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
@@ -1379,7 +1380,7 @@ function renderSumCards() {
 
   const cards = [
     { label:'Gesamt Guthaben', val:'$'+fmt(totalBal), sub:`${active} aktive Konten`, cls:'' },
-    { label:'Live Guthaben',   val:'$'+fmt(liveBal),  sub:`${DB.accounts.filter(a=>a.type==='Live').length} Live Konten`, cls:'' },
+    { label:'Live Guthaben',   val:'$'+fmt(liveBal),  sub:`${DB.accounts.filter(a=>a.type==='Live' && isActive(a)).length} Live Konten`, cls:'' },
     { label:'Demo Guthaben',   val:'$'+fmt(demoBal),  sub:`${DB.accounts.filter(a=>a.type==='Demo').length} Demo Konten`, cls:'warn' },
     { label:'P&L Heute',       val:(todayPnl>=0?'+$':'-$')+Math.abs(todayPnl).toFixed(2), sub:'Tagesperformance'+filterLabel, cls:todayPnl>=0?'pos':'neg' },
     { label:'P&L Woche',       val:(weekPnl>=0?'+$':'-$')+Math.abs(weekPnl).toFixed(2), sub:'laufende Woche'+filterLabel, cls:weekPnl>=0?'pos':'neg' },
@@ -1434,7 +1435,7 @@ function renderGoalProgress() {
   const liveTrades = DB.pnl.filter(p => {
     if (p.entryType && p.entryType !== 'trade') return false;
     const acc = DB.accounts.find(a => a.id == p.accountId);
-    return acc && acc.type === 'Live';
+    return acc && acc.type === 'Live' && isActive(acc);
   });
 
   const dayPnl   = liveTrades.filter(p => p.date === today).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
@@ -1489,7 +1490,7 @@ function renderAnalytics() {
   if (fEa)  entries = entries.filter(e => e.eaId == fEa);
   if (fType) entries = entries.filter(e => {
     const acc = DB.accounts.find(a => a.id == e.accountId);
-    return acc && acc.type === fType;
+    return acc && acc.type === fType && isActive(acc);
   });
 
   const today = new Date().toISOString().split('T')[0];
@@ -1638,7 +1639,7 @@ function renderEquityChart() {
   if (PNL_FILTER !== 'all') {
     entries = entries.filter(p => {
       const acc = DB.accounts.find(a => a.id == p.accountId);
-      return acc && acc.type === PNL_FILTER;
+      return acc && acc.type === PNL_FILTER && isActive(acc);
     });
   }
   const sorted = entries.sort((a,b) => (a.date||'').localeCompare(b.date||''));
@@ -1672,7 +1673,7 @@ function renderPnlBarChart() {
     if (PNL_FILTER !== 'all') {
       dayEntries = dayEntries.filter(p => {
         const acc = DB.accounts.find(a => a.id == p.accountId);
-        return acc && acc.type === PNL_FILTER;
+        return acc && acc.type === PNL_FILTER && isActive(acc);
       });
     }
     const sum = dayEntries.reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
@@ -1745,7 +1746,7 @@ function renderTodayRows() {
     if (p.date !== today) return false;
     if (PNL_FILTER === 'all') return true;
     const acc = DB.accounts.find(a => a.id == p.accountId);
-    return acc && acc.type === PNL_FILTER;
+    return acc && acc.type === PNL_FILTER && isActive(acc);
   });
   const tbody = document.getElementById('todayRows');
   if (!entries.length) { tbody.innerHTML='<tr><td colspan="6" class="empty">Noch keine Einträge für heute.</td></tr>'; return; }
@@ -1986,7 +1987,7 @@ function getIncomePnl() {
     if (p.entryType && p.entryType !== 'trade') return false;
     if (INCOME_FILTER === 'all') return true;
     const acc = DB.accounts.find(a => a.id == p.accountId);
-    return acc && acc.type === INCOME_FILTER;
+    return acc && acc.type === INCOME_FILTER && isActive(acc);
   });
 }
 
@@ -2003,7 +2004,7 @@ function renderForecast() {
       if (p.entryType && p.entryType !== 'trade') return false;
       if (p.eaId != ea.id) return false;
       const acc = DB.accounts.find(a => a.id == p.accountId);
-      return acc && acc.type === 'Live';
+      return acc && acc.type === 'Live' && isActive(acc);
     });
   });
 
@@ -2025,12 +2026,12 @@ function renderForecast() {
       if (p.entryType && p.entryType !== 'trade') return false;
       if (p.eaId != ea.id) return false;
       const acc = DB.accounts.find(a => a.id == p.accountId);
-      return acc && acc.type === 'Live';
+      return acc && acc.type === 'Live' && isActive(acc);
     });
 
     // Account linked to this EA
     const linkedAcc = DB.accounts.find(a => {
-      return a.type === 'Live' && DB.pnl.some(p => p.eaId == ea.id && p.accountId == a.id);
+      return a.type === 'Live' && isActive(a) && DB.pnl.some(p => p.eaId == ea.id && p.accountId == a.id);
     });
     const currentCap = linkedAcc ? getAccountBalance(linkedAcc) : 0;
 
@@ -2167,7 +2168,7 @@ function renderIncome() {
   const liveEntries = DB.pnl.filter(p => {
     if (p.entryType && p.entryType !== 'trade') return false;
     const acc = DB.accounts.find(a => a.id == p.accountId);
-    return acc && acc.type === 'Live';
+    return acc && acc.type === 'Live' && isActive(acc);
   });
 
   // Helper: sum forecast for a period using ratio scaling
