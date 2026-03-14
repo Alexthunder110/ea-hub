@@ -383,6 +383,7 @@ select option { background:var(--bg4); }
     </div>
   </div>
   <div class="sum-grid" id="sumCards"></div>
+  <div id="missingEntriesBanner" style="margin-bottom:12px"></div>
 
   <!-- Ziele Fortschritt -->
   <div class="form-panel" style="margin-bottom:22px">
@@ -1402,10 +1403,65 @@ function renderSumCards() {
       <div class="sum-sub">${c.sub}</div>
     </div>`;
   }).join('');
+  renderMissingEntries();
 }
 
 // ============================================================
-// GOAL
+// MISSING ENTRIES BANNER
+// ============================================================
+function renderMissingEntries() {
+  const el = document.getElementById('missingEntriesBanner');
+  if (!el) return;
+
+  // Build list of Mo-Fr dates from last 7 days (excluding today and weekend)
+  const missing = [];
+  const today = new Date();
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const dow = d.getDay();
+    if (dow === 0 || dow === 6) continue; // skip weekend
+    const ds = d.toISOString().split('T')[0];
+
+    // Check each live EA + linked account
+    DB.eas.forEach(ea => {
+      const liveAccs = DB.accounts.filter(a => a.type === 'Live' && isActive(a));
+      liveAccs.forEach(acc => {
+        // Only check if this EA/account combo has any historical entries
+        const hasHistory = DB.pnl.some(p => p.eaId == ea.id && p.accountId == acc.id);
+        if (!hasHistory) return;
+        const hasEntry = DB.pnl.some(p =>
+          p.eaId == ea.id && p.accountId == acc.id && p.date === ds &&
+          (!p.entryType || p.entryType === 'trade')
+        );
+        if (!hasEntry) {
+          missing.push({ ea: ea.name, acc: acc.number, date: ds });
+        }
+      });
+    });
+  }
+
+  if (!missing.length) { el.innerHTML = ''; return; }
+
+  // Group by date for compact display
+  const byDate = {};
+  missing.forEach(m => {
+    if (!byDate[m.date]) byDate[m.date] = [];
+    byDate[m.date].push(`${m.ea} #${m.acc}`);
+  });
+
+  const lines = Object.keys(byDate).sort().reverse().map(date => {
+    const d = new Date(date);
+    const label = d.toLocaleDateString('de-DE', { weekday:'short', day:'2-digit', month:'2-digit' });
+    return `<span style="margin-right:16px"><span style="color:var(--text2)">${label}:</span> ${byDate[date].join(', ')}</span>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="background:rgba(240,192,64,0.08);border:1px solid rgba(240,192,64,0.3);border-radius:8px;padding:10px 16px;display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap">
+      <span style="color:#f0c040;font-size:12px;font-weight:700;white-space:nowrap">⚠️ Fehlende Einträge</span>
+      <span style="font-size:11px;color:var(--text3);line-height:1.7">${lines}</span>
+    </div>`;
+}
 // ============================================================
 function saveGoal(type) {
   const dateId   = 'goal-date-live';
