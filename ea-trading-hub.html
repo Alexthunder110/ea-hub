@@ -2587,25 +2587,10 @@ function renderWithdrawalChart() {
     forecastDate.setDate(forecastDate.getDate() + 1);
   }
 
-  // Forecast Ist loop – independent, based on raw historical avg
-  const istPoints = [];
-  let cumulativeIst = startCap + allDates.reduce((s, date) => {
+  // Ist-Forecast start value: startCap + all historical P&L
+  const istStartValue = startCap + allDates.reduce((s, date) => {
     return s + livePnl.filter(p => p.date === date).reduce((ss,p) => ss+(parseFloat(p.pnl)||0), 0);
   }, 0);
-  let istDate = new Date(today);
-  istDate.setDate(istDate.getDate() + 1);
-  while (istDate <= endOfYear) {
-    const ds = istDate.toISOString().split('T')[0];
-    cumulativeIst += avgDailyProfitIst;
-    const isFriday = istDate.getDay() === 5;
-    const afterStart = !startMonth || ds.substring(0,7) >= startMonth;
-    const isWithdrawal = isFriday && weeklyAmount > 0 && afterStart;
-    if (isWithdrawal) cumulativeIst -= weeklyAmount;
-    if (isFriday || istDate.getDay() === 1) {
-      istPoints.push({ date: ds, value: Math.max(0, parseFloat(cumulativeIst.toFixed(2))) });
-    }
-    istDate.setDate(istDate.getDate() + 1);
-  }
 
   el.innerHTML = `
     <div class="form-panel" style="margin-bottom:0">
@@ -2649,12 +2634,23 @@ function renderWithdrawalChart() {
     const anchorVal = lastHistIdx >= 0 ? dpMap[allDatesChart[lastHistIdx]].value : 0;
     if (lastHistIdx >= 0) foreValues[lastHistIdx] = anchorVal;
 
-    // Ist-Forecast: build as {x, y} points using same label strings for alignment
-    const labelSet = new Set(labels);
-    const istData = [{ x: fmtDate(allDatesChart[lastHistIdx]), y: anchorVal }];
-    istPoints.forEach(p => {
-      const lbl = fmtDate(p.date);
-      istData.push({ x: lbl, y: p.value });
+    // Ist-Forecast: map directly onto each forecast dataPoint date
+    const todayTs = new Date(today).getTime();
+    const istValues = allDatesChart.map((d, i) => {
+      if (i < lastHistIdx) return null;
+      if (i === lastHistIdx) return anchorVal;
+      const days = Math.round((new Date(d).getTime() - todayTs) / 86400000);
+      let val = istStartValue + (days * avgDailyProfitIst);
+      if (weeklyAmount > 0 && startMonth) {
+        let cur = new Date(today); cur.setDate(cur.getDate() + 1);
+        const target = new Date(d);
+        while (cur <= target) {
+          const cs = cur.toISOString().split('T')[0];
+          if (cur.getDay() === 5 && cs.substring(0,7) >= startMonth) val -= weeklyAmount;
+          cur.setDate(cur.getDate() + 1);
+        }
+      }
+      return Math.max(0, parseFloat(val.toFixed(2)));
     });
 
     charts.withdrawal = new Chart(canvas, {
@@ -2687,7 +2683,7 @@ function renderWithdrawalChart() {
           },
           {
             label: 'Forecast (Ist)',
-            data: istData,
+            data: istValues,
             borderColor: 'rgba(0,255,157,0.6)',
             backgroundColor: 'transparent',
             borderWidth: 2,
