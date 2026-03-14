@@ -2536,7 +2536,7 @@ function renderWithdrawalChart() {
   const forecastSaved = DB.settings.forecastSettings || {};
   const today = new Date().toISOString().split('T')[0];
   const avgDailyForecast = DB.eas.reduce((total, ea) => {
-    const eaEntries = livePnl.filter(p => p.eaId == ea.id);
+    const eaEntries = activePnl.filter(p => p.eaId == ea.id);
     if (!eaEntries.length) return total;
     const avgDay = eaEntries.reduce((s,p) => s+(parseFloat(p.pnl)||0), 0) / Math.max(1, new Set(eaEntries.map(p=>p.date)).size);
     const cfg = forecastSaved[ea.id] || {};
