@@ -2564,33 +2564,24 @@ function renderWithdrawalChart() {
     dataPoints.push({ date, value: cumulative, isWithdrawal, forecast: false });
   });
 
-  // Forecast Ziel-Lot loop
+  // Check if Ist-forecast hits zero (for warning) using avgDailyProfitIst
   const endOfYear = new Date(new Date().getFullYear(), 11, 31);
-  let forecastDate = new Date(today);
-  forecastDate.setDate(forecastDate.getDate() + 1);
   let bankruptDate = null;
-  while (forecastDate <= endOfYear) {
-    const ds = forecastDate.toISOString().split('T')[0];
-    cumulative += avgDailyProfit;
-    const isFriday = forecastDate.getDay() === 5;
+  let cumCheck = cumulative;
+  let checkDate = new Date(today);
+  checkDate.setDate(checkDate.getDate() + 1);
+  while (checkDate <= endOfYear) {
+    const ds = checkDate.toISOString().split('T')[0];
+    cumCheck += avgDailyProfitIst;
+    const isFriday = checkDate.getDay() === 5;
     const afterStart = !startMonth || ds.substring(0,7) >= startMonth;
-    const isWithdrawal = isFriday && weeklyAmount > 0 && afterStart;
-    if (isWithdrawal) cumulative -= weeklyAmount;
-    if (cumulative <= 0) {
-      dataPoints.push({ date: ds, value: 0, isWithdrawal: false, forecast: true });
-      bankruptDate = ds;
-      break;
-    }
-    if (isFriday || forecastDate.getDay() === 1) {
-      dataPoints.push({ date: ds, value: parseFloat(cumulative.toFixed(2)), isWithdrawal, forecast: true });
-    }
-    forecastDate.setDate(forecastDate.getDate() + 1);
+    if (isFriday && weeklyAmount > 0 && afterStart) cumCheck -= weeklyAmount;
+    if (cumCheck <= 0) { bankruptDate = ds; break; }
+    checkDate.setDate(checkDate.getDate() + 1);
   }
 
   // Ist-Forecast start value: startCap + all historical P&L
-  const istStartValue = startCap + allDates.reduce((s, date) => {
-    return s + livePnl.filter(p => p.date === date).reduce((ss,p) => ss+(parseFloat(p.pnl)||0), 0);
-  }, 0);
+  const istStartValue = cumulative;
 
   el.innerHTML = `
     <div class="form-panel" style="margin-bottom:0">
