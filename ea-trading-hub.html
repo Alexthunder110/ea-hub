@@ -2187,15 +2187,30 @@ function renderIncome() {
   const dayOfMonth = now.getDate();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
 
-  // Yellow = current lot, no extrapolation - just what's been earned so far
-  const yellowDay   = dayPnl;
-  const yellowWeek  = weekPnl;
-  const yellowMonth = monthPnl;
+  // Days elapsed for extrapolation
+  const now = new Date();
+  const dayOfWeek  = now.getDay() === 0 ? 7 : now.getDay();
+  const dayOfMonth = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
 
-  // Orange = target lot scaling, no extrapolation - sum of EA forecast values
-  const orangeDay   = calcForecastPnl(liveEntries.filter(p => p.date === today), forecastCfg);
-  const orangeWeek  = calcForecastPnl(liveEntries.filter(p => p.date >= ws && p.date <= today), forecastCfg);
-  const orangeMonth = calcForecastPnl(liveEntries.filter(p => p.date && p.date.startsWith(month)), forecastCfg);
+  // Live-only entries for forecast bars
+  const todayLive = liveEntries.filter(p => p.date === today);
+  const weekLive  = liveEntries.filter(p => p.date >= ws && p.date <= today);
+  const monthLive = liveEntries.filter(p => p.date && p.date.startsWith(month));
+
+  const liveDayPnl   = todayLive.reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
+  const liveWeekPnl  = weekLive.reduce((s,p)  => s+(parseFloat(p.pnl)||0), 0);
+  const liveMonthPnl = monthLive.reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
+
+  // Yellow = extrapolate current lot performance to end of period
+  const yellowDay   = liveDayPnl; // today = no extrapolation
+  const yellowWeek  = dayOfWeek  > 0 ? (liveWeekPnl  / dayOfWeek)  * 5 : liveWeekPnl;
+  const yellowMonth = dayOfMonth > 0 ? (liveMonthPnl / dayOfMonth) * daysInMonth : liveMonthPnl;
+
+  // Orange = target lot scaling, no extrapolation - what's been earned so far at target lots
+  const orangeDay   = calcForecastPnl(todayLive, forecastCfg);
+  const orangeWeek  = calcForecastPnl(weekLive,  forecastCfg);
+  const orangeMonth = calcForecastPnl(monthLive, forecastCfg);
 
   // Progress bars
   const progressEl = document.getElementById('incomeProgress');
@@ -2228,7 +2243,7 @@ function renderIncome() {
             <div style="width:52px;font-size:9px;color:var(--pos);text-align:right">${pct.toFixed(0)}%</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:52px;font-size:9px;color:#a07820;letter-spacing:.5px">FORECAST</div>
+            <div style="width:52px;font-size:9px;color:#a07820;letter-spacing:.5px">PROGNOSE</div>
             <div class="goal-bar-bg" style="flex:1;height:6px"><div style="height:100%;border-radius:3px;background:rgba(255,184,48,0.45);width:${pctYellow}%;transition:width .3s"></div></div>
             <div style="width:52px;font-size:9px;color:#a07820;text-align:right">${fmtVal(b.yellow)}</div>
           </div>
