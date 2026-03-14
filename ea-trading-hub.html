@@ -2133,7 +2133,7 @@ function updateForecastCfg(eaId, key, value) {
   if (!DB.settings.forecastSettings[eaId]) DB.settings.forecastSettings[eaId] = {};
   DB.settings.forecastSettings[eaId][key] = parseFloat(value);
   saveLocal();
-  renderForecast();
+  renderIncome();
 }
 
 function renderIncome() {
