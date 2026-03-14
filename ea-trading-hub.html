@@ -777,6 +777,8 @@ let INCOME_FILTER = 'all';
 })();
 
 function isActive(acc) { return acc && acc.status !== 'off' && acc.status !== 'paused'; }
+// For historical P&L: always include all entries regardless of current account status
+// isActive is only used for current balance calculations and forecasts
 function saveLocal() { localStorage.setItem('eaHub_v2', JSON.stringify(DB)); }
 
 function normalizeDate(val) {
@@ -1636,13 +1638,13 @@ function renderAnalyticsCharts(entries) {
 }
 
 function renderBalanceChart() {
-  // Balance = startCapital + cumulative P&L per day for all active live accounts
-  const liveAccs = DB.accounts.filter(a => a.type === 'Live' && isActive(a));
+  // Balance = startCapital of ALL live accounts + cumulative P&L (including inactive - historical data)
+  const allLiveAccs = DB.accounts.filter(a => a.type === 'Live');
   const livePnl = DB.pnl.filter(p => {
     if (p.entryType && p.entryType !== 'trade') return false;
-    return liveAccs.some(a => a.id == p.accountId);
+    return allLiveAccs.some(a => a.id == p.accountId);
   });
-  const startCap = liveAccs.reduce((s,a) => s + (parseFloat(a.startCapital)||0), 0);
+  const startCap = allLiveAccs.reduce((s,a) => s + (parseFloat(a.startCapital)||0), 0);
   const sorted = [...livePnl].sort((a,b) => (a.date||'').localeCompare(b.date||''));
   const byDate = {};
   sorted.forEach(p => {
@@ -1673,12 +1675,12 @@ function renderBalanceChart() {
 }
 
 function renderCombinedChart() {
-  // Bars: daily P&L last 30 days, Line: cumulative P&L
+  // Historical data: include all entries regardless of current account status
   let entries = [...DB.pnl].filter(p => !p.entryType || p.entryType === 'trade');
   if (PNL_FILTER !== 'all') {
     entries = entries.filter(p => {
       const acc = DB.accounts.find(a => a.id == p.accountId);
-      return acc && acc.type === PNL_FILTER && isActive(acc);
+      return acc && acc.type === PNL_FILTER; // no isActive - historical data
     });
   }
 
@@ -2390,11 +2392,11 @@ function renderWithdrawalChart() {
   const weeklyAmount = saved.weekly || 0;
   const startMonth  = saved.startMonth || '';
 
-  // Build daily cumulative P&L from live active accounts
+  // Build daily cumulative P&L - include ALL live accounts (historical, even inactive)
+  const allLiveAccs = DB.accounts.filter(a => a.type === 'Live');
   const livePnl = DB.pnl.filter(p => {
     if (p.entryType && p.entryType !== 'trade') return false;
-    const acc = DB.accounts.find(a => a.id == p.accountId);
-    return acc && acc.type === 'Live' && isActive(acc);
+    return allLiveAccs.some(a => a.id == p.accountId);
   });
 
   if (!livePnl.length) { el.innerHTML = ''; return; }
@@ -2402,22 +2404,46 @@ function renderWithdrawalChart() {
   const allDates = [...new Set(livePnl.map(p => p.date))].filter(Boolean).sort();
   if (!allDates.length) { el.innerHTML = ''; return; }
 
+  // Calculate avg daily profit from last 30 days (active accounts only for forecast)
+  const today = new Date().toISOString().split('T')[0];
+  const d30ago = new Date(); d30ago.setDate(d30ago.getDate()-30);
+  const d30str = d30ago.toISOString().split('T')[0];
+  const recentEntries = livePnl.filter(p => p.date >= d30str && p.date <= today);
+  const recentDays = [...new Set(recentEntries.map(p=>p.date))].length || 1;
+  const avgDailyProfit = recentEntries.reduce((s,p)=>s+(parseFloat(p.pnl)||0),0) / recentDays;
+
+  // Build historical data points
   let cumulative = 0;
   const dataPoints = [];
 
   allDates.forEach(date => {
     const dayPnl = livePnl.filter(p => p.date === date).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
     cumulative += dayPnl;
-
-    // Apply withdrawal on Fridays (day 5) only from startMonth onwards
     const d = new Date(date);
     const isFriday = d.getDay() === 5;
     const afterStart = !startMonth || date.substring(0,7) >= startMonth;
     const isWithdrawal = isFriday && weeklyAmount > 0 && afterStart;
     if (isWithdrawal) cumulative -= weeklyAmount;
-
-    dataPoints.push({ date, value: cumulative, dayPnl, isWithdrawal });
+    dataPoints.push({ date, value: cumulative, isWithdrawal, forecast: false });
   });
+
+  // Add forecast from today to end of year
+  const endOfYear = new Date(new Date().getFullYear(), 11, 31);
+  let forecastDate = new Date(today);
+  forecastDate.setDate(forecastDate.getDate() + 1);
+  while (forecastDate <= endOfYear) {
+    const ds = forecastDate.toISOString().split('T')[0];
+    cumulative += avgDailyProfit;
+    const isFriday = forecastDate.getDay() === 5;
+    const afterStart = !startMonth || ds.substring(0,7) >= startMonth;
+    const isWithdrawal = isFriday && weeklyAmount > 0 && afterStart;
+    if (isWithdrawal) cumulative -= weeklyAmount;
+    // Only add weekly points for forecast to keep chart clean
+    if (isFriday || forecastDate.getDay() === 1) {
+      dataPoints.push({ date: ds, value: parseFloat(cumulative.toFixed(2)), isWithdrawal, forecast: true });
+    }
+    forecastDate.setDate(forecastDate.getDate() + 1);
+  }
 
   el.innerHTML = `
     <div class="form-panel" style="margin-bottom:0">
@@ -2448,29 +2474,43 @@ function renderWithdrawalChart() {
     if (charts.withdrawal) { charts.withdrawal.destroy(); delete charts.withdrawal; }
 
     const labels = dataPoints.map(d => fmtDate(d.date));
-    const values = dataPoints.map(d => d.value);
+    const histValues = dataPoints.map(d => d.forecast ? null : d.value);
+    const foreValues = dataPoints.map(d => d.forecast ? d.value : null);
+    // Connect last historical point to first forecast point
+    const lastHistIdx = dataPoints.reduce((last, d, i) => !d.forecast ? i : last, -1);
+    if (lastHistIdx >= 0 && lastHistIdx + 1 < dataPoints.length) {
+      foreValues[lastHistIdx] = dataPoints[lastHistIdx].value;
+    }
 
     charts.withdrawal = new Chart(canvas, {
       type: 'line',
       data: {
         labels,
-        datasets: [{
-          label: 'Netto-Balance',
-          data: values,
-          borderColor: '#00ff9d',
-          backgroundColor: 'rgba(0,255,157,0.06)',
-          borderWidth: 2,
-          pointRadius: dataPoints.map((d, i) => {
-            // Show point on Mondays (withdrawal days)
-            if (i === 0) return 2;
-            const prev = dataPoints[i-1];
-            return getWeekKey(d.date) !== getWeekKey(prev.date) && weeklyAmount > 0 ? 6 : 2;
-          }),
-          pointBackgroundColor: dataPoints.map(d => d.isWithdrawal ? '#ff4060' : '#00ff9d'),
-          pointStyle: dataPoints.map(d => d.isWithdrawal ? 'triangle' : 'circle'),
-          fill: true,
-          tension: 0.3,
-        }]
+        datasets: [
+          {
+            label: 'Historisch',
+            data: histValues,
+            borderColor: '#00ff9d',
+            backgroundColor: 'rgba(0,255,157,0.06)',
+            borderWidth: 2,
+            pointRadius: dataPoints.map(d => d.isWithdrawal && !d.forecast ? 6 : 2),
+            pointBackgroundColor: dataPoints.map(d => d.isWithdrawal ? '#ff4060' : '#00ff9d'),
+            pointStyle: dataPoints.map(d => d.isWithdrawal ? 'triangle' : 'circle'),
+            fill: true, tension: 0.3, spanGaps: false,
+          },
+          {
+            label: 'Forecast',
+            data: foreValues,
+            borderColor: 'rgba(0,255,157,0.35)',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            borderDash: [5, 4],
+            pointRadius: dataPoints.map(d => d.isWithdrawal && d.forecast ? 5 : 0),
+            pointBackgroundColor: '#ff4060',
+            pointStyle: 'triangle',
+            fill: false, tension: 0.3, spanGaps: false,
+          }
+        ]
       },
       options: {
         responsive: true,
@@ -2481,7 +2521,7 @@ function renderWithdrawalChart() {
             callbacks: {
               label: ctx => {
                 const d = dataPoints[ctx.dataIndex];
-                const lines = [`Balance: $${d.value.toFixed(2)}`];
+                const lines = [`${d.forecast ? '📈 Forecast' : 'Balance'}: $${d.value.toFixed(2)}`];
                 if (d.isWithdrawal) lines.push(`↓ Auszahlung: -$${weeklyAmount}`);
                 return lines;
               }
@@ -2489,7 +2529,7 @@ function renderWithdrawalChart() {
           }
         },
         scales: {
-          x: { ticks: { color: '#3d5166', font: { size: 9 }, maxTicksLimit: 10 }, grid: { color: 'rgba(30,45,61,0.5)' } },
+          x: { ticks: { color: '#3d5166', font: { size: 9 }, maxTicksLimit: 12 }, grid: { color: 'rgba(30,45,61,0.5)' } },
           y: { ticks: { color: '#3d5166', font: { size: 9 }, callback: v => '$'+v.toFixed(0) }, grid: { color: 'rgba(30,45,61,0.5)' } }
         }
       }
