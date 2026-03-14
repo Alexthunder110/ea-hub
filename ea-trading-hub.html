@@ -2621,43 +2621,54 @@ function renderWithdrawalChart() {
     if (!canvas) return;
     if (charts.withdrawal) { charts.withdrawal.destroy(); delete charts.withdrawal; }
 
-    // Build chart arrays from dataPoints only
-    const allDatesChart = dataPoints.map(d => d.date);
-    const dpMap = {}; dataPoints.forEach(d => { dpMap[d.date] = d; });
+    // Historical labels + values
+    const histDates = allDates.filter(d => {
+      return livePnl.some(p => p.date === d);
+    });
 
-    const labels = allDatesChart.map(d => fmtDate(d));
-    const histValues = allDatesChart.map(d => dpMap[d] && !dpMap[d].forecast ? dpMap[d].value : null);
-    const foreValues = allDatesChart.map(d => dpMap[d] && dpMap[d].forecast ? dpMap[d].value : null);
+    // Build from startCap, accumulate real P&L day by day
+    const labels = [];
+    const vals = [];
+    let cum = startCap;
 
-    // Connect last historical to first forecast
-    const lastHistIdx = allDatesChart.reduce((last, d, i) => dpMap[d] && !dpMap[d].forecast ? i : last, -1);
-    const anchorVal = lastHistIdx >= 0 ? dpMap[allDatesChart[lastHistIdx]].value : 0;
-    if (lastHistIdx >= 0) foreValues[lastHistIdx] = anchorVal;
+    // Add start anchor
+    const firstDate = new Date(histDates[0]);
+    firstDate.setDate(firstDate.getDate() - 1);
+    labels.push(fmtDate(firstDate.toISOString().split('T')[0]));
+    vals.push(parseFloat(startCap.toFixed(2)));
 
-    // Ist-Forecast: map directly onto each forecast dataPoint date
-    const todayTs = new Date(today).getTime();
-    const istValues = allDatesChart.map((d, i) => {
-      if (i < lastHistIdx) return null;
-      if (i === lastHistIdx) return anchorVal;
-      const days = Math.round((new Date(d).getTime() - todayTs) / 86400000);
-      let val = istStartValue + (days * avgDailyProfitIst);
-      if (weeklyAmount > 0 && startMonth) {
-        let cur = new Date(today); cur.setDate(cur.getDate() + 1);
-        const target = new Date(d);
-        while (cur <= target) {
-          const cs = cur.toISOString().split('T')[0];
-          if (cur.getDay() === 5 && cs.substring(0,7) >= startMonth) val -= weeklyAmount;
-          cur.setDate(cur.getDate() + 1);
-        }
+    // Historical
+    histDates.forEach(d => {
+      const dayPnl = livePnl.filter(p => p.date === d).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
+      cum += dayPnl;
+      const isFriday = new Date(d).getDay() === 5;
+      const afterStart = !startMonth || d.substring(0,7) >= startMonth;
+      if (isFriday && weeklyAmount > 0 && afterStart) cum -= weeklyAmount;
+      labels.push(fmtDate(d));
+      vals.push(parseFloat(cum.toFixed(2)));
+    });
+
+    // Forecast from today using avgDailyProfitIst
+    const today2 = new Date(today);
+    today2.setDate(today2.getDate() + 1);
+    const endOfYear2 = new Date(new Date().getFullYear(), 11, 31);
+    while (today2 <= endOfYear2) {
+      const ds = today2.toISOString().split('T')[0];
+      cum += avgDailyProfitIst;
+      const isFriday = today2.getDay() === 5;
+      const afterStart = !startMonth || ds.substring(0,7) >= startMonth;
+      if (isFriday && weeklyAmount > 0 && afterStart) cum -= weeklyAmount;
+      if (today2.getDay() === 5 || today2.getDay() === 1) {
+        labels.push(fmtDate(ds));
+        vals.push(parseFloat(cum.toFixed(2)));
       }
-      return parseFloat(val.toFixed(2));
-    });
-    console.log('DEBUG Ist:', {
-      istStartValue, avgDailyProfitIst, today,
-      anchorVal, lastHistIdx,
-      first5: istValues.slice(lastHistIdx, lastHistIdx+5),
-      last3: istValues.slice(-3)
-    });
+      today2.setDate(today2.getDate() + 1);
+    }
+
+    // Split into historical and forecast
+    const splitIdx = histDates.length + 1; // +1 for anchor
+    const histVals = vals.map((v, i) => i < splitIdx ? v : null);
+    const foreVals = vals.map((v, i) => i >= splitIdx - 1 ? v : null);
 
     charts.withdrawal = new Chart(canvas, {
       type: 'line',
@@ -2666,34 +2677,20 @@ function renderWithdrawalChart() {
         datasets: [
           {
             label: 'Historisch',
-            data: histValues,
+            data: histVals,
             borderColor: '#00ff9d',
-            backgroundColor: 'rgba(0,255,157,0.06)',
+            backgroundColor: 'rgba(0,255,157,0.08)',
             borderWidth: 2,
-            pointRadius: dataPoints.map(d => d.isWithdrawal && !d.forecast ? 6 : 2),
-            pointBackgroundColor: dataPoints.map(d => d.isWithdrawal ? '#ff4060' : '#00ff9d'),
-            pointStyle: dataPoints.map(d => d.isWithdrawal ? 'triangle' : 'circle'),
+            pointRadius: 2,
             fill: true, tension: 0.3, spanGaps: false,
           },
           {
-            label: 'Forecast (Ziel-Lot)',
-            data: foreValues,
-            borderColor: '#f0c040',
-            backgroundColor: 'rgba(240,192,64,0.04)',
-            borderWidth: 2,
-            segment: { borderDash: () => [6, 4] },
-            pointRadius: dataPoints.map(d => d.isWithdrawal && d.forecast ? 5 : 0),
-            pointBackgroundColor: '#ff4060',
-            pointStyle: 'triangle',
-            fill: true, tension: 0.3, spanGaps: true,
-          },
-          {
             label: 'Forecast (Ist)',
-            data: istValues,
-            borderColor: 'rgba(0,255,157,0.6)',
+            data: foreVals,
+            borderColor: 'rgba(0,255,157,0.5)',
             backgroundColor: 'transparent',
             borderWidth: 2,
-            segment: { borderDash: () => [4, 4] },
+            segment: { borderDash: () => [5, 4] },
             pointRadius: 0,
             fill: false, tension: 0.3, spanGaps: false,
           }
