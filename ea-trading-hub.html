@@ -2579,8 +2579,10 @@ function renderWithdrawalChart() {
   let bankruptDate = null;
   while (forecastDate <= endOfYear) {
     const ds = forecastDate.toISOString().split('T')[0];
-    cumulative += avgDailyProfit;
-    const isFriday = forecastDate.getDay() === 5;
+    const dow = forecastDate.getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    if (!isWeekend) cumulative += avgDailyProfit;
+    const isFriday = dow === 5;
     const afterStart = !startMonth || ds.substring(0,7) >= startMonth;
     const isWithdrawal = isFriday && weeklyAmount > 0 && afterStart;
     if (isWithdrawal) cumulative -= weeklyAmount;
@@ -2589,8 +2591,7 @@ function renderWithdrawalChart() {
       bankruptDate = ds;
       break;
     }
-    // Only add weekly points for forecast to keep chart clean
-    if (isFriday || forecastDate.getDay() === 1) {
+    if (isFriday || dow === 1) {
       dataPoints.push({ date: ds, value: parseFloat(cumulative.toFixed(2)), isWithdrawal, forecast: true });
     }
     forecastDate.setDate(forecastDate.getDate() + 1);
