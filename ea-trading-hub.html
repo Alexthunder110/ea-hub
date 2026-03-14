@@ -2603,7 +2603,7 @@ function renderWithdrawalChart() {
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <span style="font-size:10px;color:var(--text3)">Wöchentliche Auszahlung ($)</span>
-            <input type="number" step="10" min="0" value="${weeklyAmount}"
+            <input type="number" step="1" min="0" value="${weeklyAmount}"
               style="background:var(--bg5);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:12px;padding:4px 10px;width:100px;text-align:right"
               oninput="saveWithdrawalPlan(this.value, null)">
           </div>
