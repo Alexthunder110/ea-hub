@@ -1413,56 +1413,69 @@ function renderMissingEntries() {
   const el = document.getElementById('missingEntriesBanner');
   if (!el) return;
 
-  // Build list of Mo-Fr dates from last 7 days (excluding today and weekend)
-  const missing = [];
   const today = new Date();
+  const missing = [];
   for (let i = 1; i <= 7; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
     const dow = d.getDay();
-    if (dow === 0 || dow === 6) continue; // skip weekend
+    if (dow === 0 || dow === 6) continue;
     const ds = d.toISOString().split('T')[0];
-
-    // Check each live EA + linked account
     DB.eas.forEach(ea => {
       const liveAccs = DB.accounts.filter(a => a.type === 'Live' && isActive(a));
       liveAccs.forEach(acc => {
-        // Only check if this EA/account combo has any historical entries
         const hasHistory = DB.pnl.some(p => p.eaId == ea.id && p.accountId == acc.id);
         if (!hasHistory) return;
         const hasEntry = DB.pnl.some(p =>
           p.eaId == ea.id && p.accountId == acc.id && p.date === ds &&
           (!p.entryType || p.entryType === 'trade')
         );
-        if (!hasEntry) {
-          missing.push({ ea: ea.name, acc: acc.number, date: ds });
-        }
+        if (!hasEntry) missing.push({ ea: ea.name, acc: acc.number, date: ds });
       });
     });
   }
 
-  if (!missing.length) { el.innerHTML = ''; return; }
+  if (!missing.length) {
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(0,255,157,0.08);border:1px solid rgba(0,255,157,0.3);border-radius:8px;padding:7px 14px">
+          <span style="font-size:14px">✅</span>
+          <span style="font-size:11px;font-weight:600;color:var(--pos)">Alle Einträge vollständig</span>
+          <span style="font-size:10px;color:var(--text3)">– letzte 7 Werktage</span>
+        </div>
+      </div>`;
+    return;
+  }
 
-  // Group by date for compact display
   const byDate = {};
   missing.forEach(m => {
     if (!byDate[m.date]) byDate[m.date] = [];
     byDate[m.date].push(`${m.ea} #${m.acc}`);
   });
 
+  const count = missing.length;
+  const detailId = 'missingDetail';
   const lines = Object.keys(byDate).sort().reverse().map(date => {
     const d = new Date(date);
     const label = d.toLocaleDateString('de-DE', { weekday:'short', day:'2-digit', month:'2-digit' });
-    return `<span style="margin-right:16px"><span style="color:var(--text2)">${label}:</span> ${byDate[date].join(', ')}</span>`;
+    return `<div style="margin-top:6px"><span style="color:var(--text2);font-weight:600">${label}:</span> <span style="color:var(--text3)">${byDate[date].join(', ')}</span></div>`;
   }).join('');
 
   el.innerHTML = `
-    <div style="background:rgba(240,192,64,0.08);border:1px solid rgba(240,192,64,0.3);border-radius:8px;padding:10px 16px;display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap">
-      <span style="color:#f0c040;font-size:12px;font-weight:700;white-space:nowrap">⚠️ Fehlende Einträge</span>
-      <span style="font-size:11px;color:var(--text3);line-height:1.7">${lines}</span>
+    <div>
+      <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(255,64,96,0.08);border:1px solid rgba(255,64,96,0.35);border-radius:8px;padding:7px 14px;cursor:pointer"
+           onclick="document.getElementById('${detailId}').style.display=document.getElementById('${detailId}').style.display==='none'?'block':'none'">
+        <span style="font-size:14px">🔴</span>
+        <span style="font-size:11px;font-weight:600;color:#ff4060">${count} fehlende Eintrag${count>1?'e':''}</span>
+        <span style="font-size:10px;color:var(--text3)">– letzte 7 Werktage</span>
+        <span style="font-size:10px;color:var(--text3);margin-left:4px">▼</span>
+      </div>
+      <div id="${detailId}" style="display:none;margin-top:8px;background:rgba(255,64,96,0.05);border:1px solid rgba(255,64,96,0.2);border-radius:8px;padding:12px 16px;font-size:11px">
+        ${lines}
+      </div>
     </div>`;
 }
-// ============================================================
+
 function saveGoal(type) {
   const dateId   = 'goal-date-live';
   const amountId = 'goal-amount-live';
