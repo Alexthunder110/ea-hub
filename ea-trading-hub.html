@@ -2564,23 +2564,18 @@ function renderWithdrawalChart() {
     dataPoints.push({ date, value: cumulative, isWithdrawal, forecast: false });
   });
 
-  // Add forecast from today to end of year – stop if balance hits zero
+  // Forecast Ziel-Lot loop
   const endOfYear = new Date(new Date().getFullYear(), 11, 31);
   let forecastDate = new Date(today);
   forecastDate.setDate(forecastDate.getDate() + 1);
   let bankruptDate = null;
-  let cumulativeIst = startCap + allDates.reduce((s, date) => {
-    return s + livePnl.filter(p => p.date === date).reduce((ss,p) => ss+(parseFloat(p.pnl)||0), 0);
-  }, 0);
-  const istPoints = [];
   while (forecastDate <= endOfYear) {
     const ds = forecastDate.toISOString().split('T')[0];
     cumulative += avgDailyProfit;
-    cumulativeIst += avgDailyProfitIst;
     const isFriday = forecastDate.getDay() === 5;
     const afterStart = !startMonth || ds.substring(0,7) >= startMonth;
     const isWithdrawal = isFriday && weeklyAmount > 0 && afterStart;
-    if (isWithdrawal) { cumulative -= weeklyAmount; cumulativeIst -= weeklyAmount; }
+    if (isWithdrawal) cumulative -= weeklyAmount;
     if (cumulative <= 0) {
       dataPoints.push({ date: ds, value: 0, isWithdrawal: false, forecast: true });
       bankruptDate = ds;
@@ -2588,9 +2583,28 @@ function renderWithdrawalChart() {
     }
     if (isFriday || forecastDate.getDay() === 1) {
       dataPoints.push({ date: ds, value: parseFloat(cumulative.toFixed(2)), isWithdrawal, forecast: true });
-      istPoints.push({ date: ds, value: Math.max(0, parseFloat(cumulativeIst.toFixed(2))), forecast: true });
     }
     forecastDate.setDate(forecastDate.getDate() + 1);
+  }
+
+  // Forecast Ist loop – independent, based on raw historical avg
+  const istPoints = [];
+  let cumulativeIst = startCap + allDates.reduce((s, date) => {
+    return s + livePnl.filter(p => p.date === date).reduce((ss,p) => ss+(parseFloat(p.pnl)||0), 0);
+  }, 0);
+  let istDate = new Date(today);
+  istDate.setDate(istDate.getDate() + 1);
+  while (istDate <= endOfYear) {
+    const ds = istDate.toISOString().split('T')[0];
+    cumulativeIst += avgDailyProfitIst;
+    const isFriday = istDate.getDay() === 5;
+    const afterStart = !startMonth || ds.substring(0,7) >= startMonth;
+    const isWithdrawal = isFriday && weeklyAmount > 0 && afterStart;
+    if (isWithdrawal) cumulativeIst -= weeklyAmount;
+    if (isFriday || istDate.getDay() === 1) {
+      istPoints.push({ date: ds, value: Math.max(0, parseFloat(cumulativeIst.toFixed(2))) });
+    }
+    istDate.setDate(istDate.getDate() + 1);
   }
 
   el.innerHTML = `
