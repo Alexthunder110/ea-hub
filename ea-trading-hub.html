@@ -2162,18 +2162,64 @@ function renderIncome() {
 
   const filterLabel = INCOME_FILTER === 'all' ? 'Alle Konten' : INCOME_FILTER;
 
+  // Calculate forecast values from EA forecast settings for the bars
+  const forecastCfg = DB.settings.forecastSettings || {};
+  const liveEntries = DB.pnl.filter(p => {
+    if (p.entryType && p.entryType !== 'trade') return false;
+    const acc = DB.accounts.find(a => a.id == p.accountId);
+    return acc && acc.type === 'Live';
+  });
+
+  // Helper: sum forecast for a period using ratio scaling
+  function calcForecastPnl(periodEntries, cfg) {
+    return periodEntries.reduce((s, p) => {
+      const eaCfg = cfg[p.eaId] || {};
+      const curLot    = eaCfg.curLot    || 0.01;
+      const targetLot = eaCfg.targetLot || curLot;
+      const ratio = curLot > 0 ? targetLot / curLot : 1;
+      return s + (parseFloat(p.pnl) || 0) * ratio;
+    }, 0);
+  }
+
+  // Days elapsed in period for extrapolation
+  const now = new Date();
+  const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); // Mon=1..Sun=7
+  const dayOfMonth = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+
+  // Yellow = extrapolate current lot performance to end of period
+  const todayLiveEntries  = liveEntries.filter(p => p.date === today);
+  const weekLiveEntries   = liveEntries.filter(p => p.date >= ws && p.date <= today);
+  const monthLiveEntries  = liveEntries.filter(p => p.date && p.date.startsWith(month));
+
+  const yellowDay   = dayPnl;  // today is today, no extrapolation needed
+  const yellowWeek  = dayOfWeek > 0 ? (weekPnl  / dayOfWeek)  * 5 : weekPnl;   // 5 trading days
+  const yellowMonth = dayOfMonth > 0 ? (monthPnl / dayOfMonth) * daysInMonth : monthPnl;
+
+  // Orange = target lot scaling applied to current period, then extrapolated
+  const orangeDayRaw   = calcForecastPnl(todayLiveEntries,  forecastCfg);
+  const orangeWeekRaw  = calcForecastPnl(weekLiveEntries,   forecastCfg);
+  const orangeMonthRaw = calcForecastPnl(monthLiveEntries,  forecastCfg);
+
+  const orangeDay   = orangeDayRaw;
+  const orangeWeek  = dayOfWeek  > 0 ? (orangeWeekRaw  / dayOfWeek)  * 5 : orangeWeekRaw;
+  const orangeMonth = dayOfMonth > 0 ? (orangeMonthRaw / dayOfMonth) * daysInMonth : orangeMonthRaw;
+
   // Progress bars
   const progressEl = document.getElementById('incomeProgress');
   const bars = [
-    { label:'Heute', pnl:dayPnl,   goal:gDay,   period:'Tag' },
-    { label:'Woche', pnl:weekPnl,  goal:gWeek,  period:'Woche' },
-    { label:'Monat', pnl:monthPnl, goal:gMonth, period:'Monat' },
+    { label:'Heute', pnl:dayPnl,   goal:gDay,   period:'Tag',   yellow:yellowDay,   orange:orangeDay   },
+    { label:'Woche', pnl:weekPnl,  goal:gWeek,  period:'Woche', yellow:yellowWeek,  orange:orangeWeek  },
+    { label:'Monat', pnl:monthPnl, goal:gMonth, period:'Monat', yellow:yellowMonth, orange:orangeMonth },
   ];
 
   progressEl.innerHTML = `<div style="display:grid;gap:14px">` + bars.map(b => {
-    const pct  = b.goal ? Math.min(100, Math.max(0, (b.pnl / b.goal) * 100)) : 0;
+    const pct       = b.goal ? Math.min(100, Math.max(0, (b.pnl    / b.goal) * 100)) : 0;
+    const pctYellow = b.goal ? Math.min(100, Math.max(0, (b.yellow / b.goal) * 100)) : 0;
+    const pctOrange = b.goal ? Math.min(100, Math.max(0, (b.orange / b.goal) * 100)) : 0;
     const done = b.goal && b.pnl >= b.goal;
     const cls  = b.pnl >= 0 ? 'var(--pos)' : 'var(--neg)';
+    const fmtVal = v => (v >= 0 ? '+$' : '-$') + Math.abs(v).toFixed(2);
     return `<div class="form-panel" style="padding:14px 18px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <span style="font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text3)">${b.label}</span>
@@ -2182,8 +2228,26 @@ function renderIncome() {
           ${b.goal ? `<span style="font-size:11px;color:var(--text3)">Ziel: \$${b.goal.toFixed(2)}</span>` : '<span style="font-size:10px;color:var(--text3)">Kein Ziel</span>'}
         </div>
       </div>
-      ${b.goal ? `<div class="goal-bar-bg" style="height:6px"><div class="goal-bar-fill ${done?'done':b.pnl<0?'neg':''}" style="width:${pct}%"></div></div>
-      <div style="font-size:9px;color:${done?'var(--pos)':'var(--text3)'};margin-top:4px">${done ? '🎯 Ziel erreicht!' : pct.toFixed(0)+'% des '+b.period+'sziels'}</div>` : ''}
+      ${b.goal ? `
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:52px;font-size:9px;color:var(--pos);letter-spacing:.5px">IST</div>
+            <div class="goal-bar-bg" style="flex:1;height:6px"><div class="goal-bar-fill ${done?'done':b.pnl<0?'neg':''}" style="width:${pct}%"></div></div>
+            <div style="width:52px;font-size:9px;color:var(--pos);text-align:right">${pct.toFixed(0)}%</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:52px;font-size:9px;color:#ffb830;letter-spacing:.5px">FORECAST</div>
+            <div class="goal-bar-bg" style="flex:1;height:6px"><div style="height:100%;border-radius:3px;background:#ffb830;width:${pctYellow}%;transition:width .3s"></div></div>
+            <div style="width:52px;font-size:9px;color:#ffb830;text-align:right">${fmtVal(b.yellow)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:52px;font-size:9px;color:#ff8c00;letter-spacing:.5px">ZIEL-LOT</div>
+            <div class="goal-bar-bg" style="flex:1;height:6px"><div style="height:100%;border-radius:3px;background:#ff8c00;width:${pctOrange}%;transition:width .3s"></div></div>
+            <div style="width:52px;font-size:9px;color:#ff8c00;text-align:right">${fmtVal(b.orange)}</div>
+          </div>
+        </div>
+        <div style="font-size:9px;color:${done?'var(--pos)':'var(--text3)'};margin-top:6px">${done ? '🎯 Ziel erreicht!' : pct.toFixed(0)+'% des '+b.period+'sziels'}</div>
+      ` : ''}
     </div>`;
   }).join('') + `</div>`;
 
