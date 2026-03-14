@@ -2181,12 +2181,6 @@ function renderIncome() {
     }, 0);
   }
 
-  // Days elapsed in period for extrapolation
-  const now = new Date();
-  const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); // Mon=1..Sun=7
-  const dayOfMonth = now.getDate();
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-
   // Days elapsed for extrapolation
   const now = new Date();
   const dayOfWeek  = now.getDay() === 0 ? 7 : now.getDay();
