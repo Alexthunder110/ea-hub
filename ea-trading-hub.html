@@ -392,11 +392,11 @@ select option { background:var(--bg4); }
 
   <div class="grid-2">
     <div class="chart-wrap">
-      <div class="chart-title" id="equityChartTitle">Kumulierter Gewinn (alle Einträge)</div>
-      <canvas id="equityChart"></canvas>
+      <div class="chart-title">Balance Live-Konten</div>
+      <canvas id="balanceChart"></canvas>
     </div>
     <div class="chart-wrap">
-      <div class="chart-title" id="pnlBarChartTitle">P&L letzte 30 Tage</div>
+      <div class="chart-title" id="pnlBarChartTitle">Kumulierter Gewinn + Tages P&L</div>
       <canvas id="pnlBarChart"></canvas>
     </div>
   </div>
@@ -1603,13 +1603,11 @@ function renderLiveDemoTables(entries, month) {
 // CHARTS
 // ============================================================
 function renderCharts() {
-  const label = PNL_FILTER === 'all' ? 'alle Einträge' : PNL_FILTER === 'Live' ? 'nur Live' : 'nur Demo';
-  const t1 = document.getElementById('equityChartTitle');
   const t2 = document.getElementById('pnlBarChartTitle');
-  if (t1) t1.textContent = `Kumulierter Gewinn (${label})`;
-  if (t2) t2.textContent = `P&L letzte 30 Tage (${label})`;
-  renderEquityChart();
-  renderPnlBarChart();
+  const label = PNL_FILTER === 'all' ? 'alle Einträge' : PNL_FILTER === 'Live' ? 'nur Live' : 'nur Demo';
+  if (t2) t2.textContent = `Kumulierter Gewinn + Tages P&L (${label})`;
+  renderBalanceChart();
+  renderCombinedChart();
 }
 
 function renderAnalyticsCharts(entries) {
@@ -1637,7 +1635,45 @@ function renderAnalyticsCharts(entries) {
   createBarChart('monthlyChart', mKeys, mVals);
 }
 
-function renderEquityChart() {
+function renderBalanceChart() {
+  // Balance = startCapital + cumulative P&L per day for all active live accounts
+  const liveAccs = DB.accounts.filter(a => a.type === 'Live' && isActive(a));
+  const livePnl = DB.pnl.filter(p => {
+    if (p.entryType && p.entryType !== 'trade') return false;
+    return liveAccs.some(a => a.id == p.accountId);
+  });
+  const startCap = liveAccs.reduce((s,a) => s + (parseFloat(a.startCapital)||0), 0);
+  const sorted = [...livePnl].sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  const byDate = {};
+  sorted.forEach(p => {
+    if (!p.date) return;
+    byDate[p.date] = (byDate[p.date]||0) + (parseFloat(p.pnl)||0);
+  });
+  const dates = Object.keys(byDate).sort();
+  const labels = []; const vals = []; let cum = startCap;
+  dates.forEach(d => { cum += byDate[d]; labels.push(fmtDate(d)); vals.push(parseFloat(cum.toFixed(2))); });
+
+  if (charts.balance) charts.balance.destroy();
+  const ctx = document.getElementById('balanceChart');
+  if (!ctx) return;
+  charts.balance = new Chart(ctx.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: labels.length ? labels : ['–'],
+      datasets: [{
+        data: vals.length ? vals : [startCap],
+        borderColor: '#00c8f0',
+        backgroundColor: 'rgba(0,200,240,0.06)',
+        fill: true, tension: 0.3, pointRadius: 2, borderWidth: 2,
+        pointBackgroundColor: '#00c8f0',
+      }]
+    },
+    options: chartOpts(false)
+  });
+}
+
+function renderCombinedChart() {
+  // Bars: daily P&L last 30 days, Line: cumulative P&L
   let entries = [...DB.pnl].filter(p => !p.entryType || p.entryType === 'trade');
   if (PNL_FILTER !== 'all') {
     entries = entries.filter(p => {
@@ -1645,58 +1681,61 @@ function renderEquityChart() {
       return acc && acc.type === PNL_FILTER && isActive(acc);
     });
   }
-  const sorted = entries.sort((a,b) => (a.date||'').localeCompare(b.date||''));
-  const labels = []; const vals = []; let cum = 0;
-  sorted.forEach(p => { cum += parseFloat(p.pnl)||0; labels.push(fmtDate(p.date)); vals.push(parseFloat(cum.toFixed(2))); });
 
-  if (charts.equity) charts.equity.destroy();
-  const ctx = document.getElementById('equityChart');
-  if (!ctx) return;
-  charts.equity = new Chart(ctx.getContext('2d'), {
-    type:'line',
-    data:{
-      labels: labels.length?labels:['–'],
-      datasets:[{
-        data: vals.length?vals:[0],
-        borderColor:'#00c8f0', backgroundColor:'rgba(0,200,240,0.06)',
-        fill:true, tension:0.3, pointRadius:2, borderWidth:2,
-        pointBackgroundColor:'#00c8f0',
-      }]
-    },
-    options: chartOpts(true)
-  });
-}
-
-function renderPnlBarChart() {
-  const labels=[]; const vals=[];
-  for(let i=29;i>=0;i--){
-    const d=new Date(); d.setDate(d.getDate()-i);
-    const ds=d.toISOString().split('T')[0];
-    let dayEntries = DB.pnl.filter(p=>p.date===ds && (!p.entryType || p.entryType === 'trade'));
-    if (PNL_FILTER !== 'all') {
-      dayEntries = dayEntries.filter(p => {
-        const acc = DB.accounts.find(a => a.id == p.accountId);
-        return acc && acc.type === PNL_FILTER && isActive(acc);
-      });
-    }
-    const sum = dayEntries.reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+  const labels = []; const barVals = []; const lineVals = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const ds = d.toISOString().split('T')[0];
+    const sum = entries.filter(p => p.date === ds).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
     labels.push(d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}));
-    vals.push(parseFloat(sum.toFixed(2)));
+    barVals.push(parseFloat(sum.toFixed(2)));
   }
+  // Cumulative line over same 30 days
+  let cum = 0;
+  barVals.forEach(v => { cum += v; lineVals.push(parseFloat(cum.toFixed(2))); });
+
   if (charts.pnlBar) charts.pnlBar.destroy();
   const ctx = document.getElementById('pnlBarChart');
   if (!ctx) return;
-  charts.pnlBar = new Chart(ctx.getContext('2d'),{
-    type:'bar',
-    data:{labels, datasets:[{
-      data:vals,
-      backgroundColor:vals.map(v=>v>=0?'rgba(0,255,157,0.55)':'rgba(255,64,96,0.55)'),
-      borderColor:vals.map(v=>v>=0?'#00ff9d':'#ff4060'),
-      borderWidth:1, borderRadius:2,
-    }]},
-    options: chartOpts(false)
+  charts.pnlBar = new Chart(ctx.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'bar',
+          data: barVals,
+          backgroundColor: barVals.map(v => v >= 0 ? 'rgba(0,255,157,0.5)' : 'rgba(255,64,96,0.5)'),
+          borderColor: barVals.map(v => v >= 0 ? '#00ff9d' : '#ff4060'),
+          borderWidth: 1, borderRadius: 2,
+          yAxisID: 'y',
+          order: 2,
+        },
+        {
+          type: 'line',
+          data: lineVals,
+          borderColor: '#00c8f0',
+          backgroundColor: 'transparent',
+          borderWidth: 2, pointRadius: 2,
+          pointBackgroundColor: '#00c8f0',
+          tension: 0.3,
+          yAxisID: 'y2',
+          order: 1,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color:'#3d5166', font:{family:'JetBrains Mono',size:9}, maxRotation:45 }, grid:{color:'rgba(30,45,61,0.3)'} },
+        y: { position:'left', ticks:{color:'#3d5166',font:{family:'JetBrains Mono',size:9}}, grid:{color:'rgba(30,45,61,0.3)'} },
+        y2: { position:'right', ticks:{color:'#00c8f0',font:{family:'JetBrains Mono',size:9}}, grid:{display:false} }
+      }
+    }
   });
 }
+
 
 function createBarChart(canvasId, labels, vals) {
   if (charts[canvasId]) charts[canvasId].destroy();
@@ -2349,6 +2388,7 @@ function renderWithdrawalChart() {
 
   const saved = DB.settings && DB.settings.withdrawalPlan || {};
   const weeklyAmount = saved.weekly || 0;
+  const startMonth  = saved.startMonth || '';
 
   // Build daily cumulative P&L from live active accounts
   const livePnl = DB.pnl.filter(p => {
@@ -2359,40 +2399,43 @@ function renderWithdrawalChart() {
 
   if (!livePnl.length) { el.innerHTML = ''; return; }
 
-  // Get all dates sorted
   const allDates = [...new Set(livePnl.map(p => p.date))].filter(Boolean).sort();
   if (!allDates.length) { el.innerHTML = ''; return; }
 
-  // Build cumulative balance line with weekly withdrawals
   let cumulative = 0;
-  let lastWithdrawalWeek = null;
   const dataPoints = [];
 
   allDates.forEach(date => {
     const dayPnl = livePnl.filter(p => p.date === date).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
     cumulative += dayPnl;
 
-    // Check if this is a new week (Monday) and apply withdrawal
+    // Apply withdrawal on Fridays (day 5) only from startMonth onwards
     const d = new Date(date);
-    const weekKey = getWeekKey(date);
-    if (weeklyAmount > 0 && lastWithdrawalWeek && weekKey !== lastWithdrawalWeek) {
-      cumulative -= weeklyAmount;
-    }
-    lastWithdrawalWeek = weekKey;
+    const isFriday = d.getDay() === 5;
+    const afterStart = !startMonth || date.substring(0,7) >= startMonth;
+    const isWithdrawal = isFriday && weeklyAmount > 0 && afterStart;
+    if (isWithdrawal) cumulative -= weeklyAmount;
 
-    dataPoints.push({ date, value: cumulative, dayPnl });
+    dataPoints.push({ date, value: cumulative, dayPnl, isWithdrawal });
   });
 
-  // Render
   el.innerHTML = `
     <div class="form-panel" style="margin-bottom:0">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
         <div class="sh" style="margin:0">💸 Balance nach Auszahlung</div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:10px;color:var(--text3)">Wöchentliche Auszahlung ($)</span>
-          <input type="number" step="10" min="0" value="${weeklyAmount}"
-            style="background:var(--bg5);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:12px;padding:4px 10px;width:100px;text-align:right"
-            onchange="saveWithdrawalPlan(this.value)">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:10px;color:var(--text3)">Start ab</span>
+            <input type="month" value="${startMonth}"
+              style="background:var(--bg5);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:12px;padding:4px 8px"
+              onchange="saveWithdrawalPlan(null, this.value)">
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:10px;color:var(--text3)">Wöchentliche Auszahlung ($)</span>
+            <input type="number" step="10" min="0" value="${weeklyAmount}"
+              style="background:var(--bg5);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:12px;padding:4px 10px;width:100px;text-align:right"
+              onchange="saveWithdrawalPlan(this.value, null)">
+          </div>
         </div>
       </div>
       <canvas id="withdrawalChart" style="width:100%;height:220px"></canvas>
@@ -2423,16 +2466,8 @@ function renderWithdrawalChart() {
             const prev = dataPoints[i-1];
             return getWeekKey(d.date) !== getWeekKey(prev.date) && weeklyAmount > 0 ? 6 : 2;
           }),
-          pointBackgroundColor: dataPoints.map((d, i) => {
-            if (i === 0) return '#00ff9d';
-            const prev = dataPoints[i-1];
-            return getWeekKey(d.date) !== getWeekKey(prev.date) && weeklyAmount > 0 ? '#ff4060' : '#00ff9d';
-          }),
-          pointStyle: dataPoints.map((d, i) => {
-            if (i === 0) return 'circle';
-            const prev = dataPoints[i-1];
-            return getWeekKey(d.date) !== getWeekKey(prev.date) && weeklyAmount > 0 ? 'triangle' : 'circle';
-          }),
+          pointBackgroundColor: dataPoints.map(d => d.isWithdrawal ? '#ff4060' : '#00ff9d'),
+          pointStyle: dataPoints.map(d => d.isWithdrawal ? 'triangle' : 'circle'),
           fill: true,
           tension: 0.3,
         }]
@@ -2446,9 +2481,8 @@ function renderWithdrawalChart() {
             callbacks: {
               label: ctx => {
                 const d = dataPoints[ctx.dataIndex];
-                const isWithdrawal = ctx.dataIndex > 0 && getWeekKey(d.date) !== getWeekKey(dataPoints[ctx.dataIndex-1].date) && weeklyAmount > 0;
                 const lines = [`Balance: $${d.value.toFixed(2)}`];
-                if (isWithdrawal) lines.push(`↓ Auszahlung: -$${weeklyAmount}`);
+                if (d.isWithdrawal) lines.push(`↓ Auszahlung: -$${weeklyAmount}`);
                 return lines;
               }
             }
@@ -2463,9 +2497,10 @@ function renderWithdrawalChart() {
   }, 50);
 }
 
-function saveWithdrawalPlan(value) {
+function saveWithdrawalPlan(weekly, startMonth) {
   if (!DB.settings.withdrawalPlan) DB.settings.withdrawalPlan = {};
-  DB.settings.withdrawalPlan.weekly = parseFloat(value) || 0;
+  if (weekly !== null && weekly !== undefined) DB.settings.withdrawalPlan.weekly = parseFloat(weekly) || 0;
+  if (startMonth !== null && startMonth !== undefined) DB.settings.withdrawalPlan.startMonth = startMonth;
   saveLocal();
   renderWithdrawalChart();
 }
