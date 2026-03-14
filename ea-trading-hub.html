@@ -2434,10 +2434,11 @@ function renderWithdrawalChart() {
     dataPoints.push({ date, value: cumulative, isWithdrawal, forecast: false });
   });
 
-  // Add forecast from today to end of year
+  // Add forecast from today to end of year – stop if balance hits zero
   const endOfYear = new Date(new Date().getFullYear(), 11, 31);
   let forecastDate = new Date(today);
   forecastDate.setDate(forecastDate.getDate() + 1);
+  let bankruptDate = null;
   while (forecastDate <= endOfYear) {
     const ds = forecastDate.toISOString().split('T')[0];
     cumulative += avgDailyProfit;
@@ -2445,6 +2446,11 @@ function renderWithdrawalChart() {
     const afterStart = !startMonth || ds.substring(0,7) >= startMonth;
     const isWithdrawal = isFriday && weeklyAmount > 0 && afterStart;
     if (isWithdrawal) cumulative -= weeklyAmount;
+    if (cumulative <= 0) {
+      dataPoints.push({ date: ds, value: 0, isWithdrawal: false, forecast: true });
+      bankruptDate = ds;
+      break;
+    }
     // Only add weekly points for forecast to keep chart clean
     if (isFriday || forecastDate.getDay() === 1) {
       dataPoints.push({ date: ds, value: parseFloat(cumulative.toFixed(2)), isWithdrawal, forecast: true });
@@ -2456,6 +2462,7 @@ function renderWithdrawalChart() {
     <div class="form-panel" style="margin-bottom:0">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
         <div class="sh" style="margin:0">💸 Balance nach Auszahlung</div>
+        ${bankruptDate ? `<div style="color:#ff4060;font-size:11px;font-weight:600;margin-top:4px">⚠️ Balance erreicht $0 am ${fmtDate(bankruptDate)} – Auszahlung zu hoch!</div>` : ""}
         <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
           <div style="display:flex;align-items:center;gap:8px">
             <span style="font-size:10px;color:var(--text3)">Start ab</span>
@@ -2537,7 +2544,7 @@ function renderWithdrawalChart() {
         },
         scales: {
           x: { ticks: { color: '#3d5166', font: { size: 9 }, maxTicksLimit: 12 }, grid: { color: 'rgba(30,45,61,0.5)' } },
-          y: { ticks: { color: '#3d5166', font: { size: 9 }, callback: v => '$'+v.toFixed(0) }, grid: { color: 'rgba(30,45,61,0.5)' } }
+          y: { min: 0, ticks: { color: '#3d5166', font: { size: 9 }, callback: v => '$'+v.toFixed(0) }, grid: { color: 'rgba(30,45,61,0.5)' } }
         }
       }
     });
