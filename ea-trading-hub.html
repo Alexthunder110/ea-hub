@@ -2816,7 +2816,7 @@ function renderStrategy() {
           var opts = '<option value="">– kein EA –</option>' + DB.eas.map(function(ea) {
             return '<option value="' + ea.id + '"' + (ea.id===r.eaId?' selected':'') + '>' + ea.name + '</option>';
           }).join('');
-          return '<select onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'eaId\',this.value)" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:2px 6px;width:110px">' + opts + '</select>';
+          return '<select onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'eaId\',this.value);renderStrategy()" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:2px 6px;width:110px">' + opts + '</select>';
         })() + '</td>' +
         '<td style="padding:8px 10px;text-align:center"><input type="month" value="' + (r.month||'') + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'month\',this.value);renderStrategy()" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:10px;padding:2px 6px"></td>' +
         '<td style="padding:8px 10px;text-align:right;color:var(--text3)">$' + (r.from||0).toLocaleString() + '</td>' +
