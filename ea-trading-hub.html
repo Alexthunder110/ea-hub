@@ -2825,7 +2825,7 @@ function renderStrategy() {
         '<td style="padding:8px 10px"><input value="' + (r.name||'').replace(/"/g,'&quot;') + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'name\',this.value)" style="background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;width:160px"></td>' +
         '<td style="padding:8px 10px">' + (function() {
           var opts = '<option value="">– kein EA –</option>' + DB.eas.map(function(ea) {
-            return '<option value="' + ea.id + '"' + (ea.id===r.eaId?' selected':'') + '>' + ea.name + '</option>';
+            return '<option value="' + ea.id + '"' + (String(ea.id)===String(r.eaId)?' selected':'') + '>' + ea.name + '</option>';
           }).join('');
           return '<select onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'eaId\',this.value)" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:2px 6px;width:110px">' + opts + '</select>';
         })() + '</td>' +
@@ -2890,7 +2890,7 @@ function renderStrategy() {
       '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:16px">' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">' +
           (function() {
-        var ea = r.eaId ? DB.eas.find(function(e){ return e.id === r.eaId; }) : null;
+        var ea = r.eaId ? DB.eas.find(function(e){ return String(e.id) === String(r.eaId); }) : null;
         var displayName = ea ? ea.name : (r.name||'–');
         return '<span style="font-size:15px;font-weight:800;color:var(--text);font-family:\'Bebas Neue\',sans-serif;letter-spacing:1px">' + displayName + '</span>';
       })() +
