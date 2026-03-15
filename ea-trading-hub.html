@@ -2781,14 +2781,16 @@ function fmtMonth(m) {
   return d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
 }
 
+;
+
 function renderStrategy() {
   const el = document.getElementById('strategyContent');
   if (!el) return;
   const data = getStrategy();
 
-  // Group capital plan by month
+  // Group capitalPlan by month
   const capMonths = {};
-  data.capitalPlan.forEach(r => {
+  data.capitalPlan.forEach(function(r) {
     const m = r.month || 'unbekannt';
     if (!capMonths[m]) capMonths[m] = [];
     capMonths[m].push(r);
@@ -2798,203 +2800,134 @@ function renderStrategy() {
   const statusLabel = { planned:'📋 Geplant', active:'⏳ Laufend', done:'✅ Erreicht' };
   const statusColor = { planned:'var(--text3)', active:'var(--warn)', done:'var(--pos)' };
 
-  let capitalHtml = Object.keys(capMonths).sort().map(month => {
+  // Build capital plan table rows
+  let capitalHtml = '';
+  Object.keys(capMonths).sort().forEach(function(month) {
     const rows = capMonths[month];
-    const total = rows.reduce((s,r) => s + (parseFloat(r.deposit)||0), 0);
-    const rowsHtml = rows.map(r => `<tr>
-      <td style="padding:8px 10px"><input value="${r.name}" onchange="updateStrategyItem('capitalPlan','${r.id}','name',this.value)" style="background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;width:160px"></td>
-      <td style="padding:8px 10px;text-align:center">
-        <input type="month" value="${r.month||''}" onchange="updateStrategyItem('capitalPlan','${r.id}','month',this.value);renderStrategy()" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:10px;padding:2px 6px">
-      </td>
-      <td style="padding:8px 10px;text-align:right;color:var(--text3)">$${(r.from||0).toLocaleString()}</td>
-      <td style="padding:8px 10px;text-align:right"><input type="number" value="${r.to}" onchange="updateStrategyItem('capitalPlan','${r.id}','to',parseFloat(this.value)||0);updateDeposit('${r.id}')" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;width:80px;text-align:right;padding:2px 6px"></td>
-      <td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700">$${(r.deposit||0).toLocaleString()}</td>
-      <td style="padding:8px 10px"><select onchange="updateStrategyItem('capitalPlan','${r.id}','status',this.value)" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:${statusColor[r.status]||'var(--text3)'};font-family:var(--font-mono);font-size:10px;padding:2px 4px">${statusOpts.map(s => `<option value="${s}" ${s===r.status?'selected':''}>${statusLabel[s]}</option>`).join('')}</select></td>
-      <td style="padding:8px 10px"><input value="${r.note||''}" placeholder="Notiz..." onchange="updateStrategyItem('capitalPlan','${r.id}','note',this.value)" style="background:transparent;border:none;color:var(--text3);font-family:var(--font-mono);font-size:10px;width:140px"></td>
-      <td style="padding:8px 10px"><button onclick="deleteStrategyItem('capitalPlan','${r.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px">✕</button></td>
-    </tr>`).join('');
-    return `<tr style="background:var(--bg3)"><td colspan="8" style="padding:6px 10px;font-size:10px;font-weight:700;color:var(--text2);letter-spacing:0.08em;text-transform:uppercase">${fmtMonth(month)}</td></tr>
-    ${rowsHtml}
-    <tr style="border-top:1px solid var(--border)">
-      <td colspan="4" style="padding:6px 10px;font-size:11px;font-weight:700;color:var(--text2)">Gesamt ${fmtMonth(month)}</td>
-      <td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--accent)">$${total.toLocaleString()}</td>
-      <td colspan="3"></td>
-    </tr>`;
-  }).join('');
+    const total = rows.reduce(function(s,r){ return s + (parseFloat(r.deposit)||0); }, 0);
+    capitalHtml += '<tr style="background:var(--bg3)"><td colspan="8" style="padding:6px 10px;font-size:10px;font-weight:700;color:var(--text2);letter-spacing:0.08em;text-transform:uppercase">' + fmtMonth(month) + '</td></tr>';
+    rows.forEach(function(r) {
+      const opts = statusOpts.map(function(s) {
+        return '<option value="' + s + '"' + (s===r.status?' selected':'') + '>' + statusLabel[s] + '</option>';
+      }).join('');
+      capitalHtml += '<tr>' +
+        '<td style="padding:8px 10px"><input value="' + (r.name||'').replace(/"/g,'&quot;') + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'name\',this.value)" style="background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;width:160px"></td>' +
+        '<td style="padding:8px 10px;text-align:center"><input type="month" value="' + (r.month||'') + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'month\',this.value);renderStrategy()" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:10px;padding:2px 6px"></td>' +
+        '<td style="padding:8px 10px;text-align:right;color:var(--text3)">$' + (r.from||0).toLocaleString() + '</td>' +
+        '<td style="padding:8px 10px;text-align:right"><input type="number" value="' + (r.to||0) + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'to\',parseFloat(this.value)||0);updateDeposit(\'' + r.id + '\')" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;width:80px;text-align:right;padding:2px 6px"></td>' +
+        '<td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700">$' + (r.deposit||0).toLocaleString() + '</td>' +
+        '<td style="padding:8px 10px"><select onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'status\',this.value)" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:' + (statusColor[r.status]||'var(--text3)') + ';font-family:var(--font-mono);font-size:10px;padding:2px 4px">' + opts + '</select></td>' +
+        '<td style="padding:8px 10px"><input value="' + (r.note||'').replace(/"/g,'&quot;') + '" placeholder="Notiz..." onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'note\',this.value)" style="background:transparent;border:none;color:var(--text3);font-family:var(--font-mono);font-size:10px;width:140px"></td>' +
+        '<td style="padding:8px 10px"><button onclick="deleteStrategyItem(\'capitalPlan\',\'' + r.id + '\')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px">✕</button></td>' +
+        '</tr>';
+    });
+    capitalHtml += '<tr style="border-top:1px solid var(--border)"><td colspan="4" style="padding:6px 10px;font-size:11px;font-weight:700;color:var(--text2)">Gesamt ' + fmtMonth(month) + '</td><td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--accent)">$' + total.toLocaleString() + '</td><td colspan="3"></td></tr>';
+  });
 
   // EA costs
-  const costsHtml = data.eaCosts.map(r => `<tr>
-    <td style="padding:8px 10px"><input value="${r.name}" onchange="updateStrategyItem('eaCosts','${r.id}','name',this.value)" style="background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;width:180px"></td>
-    <td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700">$<input type="number" value="${r.price}" onchange="updateStrategyItem('eaCosts','${r.id}','price',parseFloat(this.value)||0)" style="background:transparent;border:none;color:var(--accent);font-family:var(--font-mono);font-size:11px;width:90px;font-weight:700"></td>
-    <td style="padding:8px 10px"><input value="${r.type}" onchange="updateStrategyItem('eaCosts','${r.id}','type',this.value)" style="background:transparent;border:none;color:var(--text3);font-family:var(--font-mono);font-size:11px;width:100px"></td>
-    <td style="padding:8px 10px"><input value="${r.when}" onchange="updateStrategyItem('eaCosts','${r.id}','when',this.value)" style="background:transparent;border:none;color:var(--text3);font-family:var(--font-mono);font-size:11px;width:120px"></td>
-    <td style="padding:8px 10px"><button onclick="deleteStrategyItem('eaCosts','${r.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px">✕</button></td>
-  </tr>`).join('');
-  const totalCosts = data.eaCosts.reduce((s,r) => s + (parseFloat(r.price)||0), 0);
-
-  // EA cards - group by month, dynamic filter tabs
-  const allMonths = [...new Set(data.eaCards.map(e => e.month||'').filter(Boolean))].sort();
-  const filtered = strategyFilter === 'all' ? data.eaCards : data.eaCards.filter(e => e.month === strategyFilter);
-
-  const filterTabs = [
-    `<button onclick="strategyFilter='all';renderStrategy()" class="pnl-filter-btn ${strategyFilter==='all'?'active':''}" style="font-size:10px;padding:4px 10px">Alle</button>`,
-    ...allMonths.map(m => `<button onclick="strategyFilter='${m}';renderStrategy()" class="pnl-filter-btn ${strategyFilter===m?'active':''}" style="font-size:10px;padding:4px 10px">${fmtMonth(m)}</button>`)
-  ].join('');
-
-  const badgeColor = b => b.includes('Live') ? 'rgba(0,255,157,0.15)' : b.includes('kaufen') || b.includes('schalten') ? 'rgba(240,192,64,0.15)' : 'rgba(100,100,100,0.2)';
-  const badgeTextColor = b => b.includes('Live') ? 'var(--pos)' : b.includes('kaufen') || b.includes('schalten') ? 'var(--warn)' : 'var(--text3)';
-  const statColor = cls => cls === 'pos' ? 'var(--pos)' : cls === 'neg' ? 'var(--neg)' : 'var(--text)';
-
-  const cardsHtml = filtered.map(e => `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:16px">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-      <div><span style="font-size:15px;font-weight:800;color:var(--text);font-family:'Bebas Neue',sans-serif;letter-spacing:1px">${e.name}</span>${e.account?`<span style="font-size:9px;color:var(--text3);margin-left:6px">#${e.account}</span>`:''}</div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <span style="font-size:9px;padding:3px 8px;border-radius:4px;background:${badgeColor(e.badge)};color:${badgeTextColor(e.badge)};font-weight:600">${e.badge}</span>
-        <button onclick="deleteStrategyItem('eaCards','${e.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px">✕</button>
-      </div>
-    </div>
-    <div style="font-size:10px;color:var(--text3);margin-bottom:4px">${e.account?`Konto <strong style="color:var(--text2)">#${e.account}</strong> &nbsp;`:''}Kapital <strong style="color:var(--text2)">$${(e.capitalFrom||0).toLocaleString()} → $${(e.capitalTo||0).toLocaleString()}</strong></div>
-    <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Instrument <strong style="color:var(--text2)">${e.instrument}</strong>${e.note?` &nbsp; ${e.note}`:''}</div>
-    <div style="font-size:9px;color:var(--accent);margin-bottom:8px">📅 ${fmtMonth(e.month)}</div>
-    <div style="border-top:1px solid var(--border);padding-top:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-      <div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">${e.stat1Label}</div><div style="font-size:13px;font-weight:700;color:${statColor(e.stat1cls)}">${e.stat1}</div></div>
-      <div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">${e.stat2Label}</div><div style="font-size:13px;font-weight:700;color:${statColor(e.stat2cls)}">${e.stat2}</div></div>
-      <div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">${e.stat3Label}</div><div style="font-size:11px;font-weight:700;color:${statColor(e.stat3cls)}">${e.stat3}</div></div>
-    </div>
-  </div>`).join('');
-
-  // EA add form month options - dynamic from existing months + future months
-  const monthOpts = ['2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12']
-    .map(m => `<option value="${m}">${fmtMonth(m)}</option>`).join('');
-
-  el.innerHTML = `<div style="display:flex;flex-direction:column;gap:24px">
-    <div class="form-panel">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <div class="sh" style="margin:0">💰 Kapital-Einzahlungen</div>
-        <button onclick="addStrategyCapital()" class="btn btn-primary" style="font-size:10px;padding:5px 12px">+ Position</button>
-      </div>
-      <div class="table-wrap"><table><thead><tr>
-        <th>Position</th><th>Monat</th><th style="text-align:right">Von</th><th style="text-align:right">Auf</th>
-        <th style="text-align:right">Einzahlung</th><th>Status</th><th>Notiz</th><th></th>
-      </tr></thead><tbody>${capitalHtml}</tbody></table></div>
-    </div>
-    <div class="form-panel">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <div class="sh" style="margin:0">🛒 EA-Kaufkosten</div>
-        <button onclick="addStrategyCost()" class="btn btn-primary" style="font-size:10px;padding:5px 12px">+ EA</button>
-      </div>
-      <div class="table-wrap"><table><thead><tr><th>EA</th><th style="text-align:right">Preis</th><th>Typ</th><th>Wann</th><th></th></tr></thead>
-      <tbody>${costsHtml}<tr style="border-top:1px solid var(--border)"><td style="padding:6px 10px;font-weight:700;color:var(--text2)">Gesamt</td><td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--accent)">$${totalCosts.toLocaleString()}</td><td colspan="3"></td></tr></tbody></table>
-      </div>
-    </div>
-    <div class="form-panel">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
-        <div class="sh" style="margin:0">🤖 Expert Advisors</div>
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          <div style="display:flex;gap:6px;flex-wrap:wrap">${filterTabs}</div>
-          <button onclick="document.getElementById('eaAddForm').style.display=document.getElementById('eaAddForm').style.display==='none'?'block':'none'" class="btn btn-primary" style="font-size:10px;padding:5px 12px">+ EA</button>
-        </div>
-      </div>
-      <div id="eaAddForm" style="display:none;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;padding:16px;margin-bottom:16px">
-        <div class="sh" style="margin-bottom:12px;font-size:11px">Neuen EA anlegen</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
-          <div><label style="font-size:9px;color:var(--text3)">NAME</label><input id="ea-new-name" placeholder="EA Name" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-          <div><label style="font-size:9px;color:var(--text3)">BADGE</label><input id="ea-new-badge" placeholder="z.B. Juni – kaufen" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-          <div><label style="font-size:9px;color:var(--text3)">MONAT</label><select id="ea-new-phase" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box">${monthOpts}</select></div>
-          <div><label style="font-size:9px;color:var(--text3)">KONTO #</label><input id="ea-new-account" placeholder="optional" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-          <div><label style="font-size:9px;color:var(--text3)">KAPITAL VON</label><input id="ea-new-capfrom" type="number" placeholder="0" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-          <div><label style="font-size:9px;color:var(--text3)">KAPITAL BIS</label><input id="ea-new-capto" type="number" placeholder="1000" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-          <div><label style="font-size:9px;color:var(--text3)">INSTRUMENT</label><input id="ea-new-instrument" placeholder="XAUUSD" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-          <div><label style="font-size:9px;color:var(--text3)">NOTIZ</label><input id="ea-new-note" placeholder="z.B. Entwickler: Puscasu" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-        </div>
-        <div style="font-size:9px;color:var(--text3);margin-bottom:8px;letter-spacing:0.08em">KENNZAHLEN</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
-          <div><input id="ea-new-s1l" placeholder="Label (z.B. P&L)" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:4px 8px;box-sizing:border-box;margin-bottom:4px"><input id="ea-new-s1v" placeholder="Wert" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:4px 8px;box-sizing:border-box"><select id="ea-new-s1c" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:3px;margin-top:3px;box-sizing:border-box"><option value="">neutral</option><option value="pos">grün</option><option value="neg">rot</option></select></div>
-          <div><input id="ea-new-s2l" placeholder="Label" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:4px 8px;box-sizing:border-box;margin-bottom:4px"><input id="ea-new-s2v" placeholder="Wert" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:4px 8px;box-sizing:border-box"><select id="ea-new-s2c" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:3px;margin-top:3px;box-sizing:border-box"><option value="">neutral</option><option value="pos">grün</option><option value="neg">rot</option></select></div>
-          <div><input id="ea-new-s3l" placeholder="Label" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:4px 8px;box-sizing:border-box;margin-bottom:4px"><input id="ea-new-s3v" placeholder="Wert" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:4px 8px;box-sizing:border-box"><select id="ea-new-s3c" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:3px;margin-top:3px;box-sizing:border-box"><option value="">neutral</option><option value="pos">grün</option><option value="neg">rot</option></select></div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button onclick="saveNewStrategyEA()" class="btn btn-primary" style="font-size:10px;padding:5px 14px">💾 Speichern</button>
-          <button onclick="document.getElementById('eaAddForm').style.display='none'" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:5px 14px;cursor:pointer">Abbrechen</button>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">${cardsHtml}</div>
-    </div>
-  </div>`;
-}
-function updateStrategyItem(section, id, key, value) {
-  const data = getStrategy();
-  const item = data[section].find(r => r.id === id);
-  if (item) { item[key] = value; saveStrategy(data); }
-}
-
-function updateDeposit(id) {
-  const data = getStrategy();
-  const item = data.capitalPlan.find(r => r.id === id);
-  if (item) { item.deposit = Math.max(0, (item.to||0) - (item.from||0)); saveStrategy(data); renderStrategy(); }
-}
-
-function deleteStrategyItem(section, id) {
-  const data = getStrategy();
-  data[section] = data[section].filter(r => r.id !== id);
-  saveStrategy(data); renderStrategy();
-}
-
-function addStrategyCapital() {
-  const data = getStrategy();
-  const nextMonth = new Date(); nextMonth.setMonth(nextMonth.getMonth()+1); const nm = nextMonth.toISOString().substring(0,7); data.capitalPlan.push({ id:'s'+Date.now(), month:nm, name:'', from:0, to:0, deposit:0, status:'planned', note:'' });
-  saveStrategy(data); renderStrategy();
-}
-
-function addStrategyCost() {
-  const data = getStrategy();
-  data.eaCosts.push({ id:'c'+Date.now(), name:'', price:0, type:'Einmalkauf', when:'', note:'' });
-  saveStrategy(data); renderStrategy();
-}
-
-function addStrategyEA() {
-  const data = getStrategy();
-  data.eaCards.push({ id:'e'+Date.now(), name:'Neuer EA', badge:'Geplant', account:'', capitalFrom:0, capitalTo:0, instrument:'', stat1Label:'', stat1:'', stat1cls:'', stat2Label:'', stat2:'', stat2cls:'', stat3Label:'', stat3:'', stat3cls:'', phase:'live', note:'' });
-  saveStrategy(data); renderStrategy();
-}
-
-
-function renameStrategyPhase(oldPhase, newPhase) {
-  if (!newPhase.trim()) return;
-  const data = getStrategy();
-  data.capitalPlan.forEach(r => { if (r.phase === oldPhase) r.phase = newPhase; });
-  saveStrategy(data);
-}
-
-function saveNewStrategyEA() {
-  const g = id => document.getElementById(id);
-  const name = g('ea-new-name').value.trim();
-  if (!name) { alert('Name ist Pflicht'); return; }
-  const data = getStrategy();
-  data.eaCards.push({
-    id: 'e'+Date.now(),
-    name,
-    badge: g('ea-new-badge').value || 'Geplant',
-    account: g('ea-new-account').value || '',
-    capitalFrom: parseFloat(g('ea-new-capfrom').value) || 0,
-    capitalTo: parseFloat(g('ea-new-capto').value) || 0,
-    instrument: g('ea-new-instrument').value || '',
-    note: g('ea-new-note').value || '',
-    month: g('ea-new-phase').value || '2026-04',
-    stat1Label: g('ea-new-s1l').value || '',
-    stat1: g('ea-new-s1v').value || '',
-    stat1cls: g('ea-new-s1c').value || '',
-    stat2Label: g('ea-new-s2l').value || '',
-    stat2: g('ea-new-s2v').value || '',
-    stat2cls: g('ea-new-s2c').value || '',
-    stat3Label: g('ea-new-s3l').value || '',
-    stat3: g('ea-new-s3v').value || '',
-    stat3cls: g('ea-new-s3c').value || '',
+  let costsHtml = '';
+  data.eaCosts.forEach(function(r) {
+    costsHtml += '<tr>' +
+      '<td style="padding:8px 10px"><input value="' + (r.name||'').replace(/"/g,'&quot;') + '" onchange="updateStrategyItem(\'eaCosts\',\'' + r.id + '\',\'name\',this.value)" style="background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;width:180px"></td>' +
+      '<td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700">$<input type="number" value="' + (r.price||0) + '" onchange="updateStrategyItem(\'eaCosts\',\'' + r.id + '\',\'price\',parseFloat(this.value)||0)" style="background:transparent;border:none;color:var(--accent);font-family:var(--font-mono);font-size:11px;width:90px;font-weight:700"></td>' +
+      '<td style="padding:8px 10px"><input value="' + (r.type||'').replace(/"/g,'&quot;') + '" onchange="updateStrategyItem(\'eaCosts\',\'' + r.id + '\',\'type\',this.value)" style="background:transparent;border:none;color:var(--text3);font-family:var(--font-mono);font-size:11px;width:100px"></td>' +
+      '<td style="padding:8px 10px"><input value="' + (r.when||'').replace(/"/g,'&quot;') + '" onchange="updateStrategyItem(\'eaCosts\',\'' + r.id + '\',\'when\',this.value)" style="background:transparent;border:none;color:var(--text3);font-family:var(--font-mono);font-size:11px;width:120px"></td>' +
+      '<td style="padding:8px 10px"><button onclick="deleteStrategyItem(\'eaCosts\',\'' + r.id + '\')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px">✕</button></td>' +
+      '</tr>';
   });
-  saveStrategy(data);
-  document.getElementById('eaAddForm').style.display = 'none';
-  renderStrategy();
+  const totalCosts = data.eaCosts.reduce(function(s,r){ return s + (parseFloat(r.price)||0); }, 0);
+
+  // EA cards from capitalPlan – auto-calculate stats from P&L DB
+  const allMonths = [];
+  data.capitalPlan.forEach(function(r) { if (r.month && allMonths.indexOf(r.month)<0) allMonths.push(r.month); });
+  allMonths.sort();
+
+  const filteredPlan = strategyFilter === 'all' ? data.capitalPlan : data.capitalPlan.filter(function(r){ return r.month === strategyFilter; });
+
+  let filterTabs = '<button onclick="strategyFilter=\'all\';renderStrategy()" class="pnl-filter-btn ' + (strategyFilter==='all'?'active':'') + '" style="font-size:10px;padding:4px 10px">Alle</button>';
+  allMonths.forEach(function(m) {
+    filterTabs += '<button onclick="strategyFilter=\'' + m + '\';renderStrategy()" class="pnl-filter-btn ' + (strategyFilter===m?'active':'') + '" style="font-size:10px;padding:4px 10px">' + fmtMonth(m) + '</button>';
+  });
+
+  let cardsHtml = '';
+  filteredPlan.forEach(function(r) {
+    // Find linked account
+    const acc = DB.accounts.find(function(a){ return a.number == r.account || a.id == r.accountId; });
+    let s1l='P&L', s1v='TBD', s1c='';
+    let s2l='Win-Rate', s2v='TBD', s2c='';
+    let s3l='Max DD', s3v='TBD', s3c='';
+
+    if (acc) {
+      const pnlEntries = DB.pnl.filter(function(p){ return p.accountId==acc.id && (!p.entryType||p.entryType==='trade'); });
+      if (pnlEntries.length > 0) {
+        const total = pnlEntries.reduce(function(s,p){ return s+(parseFloat(p.pnl)||0); }, 0);
+        const wins = pnlEntries.filter(function(p){ return (parseFloat(p.pnl)||0)>0; }).length;
+        const wr = ((wins/pnlEntries.length)*100).toFixed(0);
+        const maxDd = Math.max.apply(null, pnlEntries.map(function(p){ return parseFloat(p.dd)||0; }));
+        s1v = (total>=0?'+$':'-$') + Math.abs(total).toFixed(2); s1c = total>=0?'pos':'neg';
+        s2v = wr+'%'; s2c = wr>=60?'pos':'';
+        s3v = '$'+maxDd.toFixed(2);
+      }
+    }
+
+    const statColor = function(c){ return c==='pos'?'var(--pos)':c==='neg'?'var(--neg)':'var(--text)'; };
+    const statusBadge = r.status==='done' ? '✅ Erreicht' : r.status==='active' ? '⏳ Laufend' : '📋 Geplant';
+    const badgeBg = r.status==='done' ? 'rgba(0,255,157,0.15)' : r.status==='active' ? 'rgba(0,200,240,0.15)' : 'rgba(100,100,100,0.15)';
+    const badgeCol = r.status==='done' ? 'var(--pos)' : r.status==='active' ? 'var(--accent)' : 'var(--text3)';
+
+    cardsHtml +=
+      '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:16px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">' +
+          '<span style="font-size:15px;font-weight:800;color:var(--text);font-family:\'Bebas Neue\',sans-serif;letter-spacing:1px">' + (r.name||'–') + '</span>' +
+          '<div style="display:flex;gap:6px;align-items:center">' +
+            '<span style="font-size:9px;padding:3px 8px;border-radius:4px;background:' + badgeBg + ';color:' + badgeCol + ';font-weight:600">' + statusBadge + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div style="font-size:10px;color:var(--text3);margin-bottom:4px">Kapital <strong style="color:var(--text2)">$' + (r.from||0).toLocaleString() + ' → $' + (r.to||0).toLocaleString() + '</strong></div>' +
+        '<div style="font-size:9px;color:var(--accent);margin-bottom:8px">📅 ' + fmtMonth(r.month) + '</div>' +
+        (r.note ? '<div style="font-size:10px;color:var(--text3);margin-bottom:8px">' + r.note + '</div>' : '') +
+        '<div style="border-top:1px solid var(--border);padding-top:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px">' +
+          '<div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">' + s1l + '</div><div style="font-size:13px;font-weight:700;color:' + statColor(s1c) + '">' + s1v + '</div></div>' +
+          '<div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">' + s2l + '</div><div style="font-size:13px;font-weight:700;color:' + statColor(s2c) + '">' + s2v + '</div></div>' +
+          '<div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">' + s3l + '</div><div style="font-size:13px;font-weight:700;color:' + statColor(s3c) + '">' + s3v + '</div></div>' +
+        '</div>' +
+      '</div>';
+  });
+
+  el.innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:24px">' +
+      '<div class="form-panel">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">' +
+          '<div class="sh" style="margin:0">💰 Kapital-Einzahlungen</div>' +
+          '<button onclick="addStrategyCapital()" class="btn btn-primary" style="font-size:10px;padding:5px 12px">+ Position</button>' +
+        '</div>' +
+        '<div class="table-wrap"><table><thead><tr>' +
+          '<th>Position</th><th>Monat</th><th style="text-align:right">Von</th><th style="text-align:right">Auf</th>' +
+          '<th style="text-align:right">Einzahlung</th><th>Status</th><th>Notiz</th><th></th>' +
+        '</tr></thead><tbody>' + capitalHtml + '</tbody></table></div>' +
+      '</div>' +
+      '<div class="form-panel">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">' +
+          '<div class="sh" style="margin:0">🛒 EA-Kaufkosten</div>' +
+          '<button onclick="addStrategyCost()" class="btn btn-primary" style="font-size:10px;padding:5px 12px">+ EA</button>' +
+        '</div>' +
+        '<div class="table-wrap"><table><thead><tr><th>EA</th><th style="text-align:right">Preis</th><th>Typ</th><th>Wann</th><th></th></tr></thead>' +
+        '<tbody>' + costsHtml +
+          '<tr style="border-top:1px solid var(--border)"><td style="padding:6px 10px;font-weight:700;color:var(--text2)">Gesamt</td>' +
+          '<td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--accent)">$' + totalCosts.toLocaleString() + '</td><td colspan="3"></td></tr>' +
+        '</tbody></table></div>' +
+      '</div>' +
+      '<div class="form-panel">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">' +
+          '<div class="sh" style="margin:0">🤖 Expert Advisors</div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap">' + filterTabs + '</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">' + cardsHtml + '</div>' +
+      '</div>' +
+    '</div>';
 }
+
+
 
 </script>
 </body>
