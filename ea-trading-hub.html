@@ -409,8 +409,24 @@ select option { background:var(--bg4); }
     <tbody id="todayRows"></tbody></table>
   </div>
 
-  <div class="sh">Offene To Dos</div>
-  <div id="todoSummary"></div>
+  <!-- 3-Spalten Dashboard -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px">
+    <!-- Links: Offene To-Dos -->
+    <div class="form-panel" style="margin:0">
+      <div class="sh" style="margin-bottom:12px">✅ Offene To Dos</div>
+      <div id="todoSummary"></div>
+    </div>
+    <!-- Mitte: Einzahlungsplan -->
+    <div class="form-panel" style="margin:0">
+      <div class="sh" style="margin-bottom:12px">💰 Einzahlungsplan</div>
+      <div id="overviewDepositPlan"></div>
+    </div>
+    <!-- Rechts: Wochengewinn -->
+    <div class="form-panel" style="margin:0">
+      <div class="sh" style="margin-bottom:12px">📤 Wochengewinn je EA</div>
+      <div id="overviewWeeklyPnl"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ===== KONTEN ===== -->
@@ -941,6 +957,10 @@ function renderAll() {
   renderTodos();
   renderTodoSummary();
   updateSelects();
+  setTimeout(function() {
+    renderOverviewDepositPlan();
+    renderOverviewWeeklyPnl();
+  }, 0);
   renderCharts();
   renderTodayRows();
   renderGoalProgress();
@@ -2985,6 +3005,93 @@ function addStrategyCost() {
   const data = getStrategy();
   data.eaCosts.push({ id:'c'+Date.now(), name:'', price:0, type:'Einmalkauf', when:'', note:'' });
   saveStrategy(data); renderStrategy();
+}
+
+
+function renderOverviewDepositPlan() {
+  const el = document.getElementById('overviewDepositPlan');
+  if (!el) return;
+  const data = getStrategy();
+  const today = new Date().toISOString().substring(0,7);
+  const upcoming = data.capitalPlan
+    .filter(function(r) { return r.status !== 'done' && r.month >= today; })
+    .sort(function(a,b) { return (a.month||'').localeCompare(b.month||''); })
+    .slice(0, 6);
+
+  if (!upcoming.length) {
+    el.innerHTML = '<span style="color:var(--text3);font-size:11px">Keine geplanten Einzahlungen.</span>';
+    return;
+  }
+
+  let html = '';
+  upcoming.forEach(function(r) {
+    const ea = r.eaId ? DB.eas.find(function(e){ return String(e.id)===String(r.eaId); }) : null;
+    const name = ea ? ea.name : (r.name || '–');
+    const statusColor = r.status==='active' ? 'var(--accent)' : 'var(--text3)';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">' +
+      '<div>' +
+        '<div style="font-size:11px;font-weight:600;color:var(--text)">' + name + '</div>' +
+        '<div style="font-size:9px;color:var(--text3)">' + fmtMonth(r.month) + '</div>' +
+      '</div>' +
+      '<div style="font-size:13px;font-weight:700;color:var(--accent)">+$' + (r.deposit||0).toLocaleString() + '</div>' +
+    '</div>';
+  });
+
+  const total = upcoming.reduce(function(s,r){ return s+(parseFloat(r.deposit)||0); }, 0);
+  html += '<div style="display:flex;justify-content:space-between;padding-top:8px">' +
+    '<span style="font-size:10px;color:var(--text3)">Gesamt geplant</span>' +
+    '<span style="font-size:13px;font-weight:700;color:var(--accent)">$' + total.toLocaleString() + '</span>' +
+  '</div>';
+
+  el.innerHTML = html;
+}
+
+function renderOverviewWeeklyPnl() {
+  const el = document.getElementById('overviewWeeklyPnl');
+  if (!el) return;
+
+  const today = new Date().toISOString().split('T')[0];
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+  const ws = weekStart.toISOString().split('T')[0];
+
+  const liveAccs = DB.accounts.filter(function(a){ return a.type==='Live' && isActive(a); });
+
+  let rows = [];
+  DB.eas.forEach(function(ea) {
+    const entries = DB.pnl.filter(function(p) {
+      if (p.entryType && p.entryType !== 'trade') return false;
+      if (p.eaId != ea.id) return false;
+      if (!p.date || p.date < ws || p.date > today) return false;
+      return liveAccs.some(function(a){ return a.id == p.accountId; });
+    });
+    if (!entries.length) return;
+    const weekPnl = entries.reduce(function(s,p){ return s+(parseFloat(p.pnl)||0); }, 0);
+    rows.push({ name: ea.name, weekPnl: weekPnl });
+  });
+
+  if (!rows.length) {
+    el.innerHTML = '<span style="color:var(--text3);font-size:11px">Noch keine Einträge diese Woche.</span>';
+    return;
+  }
+
+  let html = '';
+  rows.forEach(function(r) {
+    const cls = r.weekPnl >= 0 ? 'var(--pos)' : 'var(--neg)';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">' +
+      '<span style="font-size:11px;font-weight:600;color:var(--text)">' + r.name + '</span>' +
+      '<span style="font-size:13px;font-weight:700;color:' + cls + '">' + (r.weekPnl>=0?'+$':'-$') + Math.abs(r.weekPnl).toFixed(2) + '</span>' +
+    '</div>';
+  });
+
+  const total = rows.reduce(function(s,r){ return s+r.weekPnl; }, 0);
+  const isFriday = new Date().getDay() === 5;
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px">' +
+    '<span style="font-size:10px;color:var(--text3)">' + (isFriday ? '🟢 Entnehmbar heute' : 'Gesamt diese Woche') + '</span>' +
+    '<span style="font-size:14px;font-weight:700;color:' + (total>=0?'var(--pos)':'var(--neg)') + '">' + (total>=0?'+$':'-$') + Math.abs(total).toFixed(2) + '</span>' +
+  '</div>';
+
+  el.innerHTML = html;
 }
 
 </script>
