@@ -2765,7 +2765,18 @@ const STRATEGY_SEED = {
 
 function getStrategy() {
   const saved = localStorage.getItem('ea_hub_strategy');
-  if (saved) { try { return JSON.parse(saved); } catch(e) {} }
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      // Migrate: add missing eaId field to capitalPlan entries
+      if (data.capitalPlan) {
+        data.capitalPlan.forEach(function(r) {
+          if (r.eaId === undefined) r.eaId = '';
+        });
+      }
+      return data;
+    } catch(e) {}
+  }
   return JSON.parse(JSON.stringify(STRATEGY_SEED));
 }
 
@@ -2933,7 +2944,12 @@ function renderStrategy() {
 function updateStrategyItem(section, id, key, value) {
   const data = getStrategy();
   const item = data[section].find(function(r){ return r.id === id; });
-  if (item) { item[key] = value; saveStrategy(data); }
+  if (item) { 
+    item[key] = value; 
+    saveStrategy(data);
+    // Re-render only for dropdowns/selects that need visual update
+    if (key === 'eaId' || key === 'status') renderStrategy();
+  }
 }
 
 function updateDeposit(id) {
