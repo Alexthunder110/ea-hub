@@ -2736,15 +2736,15 @@ function saveWithdrawalPlan(weekly, startMonth, mode) {
 
 const STRATEGY_SEED = {
   capitalPlan: [
-    { id:'s1', phase:'April 2026', name:'Thai', from:1266, to:3000, deposit:1734, status:'planned', note:'' },
-    { id:'s2', phase:'April 2026', name:'MM Flip', from:674, to:2000, deposit:1326, status:'planned', note:'' },
-    { id:'s3', phase:'April 2026', name:'Xau 6', from:1322, to:3000, deposit:1678, status:'planned', note:'' },
-    { id:'s4', phase:'April 2026', name:'299k (neu live)', from:0, to:1000, deposit:1000, status:'planned', note:'' },
-    { id:'s5', phase:'April 2026', name:'QQ MT5 (ECN-Konto)', from:0, to:3000, deposit:3000, status:'planned', note:'' },
-    { id:'s6', phase:'Mai 2026', name:'Quantum King', from:0, to:1000, deposit:1000, status:'planned', note:'' },
-    { id:'s7', phase:'Juni/Juli 2026 – Stufe 3 (bedingt)', name:'Thai $3k→$5k', from:3000, to:5000, deposit:2000, status:'planned', note:'' },
-    { id:'s8', phase:'Juni/Juli 2026 – Stufe 3 (bedingt)', name:'MM Flip $2k→$3k', from:2000, to:3000, deposit:1000, status:'planned', note:'' },
-    { id:'s9', phase:'Juni/Juli 2026 – Stufe 3 (bedingt)', name:'Xau 6 $3k→$5k', from:3000, to:5000, deposit:2000, status:'planned', note:'' },
+    { id:'s1', month:'2026-04', name:'Thai', from:1266, to:3000, deposit:1734, status:'planned', note:'' },
+    { id:'s2', month:'2026-04', name:'MM Flip', from:674, to:2000, deposit:1326, status:'planned', note:'' },
+    { id:'s3', month:'2026-04', name:'Xau 6', from:1322, to:3000, deposit:1678, status:'planned', note:'' },
+    { id:'s4', month:'2026-04', name:'299k (neu live)', from:0, to:1000, deposit:1000, status:'planned', note:'' },
+    { id:'s5', month:'2026-04', name:'QQ MT5 (ECN-Konto)', from:0, to:3000, deposit:3000, status:'planned', note:'' },
+    { id:'s6', month:'2026-05', name:'Quantum King', from:0, to:1000, deposit:1000, status:'planned', note:'' },
+    { id:'s7', month:'2026-06', name:'Thai $3k→$5k', from:3000, to:5000, deposit:2000, status:'planned', note:'Stufe 3 (bedingt)' },
+    { id:'s8', month:'2026-06', name:'MM Flip $2k→$3k', from:2000, to:3000, deposit:1000, status:'planned', note:'Stufe 3 (bedingt)' },
+    { id:'s9', month:'2026-06', name:'Xau 6 $3k→$5k', from:3000, to:5000, deposit:2000, status:'planned', note:'Stufe 3 (bedingt)' },
   ],
   eaCosts: [
     { id:'c1', name:'Quantum Queen MT5', price:550, type:'Einmalkauf', when:'April · sofort', note:'' },
@@ -2752,14 +2752,14 @@ const STRATEGY_SEED = {
     { id:'c3', name:'Quantum King MT5', price:599, type:'Einmalkauf', when:'Mai', note:'' },
   ],
   eaCards: [
-    { id:'e1', name:'Thai', badge:'Live Cent', account:'37290571', capitalFrom:1266, capitalTo:3000, instrument:'XAUUSD', stat1Label:'P&L (4 Wo.)', stat1:'+$406', stat1cls:'pos', stat2Label:'Win-Rate', stat2:'100%', stat2cls:'pos', stat3Label:'Max DD', stat3:'$20', stat3cls:'', phase:'live', note:'' },
-    { id:'e2', name:'MM Flip', badge:'Live MT4', account:'24252766', capitalFrom:674, capitalTo:2000, instrument:'XAUUSD', stat1Label:'P&L (4 Wo.)', stat1:'+$251', stat1cls:'pos', stat2Label:'Win-Rate', stat2:'100%', stat2cls:'pos', stat3Label:'Max DD', stat3:'$25', stat3cls:'', phase:'live', note:'' },
-    { id:'e3', name:'Xau 6', badge:'Live MT4', account:'24252774', capitalFrom:1322, capitalTo:3000, instrument:'XAUUSD', stat1Label:'P&L (4 Wo.)', stat1:'+$304', stat1cls:'pos', stat2Label:'Win-Rate', stat2:'95%', stat2cls:'pos', stat3Label:'Max DD', stat3:'$97', stat3cls:'', phase:'live', note:'' },
-    { id:'e4', name:'Quantum Queen MT5', badge:'April – kaufen', account:'', capitalFrom:0, capitalTo:3000, instrument:'XAUUSD', stat1Label:'Profit Factor', stat1:'2.92', stat1cls:'', stat2Label:'Max DD', stat2:'10.7%', stat2cls:'', stat3Label:'Withdrawals', stat3:'$7.650', stat3cls:'pos', phase:'april', note:'Entwickler: Puscasu' },
-    { id:'e5', name:'Market Master EA', badge:'April – kaufen', account:'', capitalFrom:0, capitalTo:1000, instrument:'EURUSD', stat1Label:'Profit Factor', stat1:'2.92', stat1cls:'', stat2Label:'Verlustmonate', stat2:'0', stat2cls:'pos', stat3Label:'Z-Score', stat3:'-1.36', stat3cls:'', phase:'april', note:'Entwickler: MMEAofficial' },
-    { id:'e6', name:'299k (eigener EA)', badge:'April – live schalten', account:'61337223', capitalFrom:0, capitalTo:1000, instrument:'XAUUSD', stat1Label:'P&L Demo', stat1:'+$191', stat1cls:'pos', stat2Label:'Win-Rate', stat2:'90%', stat2cls:'pos', stat3Label:'Max DD Demo', stat3:'$176', stat3cls:'', phase:'april', note:'Demo→Live' },
-    { id:'e7', name:'Quantum King MT5', badge:'Mai – kaufen', account:'', capitalFrom:0, capitalTo:1000, instrument:'AUDCAD', stat1Label:'Profit Factor', stat1:'3.44', stat1cls:'', stat2Label:'Max DD', stat2:'5.5%', stat2cls:'', stat3Label:'Withdrawals', stat3:'$1.185', stat3cls:'pos', phase:'mai', note:'Entwickler: Puscasu' },
-    { id:'e8', name:'QQ live Cent', badge:'Pausiert', account:'37292998', capitalFrom:0, capitalTo:0, instrument:'XAUUSD', stat1Label:'P&L', stat1:'-$150', stat1cls:'neg', stat2Label:'Win-Rate', stat2:'50%', stat2cls:'', stat3Label:'', stat3:'Warten auf QQ', stat3cls:'', phase:'live', note:'' },
+    { id:'e1', name:'Thai', badge:'Live Cent', account:'37290571', capitalFrom:1266, capitalTo:3000, instrument:'XAUUSD', stat1Label:'P&L (4 Wo.)', stat1:'+$406', stat1cls:'pos', stat2Label:'Win-Rate', stat2:'100%', stat2cls:'pos', stat3Label:'Max DD', stat3:'$20', stat3cls:'', month:'2026-04', note:'' },
+    { id:'e2', name:'MM Flip', badge:'Live MT4', account:'24252766', capitalFrom:674, capitalTo:2000, instrument:'XAUUSD', stat1Label:'P&L (4 Wo.)', stat1:'+$251', stat1cls:'pos', stat2Label:'Win-Rate', stat2:'100%', stat2cls:'pos', stat3Label:'Max DD', stat3:'$25', stat3cls:'', month:'2026-04', note:'' },
+    { id:'e3', name:'Xau 6', badge:'Live MT4', account:'24252774', capitalFrom:1322, capitalTo:3000, instrument:'XAUUSD', stat1Label:'P&L (4 Wo.)', stat1:'+$304', stat1cls:'pos', stat2Label:'Win-Rate', stat2:'95%', stat2cls:'pos', stat3Label:'Max DD', stat3:'$97', stat3cls:'', month:'2026-04', note:'' },
+    { id:'e4', name:'Quantum Queen MT5', badge:'April – kaufen', account:'', capitalFrom:0, capitalTo:3000, instrument:'XAUUSD', stat1Label:'Profit Factor', stat1:'2.92', stat1cls:'', stat2Label:'Max DD', stat2:'10.7%', stat2cls:'', stat3Label:'Withdrawals', stat3:'$7.650', stat3cls:'pos', month:'2026-04', note:'Entwickler: Puscasu' },
+    { id:'e5', name:'Market Master EA', badge:'April – kaufen', account:'', capitalFrom:0, capitalTo:1000, instrument:'EURUSD', stat1Label:'Profit Factor', stat1:'2.92', stat1cls:'', stat2Label:'Verlustmonate', stat2:'0', stat2cls:'pos', stat3Label:'Z-Score', stat3:'-1.36', stat3cls:'', month:'2026-04', note:'Entwickler: MMEAofficial' },
+    { id:'e6', name:'299k (eigener EA)', badge:'April – live schalten', account:'61337223', capitalFrom:0, capitalTo:1000, instrument:'XAUUSD', stat1Label:'P&L Demo', stat1:'+$191', stat1cls:'pos', stat2Label:'Win-Rate', stat2:'90%', stat2cls:'pos', stat3Label:'Max DD Demo', stat3:'$176', stat3cls:'', month:'2026-04', note:'Demo→Live' },
+    { id:'e7', name:'Quantum King MT5', badge:'Mai – kaufen', account:'', capitalFrom:0, capitalTo:1000, instrument:'AUDCAD', stat1Label:'Profit Factor', stat1:'3.44', stat1cls:'', stat2Label:'Max DD', stat2:'5.5%', stat2cls:'', stat3Label:'Withdrawals', stat3:'$1.185', stat3cls:'pos', month:'2026-05', note:'Entwickler: Puscasu' },
+    { id:'e8', name:'QQ live Cent', badge:'Pausiert', account:'37292998', capitalFrom:0, capitalTo:0, instrument:'XAUUSD', stat1Label:'P&L', stat1:'-$150', stat1cls:'neg', stat2Label:'Win-Rate', stat2:'50%', stat2cls:'', stat3Label:'', stat3:'Warten auf QQ', stat3cls:'', month:'2026-03', note:'' },
   ]
 };
 
@@ -2775,20 +2775,37 @@ function saveStrategy(data) {
 
 let strategyFilter = 'all';
 
+function fmtMonth(m) {
+  if (!m) return '–';
+  const d = new Date(m + '-01');
+  return d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+}
+
 function renderStrategy() {
   const el = document.getElementById('strategyContent');
   if (!el) return;
   const data = getStrategy();
-  const phases = {};
-  data.capitalPlan.forEach(r => { if (!phases[r.phase]) phases[r.phase] = []; phases[r.phase].push(r); });
+
+  // Group capital plan by month
+  const capMonths = {};
+  data.capitalPlan.forEach(r => {
+    const m = r.month || 'unbekannt';
+    if (!capMonths[m]) capMonths[m] = [];
+    capMonths[m].push(r);
+  });
+
   const statusOpts = ['planned','active','done'];
   const statusLabel = { planned:'📋 Geplant', active:'⏳ Laufend', done:'✅ Erreicht' };
   const statusColor = { planned:'var(--text3)', active:'var(--warn)', done:'var(--pos)' };
 
-  let capitalHtml = Object.entries(phases).map(([phase, rows]) => {
+  let capitalHtml = Object.keys(capMonths).sort().map(month => {
+    const rows = capMonths[month];
     const total = rows.reduce((s,r) => s + (parseFloat(r.deposit)||0), 0);
     const rowsHtml = rows.map(r => `<tr>
       <td style="padding:8px 10px"><input value="${r.name}" onchange="updateStrategyItem('capitalPlan','${r.id}','name',this.value)" style="background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;width:160px"></td>
+      <td style="padding:8px 10px;text-align:center">
+        <input type="month" value="${r.month||''}" onchange="updateStrategyItem('capitalPlan','${r.id}','month',this.value);renderStrategy()" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:10px;padding:2px 6px">
+      </td>
       <td style="padding:8px 10px;text-align:right;color:var(--text3)">$${(r.from||0).toLocaleString()}</td>
       <td style="padding:8px 10px;text-align:right"><input type="number" value="${r.to}" onchange="updateStrategyItem('capitalPlan','${r.id}','to',parseFloat(this.value)||0);updateDeposit('${r.id}')" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;width:80px;text-align:right;padding:2px 6px"></td>
       <td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700">$${(r.deposit||0).toLocaleString()}</td>
@@ -2796,9 +2813,16 @@ function renderStrategy() {
       <td style="padding:8px 10px"><input value="${r.note||''}" placeholder="Notiz..." onchange="updateStrategyItem('capitalPlan','${r.id}','note',this.value)" style="background:transparent;border:none;color:var(--text3);font-family:var(--font-mono);font-size:10px;width:140px"></td>
       <td style="padding:8px 10px"><button onclick="deleteStrategyItem('capitalPlan','${r.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px">✕</button></td>
     </tr>`).join('');
-    return `<tr style="background:var(--bg3)"><td colspan="7" style="padding:4px 10px"><input value="${phase}" onchange="renameStrategyPhase('${phase}',this.value)" style="background:transparent;border:none;color:var(--text2);font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;width:100%"></td></tr>${rowsHtml}<tr style="border-top:1px solid var(--border)"><td colspan="3" style="padding:6px 10px;font-size:11px;font-weight:700;color:var(--text2)">Gesamt ${phase.split(' ')[0]}</td><td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--accent)">$${total.toLocaleString()}</td><td colspan="3"></td></tr>`;
+    return `<tr style="background:var(--bg3)"><td colspan="8" style="padding:6px 10px;font-size:10px;font-weight:700;color:var(--text2);letter-spacing:0.08em;text-transform:uppercase">${fmtMonth(month)}</td></tr>
+    ${rowsHtml}
+    <tr style="border-top:1px solid var(--border)">
+      <td colspan="4" style="padding:6px 10px;font-size:11px;font-weight:700;color:var(--text2)">Gesamt ${fmtMonth(month)}</td>
+      <td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--accent)">$${total.toLocaleString()}</td>
+      <td colspan="3"></td>
+    </tr>`;
   }).join('');
 
+  // EA costs
   const costsHtml = data.eaCosts.map(r => `<tr>
     <td style="padding:8px 10px"><input value="${r.name}" onchange="updateStrategyItem('eaCosts','${r.id}','name',this.value)" style="background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;width:180px"></td>
     <td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700">$<input type="number" value="${r.price}" onchange="updateStrategyItem('eaCosts','${r.id}','price',parseFloat(this.value)||0)" style="background:transparent;border:none;color:var(--accent);font-family:var(--font-mono);font-size:11px;width:90px;font-weight:700"></td>
@@ -2808,21 +2832,30 @@ function renderStrategy() {
   </tr>`).join('');
   const totalCosts = data.eaCosts.reduce((s,r) => s + (parseFloat(r.price)||0), 0);
 
-  const filtered = strategyFilter === 'all' ? data.eaCards : data.eaCards.filter(e => e.phase === strategyFilter);
+  // EA cards - group by month, dynamic filter tabs
+  const allMonths = [...new Set(data.eaCards.map(e => e.month||'').filter(Boolean))].sort();
+  const filtered = strategyFilter === 'all' ? data.eaCards : data.eaCards.filter(e => e.month === strategyFilter);
+
+  const filterTabs = [
+    `<button onclick="strategyFilter='all';renderStrategy()" class="pnl-filter-btn ${strategyFilter==='all'?'active':''}" style="font-size:10px;padding:4px 10px">Alle</button>`,
+    ...allMonths.map(m => `<button onclick="strategyFilter='${m}';renderStrategy()" class="pnl-filter-btn ${strategyFilter===m?'active':''}" style="font-size:10px;padding:4px 10px">${fmtMonth(m)}</button>`)
+  ].join('');
+
   const badgeColor = b => b.includes('Live') ? 'rgba(0,255,157,0.15)' : b.includes('kaufen') || b.includes('schalten') ? 'rgba(240,192,64,0.15)' : 'rgba(100,100,100,0.2)';
   const badgeTextColor = b => b.includes('Live') ? 'var(--pos)' : b.includes('kaufen') || b.includes('schalten') ? 'var(--warn)' : 'var(--text3)';
   const statColor = cls => cls === 'pos' ? 'var(--pos)' : cls === 'neg' ? 'var(--neg)' : 'var(--text)';
 
   const cardsHtml = filtered.map(e => `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:16px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-      <div><span style="font-size:15px;font-weight:800;color:var(--text);font-family:'Bebas Neue',sans-serif;letter-spacing:1px">${e.name}</span>${e.account ? `<span style="font-size:9px;color:var(--text3);margin-left:6px">#${e.account}</span>` : ''}</div>
+      <div><span style="font-size:15px;font-weight:800;color:var(--text);font-family:'Bebas Neue',sans-serif;letter-spacing:1px">${e.name}</span>${e.account?`<span style="font-size:9px;color:var(--text3);margin-left:6px">#${e.account}</span>`:''}</div>
       <div style="display:flex;gap:6px;align-items:center">
         <span style="font-size:9px;padding:3px 8px;border-radius:4px;background:${badgeColor(e.badge)};color:${badgeTextColor(e.badge)};font-weight:600">${e.badge}</span>
         <button onclick="deleteStrategyItem('eaCards','${e.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px">✕</button>
       </div>
     </div>
-    <div style="font-size:10px;color:var(--text3);margin-bottom:4px">${e.account ? `Konto <strong style="color:var(--text2)">#${e.account}</strong> &nbsp;` : ''}Kapital <strong style="color:var(--text2)">$${(e.capitalFrom||0).toLocaleString()} → $${(e.capitalTo||0).toLocaleString()}</strong></div>
-    <div style="font-size:10px;color:var(--text3);margin-bottom:10px">Instrument <strong style="color:var(--text2)">${e.instrument}</strong>${e.note ? ` &nbsp; ${e.note}` : ''}</div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:4px">${e.account?`Konto <strong style="color:var(--text2)">#${e.account}</strong> &nbsp;`:''}Kapital <strong style="color:var(--text2)">$${(e.capitalFrom||0).toLocaleString()} → $${(e.capitalTo||0).toLocaleString()}</strong></div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Instrument <strong style="color:var(--text2)">${e.instrument}</strong>${e.note?` &nbsp; ${e.note}`:''}</div>
+    <div style="font-size:9px;color:var(--accent);margin-bottom:8px">📅 ${fmtMonth(e.month)}</div>
     <div style="border-top:1px solid var(--border);padding-top:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
       <div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">${e.stat1Label}</div><div style="font-size:13px;font-weight:700;color:${statColor(e.stat1cls)}">${e.stat1}</div></div>
       <div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">${e.stat2Label}</div><div style="font-size:13px;font-weight:700;color:${statColor(e.stat2cls)}">${e.stat2}</div></div>
@@ -2830,67 +2863,65 @@ function renderStrategy() {
     </div>
   </div>`).join('');
 
+  // EA add form month options - dynamic from existing months + future months
+  const monthOpts = ['2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12']
+    .map(m => `<option value="${m}">${fmtMonth(m)}</option>`).join('');
+
   el.innerHTML = `<div style="display:flex;flex-direction:column;gap:24px">
     <div class="form-panel">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <div class="sh" style="margin:0">💰 Kapital-Einzahlungen</div>
         <button onclick="addStrategyCapital()" class="btn btn-primary" style="font-size:10px;padding:5px 12px">+ Position</button>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>Position</th><th style="text-align:right">Von</th><th style="text-align:right">Auf</th><th style="text-align:right">Einzahlung</th><th>Status</th><th>Notiz</th><th></th></tr></thead><tbody>${capitalHtml}</tbody></table></div>
+      <div class="table-wrap"><table><thead><tr>
+        <th>Position</th><th>Monat</th><th style="text-align:right">Von</th><th style="text-align:right">Auf</th>
+        <th style="text-align:right">Einzahlung</th><th>Status</th><th>Notiz</th><th></th>
+      </tr></thead><tbody>${capitalHtml}</tbody></table></div>
     </div>
     <div class="form-panel">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <div class="sh" style="margin:0">🛒 EA-Kaufkosten</div>
         <button onclick="addStrategyCost()" class="btn btn-primary" style="font-size:10px;padding:5px 12px">+ EA</button>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>EA</th><th style="text-align:right">Preis</th><th>Typ</th><th>Wann</th><th></th></tr></thead><tbody>${costsHtml}<tr style="border-top:1px solid var(--border)"><td style="padding:6px 10px;font-weight:700;color:var(--text2)">Gesamt</td><td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--accent)">$${totalCosts.toLocaleString()}</td><td colspan="3"></td></tr></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>EA</th><th style="text-align:right">Preis</th><th>Typ</th><th>Wann</th><th></th></tr></thead>
+      <tbody>${costsHtml}<tr style="border-top:1px solid var(--border)"><td style="padding:6px 10px;font-weight:700;color:var(--text2)">Gesamt</td><td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--accent)">$${totalCosts.toLocaleString()}</td><td colspan="3"></td></tr></tbody></table>
+      </div>
     </div>
     <div class="form-panel">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
         <div class="sh" style="margin:0">🤖 Expert Advisors</div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <div style="display:flex;gap:6px">${['all','live','april','mai'].map(f => `<button onclick="strategyFilter='${f}';renderStrategy()" class="pnl-filter-btn ${strategyFilter===f?'active':''}" style="font-size:10px;padding:4px 10px">${f==='all'?'Alle':f==='live'?'Jetzt live':f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join('')}</div>
-          
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <div style="display:flex;gap:6px;flex-wrap:wrap">${filterTabs}</div>
+          <button onclick="document.getElementById('eaAddForm').style.display=document.getElementById('eaAddForm').style.display==='none'?'block':'none'" class="btn btn-primary" style="font-size:10px;padding:5px 12px">+ EA</button>
         </div>
       </div>
       <div id="eaAddForm" style="display:none;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;padding:16px;margin-bottom:16px">
-      <div class="sh" style="margin-bottom:12px;font-size:11px">Neuen EA anlegen</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
-        <div><label style="font-size:9px;color:var(--text3)">NAME</label><input id="ea-new-name" placeholder="EA Name" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-        <div><label style="font-size:9px;color:var(--text3)">BADGE</label><input id="ea-new-badge" placeholder="z.B. Live MT4" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-        <div><label style="font-size:9px;color:var(--text3)">PHASE</label>
-          <select id="ea-new-phase" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box">
-            <option value="live">Jetzt live</option><option value="april">April</option><option value="mai">Mai</option>
-          </select>
+        <div class="sh" style="margin-bottom:12px;font-size:11px">Neuen EA anlegen</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
+          <div><label style="font-size:9px;color:var(--text3)">NAME</label><input id="ea-new-name" placeholder="EA Name" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
+          <div><label style="font-size:9px;color:var(--text3)">BADGE</label><input id="ea-new-badge" placeholder="z.B. Juni – kaufen" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
+          <div><label style="font-size:9px;color:var(--text3)">MONAT</label><select id="ea-new-phase" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box">${monthOpts}</select></div>
+          <div><label style="font-size:9px;color:var(--text3)">KONTO #</label><input id="ea-new-account" placeholder="optional" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
+          <div><label style="font-size:9px;color:var(--text3)">KAPITAL VON</label><input id="ea-new-capfrom" type="number" placeholder="0" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
+          <div><label style="font-size:9px;color:var(--text3)">KAPITAL BIS</label><input id="ea-new-capto" type="number" placeholder="1000" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
+          <div><label style="font-size:9px;color:var(--text3)">INSTRUMENT</label><input id="ea-new-instrument" placeholder="XAUUSD" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
+          <div><label style="font-size:9px;color:var(--text3)">NOTIZ</label><input id="ea-new-note" placeholder="z.B. Entwickler: Puscasu" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
         </div>
-        <div><label style="font-size:9px;color:var(--text3)">KONTO #</label><input id="ea-new-account" placeholder="optional" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-        <div><label style="font-size:9px;color:var(--text3)">KAPITAL VON</label><input id="ea-new-capfrom" type="number" placeholder="0" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-        <div><label style="font-size:9px;color:var(--text3)">KAPITAL BIS</label><input id="ea-new-capto" type="number" placeholder="1000" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-        <div><label style="font-size:9px;color:var(--text3)">INSTRUMENT</label><input id="ea-new-instrument" placeholder="XAUUSD" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-        <div><label style="font-size:9px;color:var(--text3)">NOTIZ</label><input id="ea-new-note" placeholder="z.B. Entwickler: Puscasu" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-      </div>
-      <div style="font-size:9px;color:var(--text3);margin-bottom:8px;letter-spacing:0.08em">KENNZAHLEN (3 Felder)</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
-        <div><input id="ea-new-s1l" placeholder="Label (z.B. P&L)" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:4px 8px;box-sizing:border-box;margin-bottom:4px"><input id="ea-new-s1v" placeholder="Wert (z.B. +$400)" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:4px 8px;box-sizing:border-box">
-          <select id="ea-new-s1c" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:3px;margin-top:3px;box-sizing:border-box"><option value="">neutral</option><option value="pos">grün</option><option value="neg">rot</option></select>
+        <div style="font-size:9px;color:var(--text3);margin-bottom:8px;letter-spacing:0.08em">KENNZAHLEN</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+          <div><input id="ea-new-s1l" placeholder="Label (z.B. P&L)" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:4px 8px;box-sizing:border-box;margin-bottom:4px"><input id="ea-new-s1v" placeholder="Wert" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:4px 8px;box-sizing:border-box"><select id="ea-new-s1c" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:3px;margin-top:3px;box-sizing:border-box"><option value="">neutral</option><option value="pos">grün</option><option value="neg">rot</option></select></div>
+          <div><input id="ea-new-s2l" placeholder="Label" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:4px 8px;box-sizing:border-box;margin-bottom:4px"><input id="ea-new-s2v" placeholder="Wert" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:4px 8px;box-sizing:border-box"><select id="ea-new-s2c" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:3px;margin-top:3px;box-sizing:border-box"><option value="">neutral</option><option value="pos">grün</option><option value="neg">rot</option></select></div>
+          <div><input id="ea-new-s3l" placeholder="Label" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:4px 8px;box-sizing:border-box;margin-bottom:4px"><input id="ea-new-s3v" placeholder="Wert" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:4px 8px;box-sizing:border-box"><select id="ea-new-s3c" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:3px;margin-top:3px;box-sizing:border-box"><option value="">neutral</option><option value="pos">grün</option><option value="neg">rot</option></select></div>
         </div>
-        <div><input id="ea-new-s2l" placeholder="Label" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:4px 8px;box-sizing:border-box;margin-bottom:4px"><input id="ea-new-s2v" placeholder="Wert" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:4px 8px;box-sizing:border-box">
-          <select id="ea-new-s2c" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:3px;margin-top:3px;box-sizing:border-box"><option value="">neutral</option><option value="pos">grün</option><option value="neg">rot</option></select>
-        </div>
-        <div><input id="ea-new-s3l" placeholder="Label" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:4px 8px;box-sizing:border-box;margin-bottom:4px"><input id="ea-new-s3v" placeholder="Wert" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:4px 8px;box-sizing:border-box">
-          <select id="ea-new-s3c" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:3px;margin-top:3px;box-sizing:border-box"><option value="">neutral</option><option value="pos">grün</option><option value="neg">rot</option></select>
+        <div style="display:flex;gap:8px">
+          <button onclick="saveNewStrategyEA()" class="btn btn-primary" style="font-size:10px;padding:5px 14px">💾 Speichern</button>
+          <button onclick="document.getElementById('eaAddForm').style.display='none'" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:5px 14px;cursor:pointer">Abbrechen</button>
         </div>
       </div>
-      <div style="display:flex;gap:8px">
-        <button onclick="saveNewStrategyEA()" class="btn btn-primary" style="font-size:10px;padding:5px 14px">💾 Speichern</button>
-        <button onclick="document.getElementById('eaAddForm').style.display='none'" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:5px 14px;cursor:pointer">Abbrechen</button>
-      </div>
-    </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">${cardsHtml}</div>
     </div>
   </div>`;
 }
-
 function updateStrategyItem(section, id, key, value) {
   const data = getStrategy();
   const item = data[section].find(r => r.id === id);
@@ -2911,7 +2942,7 @@ function deleteStrategyItem(section, id) {
 
 function addStrategyCapital() {
   const data = getStrategy();
-  data.capitalPlan.push({ id:'s'+Date.now(), phase:'Neue Phase', name:'', from:0, to:0, deposit:0, status:'planned', note:'' });
+  const nextMonth = new Date(); nextMonth.setMonth(nextMonth.getMonth()+1); const nm = nextMonth.toISOString().substring(0,7); data.capitalPlan.push({ id:'s'+Date.now(), month:nm, name:'', from:0, to:0, deposit:0, status:'planned', note:'' });
   saveStrategy(data); renderStrategy();
 }
 
@@ -2949,7 +2980,7 @@ function saveNewStrategyEA() {
     capitalTo: parseFloat(g('ea-new-capto').value) || 0,
     instrument: g('ea-new-instrument').value || '',
     note: g('ea-new-note').value || '',
-    phase: g('ea-new-phase').value || 'live',
+    month: g('ea-new-phase').value || '2026-04',
     stat1Label: g('ea-new-s1l').value || '',
     stat1: g('ea-new-s1v').value || '',
     stat1cls: g('ea-new-s1c').value || '',
