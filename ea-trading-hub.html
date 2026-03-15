@@ -2827,7 +2827,7 @@ function renderStrategy() {
           var opts = '<option value="">– kein EA –</option>' + DB.eas.map(function(ea) {
             return '<option value="' + ea.id + '"' + (ea.id===r.eaId?' selected':'') + '>' + ea.name + '</option>';
           }).join('');
-          return '<select onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'eaId\',this.value);renderStrategy()" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:2px 6px;width:110px">' + opts + '</select>';
+          return '<select onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'eaId\',this.value)" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:2px 6px;width:110px">' + opts + '</select>';
         })() + '</td>' +
         '<td style="padding:8px 10px;text-align:center"><input type="month" value="' + (r.month||'') + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'month\',this.value);renderStrategy()" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:10px;padding:2px 6px"></td>' +
         '<td style="padding:8px 10px;text-align:right;color:var(--text3)">$' + (r.from||0).toLocaleString() + '</td>' +
@@ -2910,7 +2910,10 @@ function renderStrategy() {
       '<div class="form-panel">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">' +
           '<div class="sh" style="margin:0">💰 Kapital-Einzahlungen</div>' +
+          '<div style="display:flex;gap:6px">' +
           '<button onclick="addStrategyCapital()" class="btn btn-primary" style="font-size:10px;padding:5px 12px">+ Position</button>' +
+          '<button onclick="if(confirm(\'Strategie-Daten zurücksetzen?\')){{ localStorage.removeItem(\'ea_hub_strategy\'); renderStrategy(); }}" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--text3);font-family:var(--font-mono);font-size:9px;padding:5px 10px;cursor:pointer">↺ Reset</button>' +
+          '</div>' +
         '</div>' +
         '<div class="table-wrap"><table><thead><tr>' +
           '<th>Position</th><th>EA</th><th>Monat</th><th style="text-align:right">Von</th><th style="text-align:right">Auf</th>' +
@@ -2944,11 +2947,10 @@ function renderStrategy() {
 function updateStrategyItem(section, id, key, value) {
   const data = getStrategy();
   const item = data[section].find(function(r){ return r.id === id; });
-  if (item) { 
-    item[key] = value; 
+  if (item) {
+    item[key] = value;
     saveStrategy(data);
-    // Re-render only for dropdowns/selects that need visual update
-    if (key === 'eaId' || key === 'status') renderStrategy();
+    if (key === 'status' || key === 'month') renderStrategy();
   }
 }
 
