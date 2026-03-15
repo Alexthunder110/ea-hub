@@ -2812,7 +2812,6 @@ function renderStrategy() {
       }).join('');
       capitalHtml += '<tr>' +
         '<td style="padding:8px 10px"><input value="' + (r.name||'').replace(/"/g,'&quot;') + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'name\',this.value)" style="background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;width:160px"></td>' +
-        '<td style="padding:8px 10px"><input value="' + (r.account||'') + '" placeholder="–" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'account\',this.value)" style="background:transparent;border:none;color:var(--text3);font-family:var(--font-mono);font-size:11px;width:90px"></td>' +
         '<td style="padding:8px 10px;text-align:center"><input type="month" value="' + (r.month||'') + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'month\',this.value);renderStrategy()" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:10px;padding:2px 6px"></td>' +
         '<td style="padding:8px 10px;text-align:right;color:var(--text3)">$' + (r.from||0).toLocaleString() + '</td>' +
         '<td style="padding:8px 10px;text-align:right"><input type="number" value="' + (r.to||0) + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'to\',parseFloat(this.value)||0);updateDeposit(\'' + r.id + '\')" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;width:80px;text-align:right;padding:2px 6px"></td>' +
@@ -2843,9 +2842,13 @@ function renderStrategy() {
   data.capitalPlan.forEach(function(r) { if (r.month && allMonths.indexOf(r.month)<0) allMonths.push(r.month); });
   allMonths.sort();
 
-  const filteredPlan = strategyFilter === 'all' ? data.capitalPlan : data.capitalPlan.filter(function(r){ return r.month === strategyFilter; });
+  const filteredPlan = strategyFilter === 'all' ? data.capitalPlan :
+    strategyFilter === 'live' ? data.capitalPlan.filter(function(r){ return r.account && liveAccNumbers.has(r.account); }) :
+    data.capitalPlan.filter(function(r){ return r.month === strategyFilter; });
 
-  let filterTabs = '<button onclick="strategyFilter=\'all\';renderStrategy()" class="pnl-filter-btn ' + (strategyFilter==='all'?'active':'') + '" style="font-size:10px;padding:4px 10px">Alle</button>';
+  const liveAccNumbers = new Set(DB.accounts.filter(function(a){ return a.type==='Live' && isActive(a); }).map(function(a){ return a.number; }));
+  let filterTabs = '<button onclick="strategyFilter=\'all\';renderStrategy()" class="pnl-filter-btn ' + (strategyFilter==='all'?'active':'') + '" style="font-size:10px;padding:4px 10px">Alle</button>' +
+    '<button onclick="strategyFilter=\'live\';renderStrategy()" class="pnl-filter-btn ' + (strategyFilter==='live'?'active':'') + '" style="font-size:10px;padding:4px 10px">🟢 Live</button>';
   allMonths.forEach(function(m) {
     filterTabs += '<button onclick="strategyFilter=\'' + m + '\';renderStrategy()" class="pnl-filter-btn ' + (strategyFilter===m?'active':'') + '" style="font-size:10px;padding:4px 10px">' + fmtMonth(m) + '</button>';
   });
@@ -2882,7 +2885,7 @@ function renderStrategy() {
           '<button onclick="addStrategyCapital()" class="btn btn-primary" style="font-size:10px;padding:5px 12px">+ Position</button>' +
         '</div>' +
         '<div class="table-wrap"><table><thead><tr>' +
-          '<th>Position</th><th>Konto #</th><th>Monat</th><th style="text-align:right">Von</th><th style="text-align:right">Auf</th>' +
+          '<th>Position</th><th>Monat</th><th style="text-align:right">Von</th><th style="text-align:right">Auf</th>' +
           '<th style="text-align:right">Einzahlung</th><th>Status</th><th>Notiz</th><th></th>' +
         '</tr></thead><tbody>' + capitalHtml + '</tbody></table></div>' +
       '</div>' +
