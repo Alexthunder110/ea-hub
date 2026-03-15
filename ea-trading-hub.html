@@ -2860,14 +2860,21 @@ function renderStrategy() {
   allMonths.sort();
 
   const filteredPlan = strategyFilter === 'all' ? data.capitalPlan :
-    strategyFilter === 'live' ? data.capitalPlan.filter(function(r) {
-      if (!r.eaId) return false;
-      return DB.pnl.some(function(p) {
-        if (p.eaId != r.eaId) return false;
-        var acc = DB.accounts.find(function(a){ return a.id == p.accountId; });
-        return acc && acc.type === 'Live' && isActive(acc);
+    strategyFilter === 'live' ? (function() {
+      const seen = {};
+      return data.capitalPlan.filter(function(r) {
+        if (!r.eaId) return false;
+        const isLive = DB.pnl.some(function(p) {
+          if (String(p.eaId) != String(r.eaId)) return false;
+          var acc = DB.accounts.find(function(a){ return a.id == p.accountId; });
+          return acc && acc.type === 'Live' && isActive(acc);
+        });
+        if (!isLive) return false;
+        if (seen[r.eaId]) return false;
+        seen[r.eaId] = true;
+        return true;
       });
-    }) :
+    })() :
     data.capitalPlan.filter(function(r){ return r.month === strategyFilter; });
 
   const liveAccNumbers = new Set(DB.accounts.filter(function(a){ return a.type==='Live' && isActive(a); }).map(function(a){ return a.number; }));
