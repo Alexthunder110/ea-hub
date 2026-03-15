@@ -2854,24 +2854,7 @@ function renderStrategy() {
   filteredPlan.forEach(function(r) {
     // Find linked account
     const acc = DB.accounts.find(function(a){ return a.number == r.account || a.id == r.accountId; });
-    let s1l='P&L', s1v='TBD', s1c='';
-    let s2l='Win-Rate', s2v='TBD', s2c='';
-    let s3l='Max DD', s3v='TBD', s3c='';
 
-    if (acc) {
-      const pnlEntries = DB.pnl.filter(function(p){ return p.accountId==acc.id && (!p.entryType||p.entryType==='trade'); });
-      if (pnlEntries.length > 0) {
-        const total = pnlEntries.reduce(function(s,p){ return s+(parseFloat(p.pnl)||0); }, 0);
-        const wins = pnlEntries.filter(function(p){ return (parseFloat(p.pnl)||0)>0; }).length;
-        const wr = ((wins/pnlEntries.length)*100).toFixed(0);
-        const maxDd = Math.max.apply(null, pnlEntries.map(function(p){ return parseFloat(p.dd)||0; }));
-        s1v = (total>=0?'+$':'-$') + Math.abs(total).toFixed(2); s1c = total>=0?'pos':'neg';
-        s2v = wr+'%'; s2c = wr>=60?'pos':'';
-        s3v = '$'+maxDd.toFixed(2);
-      }
-    }
-
-    const statColor = function(c){ return c==='pos'?'var(--pos)':c==='neg'?'var(--neg)':'var(--text)'; };
     const statusBadge = r.status==='done' ? '✅ Erreicht' : r.status==='active' ? '⏳ Laufend' : '📋 Geplant';
     const badgeBg = r.status==='done' ? 'rgba(0,255,157,0.15)' : r.status==='active' ? 'rgba(0,200,240,0.15)' : 'rgba(100,100,100,0.15)';
     const badgeCol = r.status==='done' ? 'var(--pos)' : r.status==='active' ? 'var(--accent)' : 'var(--text3)';
@@ -2887,11 +2870,7 @@ function renderStrategy() {
         '<div style="font-size:10px;color:var(--text3);margin-bottom:4px">Kapital <strong style="color:var(--text2)">$' + (r.from||0).toLocaleString() + ' → $' + (r.to||0).toLocaleString() + '</strong></div>' +
         '<div style="font-size:9px;color:var(--accent);margin-bottom:8px">📅 ' + fmtMonth(r.month) + '</div>' +
         (r.note ? '<div style="font-size:10px;color:var(--text3);margin-bottom:8px">' + r.note + '</div>' : '') +
-        '<div style="border-top:1px solid var(--border);padding-top:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px">' +
-          '<div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">' + s1l + '</div><div style="font-size:13px;font-weight:700;color:' + statColor(s1c) + '">' + s1v + '</div></div>' +
-          '<div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">' + s2l + '</div><div style="font-size:13px;font-weight:700;color:' + statColor(s2c) + '">' + s2v + '</div></div>' +
-          '<div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">' + s3l + '</div><div style="font-size:13px;font-weight:700;color:' + statColor(s3c) + '">' + s3v + '</div></div>' +
-        '</div>' +
+
       '</div>';
   });
 
@@ -2929,6 +2908,39 @@ function renderStrategy() {
 }
 
 
+
+
+function updateStrategyItem(section, id, key, value) {
+  const data = getStrategy();
+  const item = data[section].find(function(r){ return r.id === id; });
+  if (item) { item[key] = value; saveStrategy(data); }
+}
+
+function updateDeposit(id) {
+  const data = getStrategy();
+  const item = data.capitalPlan.find(function(r){ return r.id === id; });
+  if (item) { item.deposit = Math.max(0, (item.to||0) - (item.from||0)); saveStrategy(data); renderStrategy(); }
+}
+
+function deleteStrategyItem(section, id) {
+  const data = getStrategy();
+  data[section] = data[section].filter(function(r){ return r.id !== id; });
+  saveStrategy(data); renderStrategy();
+}
+
+function addStrategyCapital() {
+  const data = getStrategy();
+  const nextMonth = new Date(); nextMonth.setMonth(nextMonth.getMonth()+1);
+  const nm = nextMonth.toISOString().substring(0,7);
+  data.capitalPlan.push({ id:'s'+Date.now(), month:nm, name:'', account:'', from:0, to:0, deposit:0, status:'planned', note:'' });
+  saveStrategy(data); renderStrategy();
+}
+
+function addStrategyCost() {
+  const data = getStrategy();
+  data.eaCosts.push({ id:'c'+Date.now(), name:'', price:0, type:'Einmalkauf', when:'', note:'' });
+  saveStrategy(data); renderStrategy();
+}
 
 </script>
 </body>
