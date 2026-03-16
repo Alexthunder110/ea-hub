@@ -352,7 +352,8 @@ select option { background:var(--bg4); }
   <div class="header-right">
     <span class="sync-status" id="syncStatus">●&nbsp;Bereit</span>
     <span class="header-date" id="headerDate"></span>
-    <button class="btn-icon" onclick="syncNow()" title="Sync">⟳ Sync</button>
+    <button class="btn-icon" onclick="syncNow()" title="Daten von Sheets laden">⬇ Laden</button>
+    <button class="btn-icon" onclick="pushAllToSheets()" title="Daten nach Sheets speichern">⬆ Speichern</button>
     <button class="btn-icon" onclick="exportCSV()" title="CSV Export">↓ CSV</button>
     <button class="btn-icon" onclick="openSettings()" title="Einstellungen">⚙</button>
   </div>
