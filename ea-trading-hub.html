@@ -887,12 +887,13 @@ async function syncAll() {
   if (!API_URL) return;
   setSyncStatus('syncing','⟳ Laden...');
   try {
-    const [accounts, eas, pnl, diary, todos] = await Promise.all([
+    const [accounts, eas, pnl, diary, todos, settingsRaw] = await Promise.all([
       api('getAll','Accounts'),
       api('getAll','EAs'),
       api('getAll','PnL'),
       api('getAll','Diary'),
       api('getAll','Todos'),
+      api('getAll','Settings'),
     ]);
     // Only overwrite local data if remote actually has content
     if (accounts && accounts.length > 0) DB.accounts = accounts;
@@ -900,6 +901,17 @@ async function syncAll() {
     if (pnl && pnl.length > 0) DB.pnl = pnl.map(r => ({ ...r, date: normalizeDate(r.date) }));
     if (diary && diary.length > 0) DB.diary = diary.map(r => ({ ...r, date: normalizeDate(r.date) }));
     if (todos && todos.length > 0) DB.todos = todos;
+    // Settings: stored as single row with key 'settings' and key 'strategy'
+    if (settingsRaw && settingsRaw.length > 0) {
+      settingsRaw.forEach(function(row) {
+        if (row.key === 'settings' && row.value) {
+          try { DB.settings = JSON.parse(row.value); } catch(e) {}
+        }
+        if (row.key === 'strategy' && row.value) {
+          try { localStorage.setItem('ea_hub_strategy', row.value); } catch(e) {}
+        }
+      });
+    }
     saveLocal();
     renderAll();
     setSyncStatus('ready','● Synced');
@@ -922,6 +934,10 @@ async function pushAllToSheets() {
       { name: 'PnL', data: DB.pnl },
       { name: 'Diary', data: DB.diary },
       { name: 'Todos', data: DB.todos },
+      { name: 'Settings', data: [
+        { key: 'settings', value: JSON.stringify(DB.settings) },
+        { key: 'strategy', value: localStorage.getItem('ea_hub_strategy') || '{}' },
+      ]},
     ];
     for (const s of sheets) {
       await api('pushAll', s.name, s.data);
