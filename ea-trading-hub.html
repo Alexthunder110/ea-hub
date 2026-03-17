@@ -581,6 +581,19 @@ select option { background:var(--bg4); }
     </div>
   </div>
 
+  <!-- EA Bewertung -->
+  <div style="margin-top:22px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+      <div class="sh" style="margin:0">🏆 EA Bewertung</div>
+    </div>
+    <div class="table-wrap">
+      <table id="eaRatingTable">
+        <thead><tr id="eaRatingHeader"></tr></thead>
+        <tbody id="eaRatingBody"></tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="grid-2">
     <div>
       <div class="sh">Live Konten</div>
@@ -772,6 +785,7 @@ let PENDING_SYNC = [];
 let charts = {};
 let PNL_FILTER = 'all';
 let INCOME_FILTER = 'all';
+var eaRatingSort = { col: 'score', dir: -1 };
 
 // ============================================================
 // INIT
@@ -1503,7 +1517,7 @@ function renderMissingEntries() {
         <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(0,255,157,0.08);border:1px solid rgba(0,255,157,0.3);border-radius:8px;padding:7px 14px">
           <span style="font-size:14px">✅</span>
           <span style="font-size:11px;font-weight:600;color:var(--pos)">Alle Einträge vollständig</span>
-          <span style="font-size:10px;color:var(--text3)">– letzte 7 Werktage</span>
+          <span style="font-size:10px;color:var(--text3)">– Mo–Fr letzte Woche</span>
         </div>
       </div>`;
     return;
@@ -1529,7 +1543,7 @@ function renderMissingEntries() {
            onclick="document.getElementById('${detailId}').style.display=document.getElementById('${detailId}').style.display==='none'?'block':'none'">
         <span style="font-size:14px">🔴</span>
         <span style="font-size:11px;font-weight:600;color:#ff4060">${count} fehlende Eintrag${count>1?'e':''}</span>
-        <span style="font-size:10px;color:var(--text3)">– letzte 7 Werktage</span>
+        <span style="font-size:10px;color:var(--text3)">– Mo–Fr letzte Woche</span>
         <span style="font-size:10px;color:var(--text3);margin-left:4px">▼</span>
       </div>
       <div id="${detailId}" style="display:none;margin-top:8px;background:rgba(255,64,96,0.05);border:1px solid rgba(255,64,96,0.2);border-radius:8px;padding:12px 16px;font-size:11px">
@@ -1709,6 +1723,7 @@ function renderAnalytics() {
   // Live / Demo tables
   renderLiveDemoTables(entries, month);
   renderAnalyticsCharts(entries);
+  renderEaRating(entries);
 }
 
 function renderLiveDemoTables(entries, month) {
@@ -3109,6 +3124,125 @@ function renderOverviewWeeklyPnl() {
   '</div>';
 
   el.innerHTML = html;
+}
+
+
+// ============================================================
+// EA RATING TABLE
+// ============================================================
+
+function renderEaRating(entries) {
+  const header = document.getElementById('eaRatingHeader');
+  const body = document.getElementById('eaRatingBody');
+  if (!header || !body) return;
+
+  const cols = [
+    { key:'name',     label:'EA',             tip:null,                                                                                   fmt: v => v },
+    { key:'winRate',  label:'Win-Rate',        tip:'Anteil positiver Handelstage. >80% = sehr gut.',                                       fmt: v => v===null?'–':v.toFixed(0)+'%' },
+    { key:'pf',       label:'Profit Factor',   tip:'Summe Gewinne ÷ Summe Verluste. >2 = gut, >3 = sehr gut. ∞ = keine Verlusttage.',     fmt: v => v===null?'–':v===Infinity?'∞':v.toFixed(2) },
+    { key:'exp',      label:'Expectancy',      tip:'Erwarteter Gewinn pro Tag: (Win-Rate × Avg.Gewinn) − (Loss-Rate × Avg.Verlust).',      fmt: v => v===null?'–':(v>=0?'+$':'-$')+Math.abs(v).toFixed(2) },
+    { key:'sharpe',   label:'Sharpe Ratio',    tip:'Avg. Tagesgewinn ÷ Standardabweichung. >1 = gut, >2 = sehr gut.',                    fmt: v => v===null?'–':v.toFixed(2) },
+    { key:'recovery', label:'Recovery Factor', tip:'Gesamt P&L ÷ Max DD. Zeigt wie gut der EA seinen Drawdown aufholt. >3 = gut.',        fmt: v => v===null?'–':v===Infinity?'∞':v.toFixed(2) },
+    { key:'maxDd',    label:'Max DD',          tip:'Größter Einzelverlust eines Tages.',                                                   fmt: v => v===null?'–':'-$'+Math.abs(v).toFixed(2) },
+    { key:'score',    label:'Score',           tip:'Gewichteter Gesamtscore 0–10 aus allen Kennzahlen.',                                  fmt: v => v===null?'–':'⭐ '+v.toFixed(1) },
+  ];
+
+  // Build header
+  header.innerHTML = cols.map(c => {
+    const sorted = eaRatingSort.col === c.key;
+    const arrow = sorted ? (eaRatingSort.dir === -1 ? ' ▼' : ' ▲') : '';
+    const tip = c.tip ? ' title="' + c.tip + '"' : '';
+    const cursor = c.key !== 'name' ? 'cursor:pointer;' : '';
+    const onclick = c.key !== 'name' ? ' onclick="sortEaRating(\'' + c.key + '\')"' : '';
+    return '<th style="' + cursor + 'white-space:nowrap"' + tip + onclick + '>' +
+      c.label + (c.tip ? ' <span style="color:var(--accent);font-size:10px">ⓘ</span>' : '') + arrow +
+      '</th>';
+  }).join('');
+
+  // Calculate stats per EA
+  const eaMap = {};
+  DB.eas.forEach(ea => { eaMap[ea.id] = ea; });
+
+  const stats = DB.eas.map(ea => {
+    const eaEntries = entries.filter(p => p.eaId == ea.id);
+    if (!eaEntries.length) return null;
+
+    const pnls = eaEntries.map(p => parseFloat(p.pnl)||0);
+    const dds  = eaEntries.map(p => parseFloat(p.dd)||0);
+    const n = pnls.length;
+
+    const wins   = pnls.filter(v => v > 0);
+    const losses = pnls.filter(v => v < 0);
+    const winRate = (wins.length / n) * 100;
+
+    const sumWin  = wins.reduce((s,v) => s+v, 0);
+    const sumLoss = Math.abs(losses.reduce((s,v) => s+v, 0));
+    const pf = sumLoss === 0 ? Infinity : sumWin / sumLoss;
+
+    const avgWin  = wins.length  ? sumWin  / wins.length  : 0;
+    const avgLoss = losses.length ? sumLoss / losses.length : 0;
+    const exp = (winRate/100 * avgWin) - ((1 - winRate/100) * avgLoss);
+
+    const avg = pnls.reduce((s,v) => s+v, 0) / n;
+    const variance = pnls.reduce((s,v) => s + Math.pow(v-avg, 2), 0) / n;
+    const stdDev = Math.sqrt(variance);
+    const sharpe = stdDev === 0 ? null : avg / stdDev;
+
+    const totalPnl = pnls.reduce((s,v) => s+v, 0);
+    const maxDd = dds.length ? -Math.max(...dds) : 0;
+    const recovery = maxDd === 0 ? Infinity : totalPnl / Math.abs(maxDd);
+
+    // Score 0-10 (weighted)
+    const scoreWinRate  = Math.min(10, winRate / 10);
+    const scorePf       = pf === Infinity ? 10 : Math.min(10, pf * 2);
+    const scoreExp      = exp <= 0 ? 0 : Math.min(10, exp / 10);
+    const scoreSharpe   = sharpe === null ? 5 : Math.min(10, Math.max(0, sharpe * 3 + 5));
+    const scoreRecovery = recovery === Infinity ? 10 : Math.min(10, Math.max(0, recovery));
+    const score = (scoreWinRate*2 + scorePf*2 + scoreExp*2 + scoreSharpe*2 + scoreRecovery*2) / 10;
+
+    return { name: ea.name, winRate, pf, exp, sharpe, recovery, maxDd, score, n };
+  }).filter(Boolean);
+
+  // Sort
+  stats.sort((a,b) => {
+    const av = a[eaRatingSort.col];
+    const bv = b[eaRatingSort.col];
+    if (av === Infinity && bv !== Infinity) return -eaRatingSort.dir;
+    if (bv === Infinity && av !== Infinity) return eaRatingSort.dir;
+    return (av - bv) * eaRatingSort.dir;
+  });
+
+  // Color helpers
+  const colorWinRate  = v => v >= 80 ? 'var(--pos)' : v >= 60 ? 'var(--warn)' : 'var(--neg)';
+  const colorPf       = v => v === Infinity || v >= 3 ? 'var(--pos)' : v >= 2 ? 'var(--warn)' : 'var(--neg)';
+  const colorExp      = v => v > 0 ? 'var(--pos)' : 'var(--neg)';
+  const colorSharpe   = v => v === null ? 'var(--text3)' : v >= 1 ? 'var(--pos)' : v >= 0 ? 'var(--warn)' : 'var(--neg)';
+  const colorRecovery = v => v === Infinity || v >= 3 ? 'var(--pos)' : v >= 1 ? 'var(--warn)' : 'var(--neg)';
+  const colorScore    = v => v >= 7 ? 'var(--pos)' : v >= 5 ? 'var(--warn)' : 'var(--neg)';
+
+  body.innerHTML = stats.map(s => {
+    const scoreColor = colorScore(s.score);
+    return '<tr>' +
+      '<td style="font-weight:600;color:var(--accent)">' + s.name + '</td>' +
+      '<td style="color:' + colorWinRate(s.winRate) + '">' + cols[1].fmt(s.winRate) + '</td>' +
+      '<td style="color:' + colorPf(s.pf) + '">' + cols[2].fmt(s.pf) + '</td>' +
+      '<td style="color:' + colorExp(s.exp) + '">' + cols[3].fmt(s.exp) + '</td>' +
+      '<td style="color:' + colorSharpe(s.sharpe) + '">' + cols[4].fmt(s.sharpe) + '</td>' +
+      '<td style="color:' + colorRecovery(s.recovery) + '">' + cols[5].fmt(s.recovery) + '</td>' +
+      '<td style="color:var(--neg)">' + cols[6].fmt(s.maxDd) + '</td>' +
+      '<td style="color:' + scoreColor + ';font-weight:700;font-size:13px">' + cols[7].fmt(s.score) + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function sortEaRating(col) {
+  if (eaRatingSort.col === col) {
+    eaRatingSort.dir *= -1;
+  } else {
+    eaRatingSort.col = col;
+    eaRatingSort.dir = -1;
+  }
+  renderAnalytics();
 }
 
 </script>
