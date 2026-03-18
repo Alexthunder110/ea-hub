@@ -601,9 +601,9 @@ select option { background:var(--bg4); }
       <div style="display:flex;gap:6px;align-items:center">
         <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block"></span>P&L Monat</span>
         <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3);margin-right:8px"><span style="width:10px;height:10px;border-radius:2px;background:#E24B4A;display:inline-block"></span>Max DD</span>
-        <button onclick="setEaChartFilter('Live')" id="eaChart-btn-live" class="pnl-filter-btn active" style="font-size:10px;padding:4px 10px">Live</button>
+        <button onclick="setEaChartFilter('Live')" id="eaChart-btn-live" class="pnl-filter-btn" style="font-size:10px;padding:4px 10px">Live</button>
         <button onclick="setEaChartFilter('Demo')" id="eaChart-btn-demo" class="pnl-filter-btn" style="font-size:10px;padding:4px 10px">Demo</button>
-        <button onclick="setEaChartFilter('all')" id="eaChart-btn-all" class="pnl-filter-btn" style="font-size:10px;padding:4px 10px">Alle</button>
+        <button onclick="setEaChartFilter('all')" id="eaChart-btn-all" class="pnl-filter-btn active" style="font-size:10px;padding:4px 10px">Alle</button>
       </div>
     </div>
     <div style="position:relative;width:100%;height:280px">
@@ -3281,7 +3281,7 @@ function sortEaRating(col) {
 // EA MONTH CHART
 // ============================================================
 var eaMonthChartInstance = null;
-var eaMonthFilter = 'Live';
+var eaMonthFilter = 'all';
 
 function setEaChartFilter(type) {
   eaMonthFilter = type;
@@ -3308,7 +3308,7 @@ function renderEaMonthChart() {
       const acc = DB.accounts.find(function(a){ return String(a.id) === String(aid); });
       if (!acc) return false;
       if (eaMonthFilter === 'all') return true;
-      return acc.type === eaMonthFilter && isActive(acc);
+      return acc.type === eaMonthFilter;
     });
     if (!validAccIds.length) return;
 
