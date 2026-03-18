@@ -1750,7 +1750,7 @@ function renderAnalytics() {
   // Live / Demo tables removed - data now in KPI table
   renderAnalyticsCharts(entries);
   renderEaRating(entries);
-  renderEaMonthChart();
+  setTimeout(renderEaMonthChart, 50);
 }
 
 function renderLiveDemoTables(entries, month) {
