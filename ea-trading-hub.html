@@ -565,6 +565,23 @@ select option { background:var(--bg4); }
     </div>
   </div>
 
+  <!-- EA Monatsvergleich Chart -->
+  <div style="margin-bottom:22px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+      <div class="sh" style="margin:0">📊 P&L Monat vs. Max DD</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block"></span>P&L Monat</span>
+        <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3);margin-right:8px"><span style="width:10px;height:10px;border-radius:2px;background:#E24B4A;display:inline-block"></span>Max DD</span>
+        <button onclick="setEaChartFilter('Live')" id="eaChart-btn-live" class="pnl-filter-btn" style="font-size:10px;padding:4px 10px">Live</button>
+        <button onclick="setEaChartFilter('Demo')" id="eaChart-btn-demo" class="pnl-filter-btn" style="font-size:10px;padding:4px 10px">Demo</button>
+        <button onclick="setEaChartFilter('all')" id="eaChart-btn-all" class="pnl-filter-btn active" style="font-size:10px;padding:4px 10px">Alle</button>
+      </div>
+    </div>
+    <div style="position:relative;width:100%;height:280px">
+      <canvas id="eaMonthChart"></canvas>
+    </div>
+  </div>
+
   <div class="grid-2">
     <div>
       <div class="sh">KPIs pro EA</div>
@@ -591,23 +608,6 @@ select option { background:var(--bg4); }
         <thead><tr id="eaRatingHeader"></tr></thead>
         <tbody id="eaRatingBody"></tbody>
       </table>
-    </div>
-  </div>
-
-  <!-- EA Monatsvergleich Chart -->
-  <div style="margin-top:22px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
-      <div class="sh" style="margin:0">📊 P&L Monat vs. Max DD</div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block"></span>P&L Monat</span>
-        <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3);margin-right:8px"><span style="width:10px;height:10px;border-radius:2px;background:#E24B4A;display:inline-block"></span>Max DD</span>
-        <button onclick="setEaChartFilter('Live')" id="eaChart-btn-live" class="pnl-filter-btn" style="font-size:10px;padding:4px 10px">Live</button>
-        <button onclick="setEaChartFilter('Demo')" id="eaChart-btn-demo" class="pnl-filter-btn" style="font-size:10px;padding:4px 10px">Demo</button>
-        <button onclick="setEaChartFilter('all')" id="eaChart-btn-all" class="pnl-filter-btn active" style="font-size:10px;padding:4px 10px">Alle</button>
-      </div>
-    </div>
-    <div style="position:relative;width:100%;height:280px">
-      <canvas id="eaMonthChart"></canvas>
     </div>
   </div>
 </div>
@@ -3315,7 +3315,7 @@ function renderEaMonthChart() {
     if (eaMonthFilter !== 'all') {
       monthEntries = monthEntries.filter(function(p) {
         const acc = DB.accounts.find(function(a){ return String(a.id) === String(p.accountId); });
-        return acc && acc.type === eaMonthFilter;
+        return acc && acc.type === eaMonthFilter && isActive(acc);
       });
     }
 
