@@ -546,10 +546,15 @@ select option { background:var(--bg4); }
 
 <!-- ===== ANALYSE ===== -->
 <div class="view" id="view-analytics">
-  <div class="filter-row" style="margin-bottom:18px">
-    <select id="an-type" onchange="renderAnalytics()"><option value="">Live + Demo</option><option value="Live">Nur Live</option><option value="Demo">Nur Demo</option></select>
-    <select id="an-account" onchange="renderAnalytics()"><option value="">Alle Konten</option></select>
-    <select id="an-ea" onchange="renderAnalytics()"><option value="">Alle EAs</option></select>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+    <div style="display:flex;gap:6px">
+      <button class="pnl-filter-btn active" id="an-btn-all"  onclick="setAnalyticsType('',this)">Alle</button>
+      <button class="pnl-filter-btn"        id="an-btn-live" onclick="setAnalyticsType('Live',this)">📈 Live</button>
+      <button class="pnl-filter-btn"        id="an-btn-demo" onclick="setAnalyticsType('Demo',this)">🧪 Demo</button>
+    </div>
+    <select id="an-account" onchange="renderAnalytics()" style="margin-left:8px"><option value="">Alle Konten</option></select>
+    <select id="an-ea"      onchange="renderAnalytics()"><option value="">Alle EAs</option></select>
+    <input type="hidden" id="an-type" value="">
   </div>
 
   <div class="sum-grid" id="analyticsCards"></div>
@@ -571,10 +576,7 @@ select option { background:var(--bg4); }
       <div class="sh" style="margin:0">📊 P&L Monat vs. Max DD</div>
       <div style="display:flex;gap:6px;align-items:center">
         <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block"></span>P&L Monat</span>
-        <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3);margin-right:8px"><span style="width:10px;height:10px;border-radius:2px;background:#E24B4A;display:inline-block"></span>Max DD</span>
-        <button onclick="setEaChartFilter('Live')" id="eaChart-btn-live" class="pnl-filter-btn" style="font-size:10px;padding:4px 10px">Live</button>
-        <button onclick="setEaChartFilter('Demo')" id="eaChart-btn-demo" class="pnl-filter-btn" style="font-size:10px;padding:4px 10px">Demo</button>
-        <button onclick="setEaChartFilter('all')" id="eaChart-btn-all" class="pnl-filter-btn active" style="font-size:10px;padding:4px 10px">Alle</button>
+        <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:#E24B4A;display:inline-block"></span>Max DD</span>
       </div>
     </div>
     <div style="position:relative;width:100%;height:280px">
@@ -3312,10 +3314,11 @@ function renderEaMonthChart() {
     });
 
     // Apply filter
-    if (eaMonthFilter !== 'all') {
+    const anType = (document.getElementById('an-type') || {}).value || '';
+    if (anType) {
       monthEntries = monthEntries.filter(function(p) {
         const acc = DB.accounts.find(function(a){ return String(a.id) === String(p.accountId); });
-        return acc && acc.type === eaMonthFilter && isActive(acc);
+        return acc && acc.type === anType && isActive(acc);
       });
     }
 
@@ -3367,6 +3370,14 @@ function renderEaMonthChart() {
       }
     }
   });
+}
+
+
+function setAnalyticsType(type, btn) {
+  document.getElementById('an-type').value = type;
+  document.querySelectorAll('#an-btn-all,#an-btn-live,#an-btn-demo').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAnalytics();
 }
 
 </script>
