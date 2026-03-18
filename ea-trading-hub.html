@@ -3303,23 +3303,25 @@ function renderEaMonthChart() {
   const labels = [], pnlData = [], ddData = [];
 
   DB.eas.forEach(function(ea) {
-    const eaAccIds = new Set(DB.pnl.filter(function(p){ return p.eaId == ea.id; }).map(function(p){ return p.accountId; }));
-    const validAccIds = [...eaAccIds].filter(function(aid) {
-      const acc = DB.accounts.find(function(a){ return String(a.id) === String(aid); });
-      if (!acc) return false;
-      if (eaMonthFilter === 'all') return true;
-      return acc.type === eaMonthFilter;
+    // Get all P&L entries for this EA this month
+    let monthEntries = DB.pnl.filter(function(p) {
+      if (String(p.eaId) !== String(ea.id)) return false;
+      if (!p.date || !p.date.startsWith(month)) return false;
+      if (p.entryType && p.entryType !== 'trade') return false;
+      return true;
     });
-    if (!validAccIds.length) return;
 
-    const monthEntries = DB.pnl.filter(function(p) {
-      return p.eaId == ea.id && validAccIds.some(function(id){ return String(id) === String(p.accountId); }) &&
-             p.date && p.date.startsWith(month) &&
-             (!p.entryType || p.entryType === 'trade');
-    });
+    // Apply filter
+    if (eaMonthFilter !== 'all') {
+      monthEntries = monthEntries.filter(function(p) {
+        const acc = DB.accounts.find(function(a){ return String(a.id) === String(p.accountId); });
+        return acc && acc.type === eaMonthFilter;
+      });
+    }
+
     if (!monthEntries.length) return;
 
-    const pnl = monthEntries.reduce(function(s,p){ return s+(parseFloat(p.pnl)||0); }, 0);
+    const pnl = monthEntries.reduce(function(s,p){ return s + (parseFloat(p.pnl)||0); }, 0);
     const maxDd = Math.max.apply(null, monthEntries.map(function(p){ return parseFloat(p.dd)||0; }));
 
     labels.push(ea.name);
@@ -3329,12 +3331,21 @@ function renderEaMonthChart() {
 
   if (eaMonthChartInstance) { eaMonthChartInstance.destroy(); eaMonthChartInstance = null; }
 
+  const wrap = canvas.parentElement;
   if (!labels.length) {
-    canvas.parentElement.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:11px;padding:40px">Keine Daten für diesen Filter.</div>';
+    wrap.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:11px;padding:40px">Keine Daten für diesen Monat.</div>';
     return;
   }
 
-  eaMonthChartInstance = new Chart(canvas, {
+  // Restore canvas if it was replaced
+  if (!document.getElementById('eaMonthChart')) {
+    const c = document.createElement('canvas');
+    c.id = 'eaMonthChart';
+    wrap.innerHTML = '';
+    wrap.appendChild(c);
+  }
+
+  eaMonthChartInstance = new Chart(document.getElementById('eaMonthChart'), {
     type: 'bar',
     data: {
       labels: labels,
