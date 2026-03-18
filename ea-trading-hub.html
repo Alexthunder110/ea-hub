@@ -569,22 +569,6 @@ select option { background:var(--bg4); }
     <div>
       <div class="sh">KPIs pro EA</div>
       <div class="table-wrap">
-        <table><thead><tr><th>EA</th><th>Strategie</th><th>Einträge</th><th>Gesamt P&L</th><th>Ø / Eintrag</th><th>Bester Tag</th><th>Schlechtester Tag</th></tr></thead>
-        <tbody id="winRateTable"></tbody></table>
-      </div>
-    </div>
-    <div>
-      <div class="sh">Performance täglich (letzte 14 Tage)</div>
-      <div class="form-panel" style="padding:14px">
-        <div id="dailyPerfList"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="grid-2">
-    <div>
-      <div class="sh">KPIs pro EA</div>
-      <div class="table-wrap">
         <table><thead><tr><th>EA</th><th>Einträge</th><th>P&L Monat</th><th>Ø / Eintrag</th><th>Bester Tag</th><th>Schlechtester Tag</th><th>Max DD</th></tr></thead>
         <tbody id="winRateTable"></tbody></table>
       </div>
@@ -3321,7 +3305,7 @@ function renderEaMonthChart() {
   DB.eas.forEach(function(ea) {
     const eaAccIds = new Set(DB.pnl.filter(function(p){ return p.eaId == ea.id; }).map(function(p){ return p.accountId; }));
     const validAccIds = [...eaAccIds].filter(function(aid) {
-      const acc = DB.accounts.find(function(a){ return a.id == aid; });
+      const acc = DB.accounts.find(function(a){ return String(a.id) === String(aid); });
       if (!acc) return false;
       if (eaMonthFilter === 'all') return true;
       return acc.type === eaMonthFilter && isActive(acc);
@@ -3329,7 +3313,7 @@ function renderEaMonthChart() {
     if (!validAccIds.length) return;
 
     const monthEntries = DB.pnl.filter(function(p) {
-      return p.eaId == ea.id && validAccIds.includes(p.accountId) &&
+      return p.eaId == ea.id && validAccIds.some(function(id){ return String(id) === String(p.accountId); }) &&
              p.date && p.date.startsWith(month) &&
              (!p.entryType || p.entryType === 'trade');
     });
