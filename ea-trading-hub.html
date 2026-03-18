@@ -547,11 +547,9 @@ select option { background:var(--bg4); }
 <!-- ===== ANALYSE ===== -->
 <div class="view" id="view-analytics">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap">
-    <div style="display:flex;gap:6px">
-      <button class="pnl-filter-btn active" id="an-btn-all"  onclick="setAnalyticsType('',this)">Alle</button>
-      <button class="pnl-filter-btn"        id="an-btn-live" onclick="setAnalyticsType('Live',this)">📈 Live</button>
-      <button class="pnl-filter-btn"        id="an-btn-demo" onclick="setAnalyticsType('Demo',this)">🧪 Demo</button>
-    </div>
+    <button class="pnl-filter-btn active" id="an-btn-all"  onclick="setAnalyticsType('',this)">Alle</button>
+    <button class="pnl-filter-btn"        id="an-btn-live" onclick="setAnalyticsType('Live',this)">📈 Live</button>
+    <button class="pnl-filter-btn"        id="an-btn-demo" onclick="setAnalyticsType('Demo',this)">🧪 Demo</button>
     <select id="an-account" onchange="renderAnalytics()"><option value="">Alle Konten</option></select>
     <select id="an-ea"      onchange="renderAnalytics()"><option value="">Alle EAs</option></select>
     <input type="hidden" id="an-type" value="">
