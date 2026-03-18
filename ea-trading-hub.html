@@ -581,6 +581,22 @@ select option { background:var(--bg4); }
     </div>
   </div>
 
+  <div class="grid-2">
+    <div>
+      <div class="sh">KPIs pro EA</div>
+      <div class="table-wrap">
+        <table><thead><tr><th>EA</th><th>Einträge</th><th>P&L Monat</th><th>Ø / Eintrag</th><th>Bester Tag</th><th>Schlechtester Tag</th><th>Max DD</th></tr></thead>
+        <tbody id="winRateTable"></tbody></table>
+      </div>
+    </div>
+    <div>
+      <div class="sh">Performance täglich (letzte 14 Tage)</div>
+      <div class="form-panel" style="padding:14px">
+        <div id="dailyPerfList"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- EA Bewertung -->
   <div style="margin-top:22px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
@@ -594,20 +610,20 @@ select option { background:var(--bg4); }
     </div>
   </div>
 
-  <div class="grid-2">
-    <div>
-      <div class="sh">Live Konten</div>
-      <div class="table-wrap">
-        <table><thead><tr><th>Konto</th><th>P&L Monat</th><th>Max DD</th><th>Gesamt P&L</th></tr></thead>
-        <tbody id="liveTable"></tbody></table>
+  <!-- EA Monatsvergleich Chart -->
+  <div style="margin-top:22px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+      <div class="sh" style="margin:0">📊 P&L Monat vs. Max DD</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block"></span>P&L Monat</span>
+        <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3);margin-right:8px"><span style="width:10px;height:10px;border-radius:2px;background:#E24B4A;display:inline-block"></span>Max DD</span>
+        <button onclick="setEaChartFilter('Live')" id="eaChart-btn-live" class="pnl-filter-btn active" style="font-size:10px;padding:4px 10px">Live</button>
+        <button onclick="setEaChartFilter('Demo')" id="eaChart-btn-demo" class="pnl-filter-btn" style="font-size:10px;padding:4px 10px">Demo</button>
+        <button onclick="setEaChartFilter('all')" id="eaChart-btn-all" class="pnl-filter-btn" style="font-size:10px;padding:4px 10px">Alle</button>
       </div>
     </div>
-    <div>
-      <div class="sh">Demo Konten</div>
-      <div class="table-wrap">
-        <table><thead><tr><th>Konto</th><th>P&L Monat</th><th>Max DD</th><th>Gesamt P&L</th></tr></thead>
-        <tbody id="demoTable"></tbody></table>
-      </div>
+    <div style="position:relative;width:100%;height:280px">
+      <canvas id="eaMonthChart"></canvas>
     </div>
   </div>
 </div>
@@ -1699,26 +1715,30 @@ function renderAnalytics() {
     ${c.sub?`<div class="sum-sub">${c.sub}</div>`:''}
   </div>`).join('');
 
-  // EA Performance Table
+  // EA Performance Table - updated columns
   const tbody = document.getElementById('winRateTable');
   if (!DB.eas.length) { tbody.innerHTML='<tr><td colspan="7" class="empty">Keine EAs.</td></tr>'; }
   else {
     tbody.innerHTML = DB.eas.map(ea => {
       const eaEntries = entries.filter(e => e.eaId == ea.id);
+      const tradingEntries = eaEntries.filter(e => (parseFloat(e.pnl)||0) !== 0);
       const totalEaPnl = eaEntries.reduce((s,e)=>s+(parseFloat(e.pnl)||0),0);
-      const avgPnl = eaEntries.length ? totalEaPnl/eaEntries.length : null;
-      const pnlValues = eaEntries.map(e=>parseFloat(e.pnl)||0);
+      const monthEaPnl = eaEntries.filter(e=>e.date&&e.date.startsWith(month)).reduce((s,e)=>s+(parseFloat(e.pnl)||0),0);
+      const avgPnl = tradingEntries.length ? totalEaPnl/tradingEntries.length : null;
+      const pnlValues = tradingEntries.map(e=>parseFloat(e.pnl)||0);
       const best  = pnlValues.length ? Math.max(...pnlValues) : null;
       const worst = pnlValues.length ? Math.min(...pnlValues) : null;
+      const ddValues = eaEntries.map(e=>parseFloat(e.dd)||0);
+      const maxDd = ddValues.length ? Math.max(...ddValues) : 0;
       const fmtPnl = v => v===null?'–':(v>=0?'+$':'-$')+Math.abs(v).toFixed(2);
       return `<tr>
         <td style="color:var(--accent);font-weight:500">${ea.name}</td>
-        <td style="color:var(--text2)">${ea.strategy||'–'}</td>
         <td>${eaEntries.length}</td>
-        <td class="${totalEaPnl>=0?'pos-val':'neg-val'}">${fmtPnl(totalEaPnl)}</td>
+        <td class="${monthEaPnl>=0?'pos-val':'neg-val'}">${fmtPnl(monthEaPnl)}</td>
         <td class="${avgPnl!==null&&avgPnl>=0?'pos-val':'neg-val'}">${fmtPnl(avgPnl)}</td>
         <td class="pos-val">${fmtPnl(best)}</td>
         <td class="neg-val">${fmtPnl(worst)}</td>
+        <td style="color:${maxDd?'var(--neg)':'var(--text3)'}">${maxDd?'-$'+maxDd.toFixed(2):'–'}</td>
       </tr>`;
     }).join('');
   }
@@ -1743,10 +1763,10 @@ function renderAnalytics() {
     </div>`;
   }).join('');
 
-  // Live / Demo tables
-  renderLiveDemoTables(entries, month);
+  // Live / Demo tables removed - data now in KPI table
   renderAnalyticsCharts(entries);
   renderEaRating(entries);
+  renderEaMonthChart();
 }
 
 function renderLiveDemoTables(entries, month) {
@@ -3188,9 +3208,11 @@ function renderEaRating(entries) {
 
   const stats = DB.eas.map(ea => {
     const eaEntries = entries.filter(p => p.eaId == ea.id);
-    if (!eaEntries.length) return null;
+    // Ignore zero P&L entries for statistics
+    const tradingEntries = eaEntries.filter(p => (parseFloat(p.pnl)||0) !== 0);
+    if (!tradingEntries.length) return null;
 
-    const pnls = eaEntries.map(p => parseFloat(p.pnl)||0);
+    const pnls = tradingEntries.map(p => parseFloat(p.pnl)||0);
     const dds  = eaEntries.map(p => parseFloat(p.dd)||0);
     const n = pnls.length;
 
@@ -3215,13 +3237,15 @@ function renderEaRating(entries) {
     const maxDd = dds.length ? -Math.max(...dds) : 0;
     const recovery = maxDd === 0 ? Infinity : totalPnl / Math.abs(maxDd);
 
-    // Score 0-10 (weighted)
+    // Score 0-10 weighted - confidence factor based on number of entries
+    const confidence = Math.min(1, n / 20); // full confidence at 20+ entries
     const scoreWinRate  = Math.min(10, winRate / 10);
     const scorePf       = pf === Infinity ? 10 : Math.min(10, pf * 2);
     const scoreExp      = exp <= 0 ? 0 : Math.min(10, exp / 10);
     const scoreSharpe   = sharpe === null ? 5 : Math.min(10, Math.max(0, sharpe * 3 + 5));
     const scoreRecovery = recovery === Infinity ? 10 : Math.min(10, Math.max(0, recovery));
-    const score = (scoreWinRate*2 + scorePf*2 + scoreExp*2 + scoreSharpe*2 + scoreRecovery*2) / 10;
+    const rawScore = (scoreWinRate*2 + scorePf*2 + scoreExp*2 + scoreSharpe*2 + scoreRecovery*2) / 10;
+    const score = rawScore * confidence + (rawScore * 0.5) * (1 - confidence); // reduce score for few entries
 
     return { name: ea.name, winRate, pf, exp, sharpe, recovery, maxDd, score, n };
   }).filter(Boolean);
@@ -3266,6 +3290,88 @@ function sortEaRating(col) {
     eaRatingSort.dir = -1;
   }
   renderAnalytics();
+}
+
+
+// ============================================================
+// EA MONTH CHART
+// ============================================================
+var eaMonthChartInstance = null;
+var eaMonthFilter = 'Live';
+
+function setEaChartFilter(type) {
+  eaMonthFilter = type;
+  ['Live','Demo','all'].forEach(function(t) {
+    const btn = document.getElementById('eaChart-btn-' + t.toLowerCase());
+    if (btn) {
+      btn.classList.toggle('active', t === type);
+    }
+  });
+  renderEaMonthChart();
+}
+
+function renderEaMonthChart() {
+  const canvas = document.getElementById('eaMonthChart');
+  if (!canvas) return;
+  const today = new Date().toISOString().split('T')[0];
+  const month = today.substring(0,7);
+
+  const labels = [], pnlData = [], ddData = [];
+
+  DB.eas.forEach(function(ea) {
+    const eaAccIds = new Set(DB.pnl.filter(function(p){ return p.eaId == ea.id; }).map(function(p){ return p.accountId; }));
+    const validAccIds = [...eaAccIds].filter(function(aid) {
+      const acc = DB.accounts.find(function(a){ return a.id == aid; });
+      if (!acc) return false;
+      if (eaMonthFilter === 'all') return true;
+      return acc.type === eaMonthFilter && isActive(acc);
+    });
+    if (!validAccIds.length) return;
+
+    const monthEntries = DB.pnl.filter(function(p) {
+      return p.eaId == ea.id && validAccIds.includes(p.accountId) &&
+             p.date && p.date.startsWith(month) &&
+             (!p.entryType || p.entryType === 'trade');
+    });
+    if (!monthEntries.length) return;
+
+    const pnl = monthEntries.reduce(function(s,p){ return s+(parseFloat(p.pnl)||0); }, 0);
+    const maxDd = Math.max.apply(null, monthEntries.map(function(p){ return parseFloat(p.dd)||0; }));
+
+    labels.push(ea.name);
+    pnlData.push(parseFloat(pnl.toFixed(2)));
+    ddData.push(parseFloat((-maxDd).toFixed(2)));
+  });
+
+  if (eaMonthChartInstance) { eaMonthChartInstance.destroy(); eaMonthChartInstance = null; }
+
+  if (!labels.length) {
+    canvas.parentElement.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:11px;padding:40px">Keine Daten für diesen Filter.</div>';
+    return;
+  }
+
+  eaMonthChartInstance = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'P&L Monat', data: pnlData, backgroundColor: '#1D9E75', borderRadius: 4, barPercentage: 1.0, categoryPercentage: 0.5 },
+        { label: 'Max DD',    data: ddData,  backgroundColor: '#E24B4A', borderRadius: 4, barPercentage: 1.0, categoryPercentage: 0.5 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(c){ return (c.parsed.y >= 0 ? '+$' : '-$') + Math.abs(c.parsed.y).toFixed(2); } } }
+      },
+      scales: {
+        x: { ticks: { color: '#3d5166', font: { size: 10 }, autoSkip: false, maxRotation: 30 }, grid: { color: 'rgba(30,45,61,0.5)' } },
+        y: { ticks: { color: '#3d5166', font: { size: 10 }, callback: function(v){ return (v >= 0 ? '+$' : '-$') + Math.abs(v); } }, grid: { color: 'rgba(30,45,61,0.5)' } }
+      }
+    }
+  });
 }
 
 </script>
