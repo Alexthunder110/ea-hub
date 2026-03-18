@@ -1441,15 +1441,28 @@ function renderSumCards() {
   const monthPnl = filteredPnl.filter(p=>p.date&&p.date.startsWith(month)).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
   const allPnl   = filteredPnl.reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
 
-  const cards = [
-    { label:'Gesamt Guthaben', val:'$'+fmt(totalBal), sub:`${active} aktive Konten`, cls:'' },
-    { label:'Live Guthaben',   val:'$'+fmt(liveBal),  sub:`${DB.accounts.filter(a=>a.type==='Live' && isActive(a)).length} Live Konten`, cls:'' },
-    { label:'Demo Guthaben',   val:'$'+fmt(demoBal),  sub:`${DB.accounts.filter(a=>a.type==='Demo').length} Demo Konten`, cls:'warn' },
-    { label:'P&L Heute',       val:(todayPnl>=0?'+$':'-$')+Math.abs(todayPnl).toFixed(2), sub:'Tagesperformance'+filterLabel, cls:todayPnl>=0?'pos':'neg' },
-    { label:'P&L Woche',       val:(weekPnl>=0?'+$':'-$')+Math.abs(weekPnl).toFixed(2), sub:'laufende Woche'+filterLabel, cls:weekPnl>=0?'pos':'neg' },
-    { label:'P&L Monat',       val:(monthPnl>=0?'+$':'-$')+Math.abs(monthPnl).toFixed(2), sub:new Date().toLocaleDateString('de-DE',{month:'long'})+filterLabel, cls:monthPnl>=0?'pos':'neg' },
-    { label:'P&L Gesamt',      val:(allPnl>=0?'+$':'-$')+Math.abs(allPnl).toFixed(2), sub:`${filteredPnl.length} Einträge`+filterLabel, cls:allPnl>=0?'pos':'neg' },
-  ];
+  const cards = [];
+
+  // Single balance card – filter-dependent
+  let balVal, balSub;
+  if (PNL_FILTER === 'Live') {
+    balVal = '$'+fmt(liveBal);
+    balSub = DB.accounts.filter(a=>a.type==='Live' && isActive(a)).length + ' Live Konten';
+  } else if (PNL_FILTER === 'Demo') {
+    balVal = '$'+fmt(demoBal);
+    balSub = DB.accounts.filter(a=>a.type==='Demo').length + ' Demo Konten';
+  } else {
+    balVal = '$'+fmt(totalBal);
+    balSub = active + ' aktive Konten';
+  }
+  cards.push({ label:'Guthaben', val:balVal, sub:balSub, cls:'' });
+
+  cards.push(
+    { label:'P&L Heute',  val:(todayPnl>=0?'+$':'-$')+Math.abs(todayPnl).toFixed(2), sub:'Tagesperformance'+filterLabel, cls:todayPnl>=0?'pos':'neg' },
+    { label:'P&L Woche',  val:(weekPnl>=0?'+$':'-$')+Math.abs(weekPnl).toFixed(2),   sub:'laufende Woche'+filterLabel,   cls:weekPnl>=0?'pos':'neg' },
+    { label:'P&L Monat',  val:(monthPnl>=0?'+$':'-$')+Math.abs(monthPnl).toFixed(2), sub:new Date().toLocaleDateString('de-DE',{month:'long'})+filterLabel, cls:monthPnl>=0?'pos':'neg' },
+    { label:'P&L Gesamt', val:(allPnl>=0?'+$':'-$')+Math.abs(allPnl).toFixed(2),     sub:filteredPnl.length+' Einträge'+filterLabel, cls:allPnl>=0?'pos':'neg' },
+  );
 
   // Calculate max weekly withdrawal from active live EAs
   const activeLiveAccs = DB.accounts.filter(a => a.type === 'Live' && isActive(a));
@@ -1468,7 +1481,17 @@ function renderSumCards() {
     const ratio = curLot > 0 ? targetLot / curLot : 1;
     maxForecast += avgDay * ratio * 5;
   });
-  cards.push({ label:'Max. Entnahme/Wo', val:'$'+maxIst.toFixed(0), sub:`Forecast: $${maxForecast.toFixed(0)}`, cls:'warn', special: true });
+  cards.push({ label:'Max. Entnahme/Wo', val:'$'+maxIst.toFixed(0), sub:`Forecast: $${maxForecast.toFixed(0)}`, cls:'', special: true });
+
+  // Ausgezahlt Monat + Noch entnehmbar Woche
+  const withdrawalsMonth = DB.pnl.filter(p => p.entryType === 'withdrawal' && p.date && p.date.startsWith(month));
+  const withdrawalsWeek  = DB.pnl.filter(p => p.entryType === 'withdrawal' && p.date && p.date >= ws && p.date <= today);
+  const paidMonth = Math.abs(withdrawalsMonth.reduce((s,p) => s+(parseFloat(p.pnl)||0), 0));
+  const paidWeek  = Math.abs(withdrawalsWeek.reduce((s,p)  => s+(parseFloat(p.pnl)||0), 0));
+  const stillAvail = weekPnl - paidWeek;
+
+  cards.push({ label:'Ausgezahlt Monat', val:'$'+paidMonth.toFixed(2), sub:new Date().toLocaleDateString('de-DE',{month:'long'}), cls:'' });
+  cards.push({ label:'Noch entnehmbar', val:(stillAvail>=0?'+$':'-$')+Math.abs(stillAvail).toFixed(2), sub:'Woche − Ausgezahlt', cls:stillAvail>=0?'pos':'neg' });
 
   document.getElementById('sumCards').innerHTML = cards.map(c => {
     const fmtVal = c.val.replace(/^([+\-]?)(\$)/, (m,sign,dollar) =>
