@@ -1406,10 +1406,10 @@ function setPnlFilter(type, btn) {
 }
 
 function getAccountBalance(acc) {
-  // Startkapital + Summe aller P&L Einträge
+  // Startkapital + alle Einträge die die Balance verändern (trade, transfer, withdrawal, deposit)
   const start = parseFloat(acc.startCapital) || 0;
   const totalPnl = DB.pnl
-    .filter(e => e.accountId == acc.id && (!e.entryType || e.entryType === 'trade'))
+    .filter(e => e.accountId == acc.id)
     .reduce((s,e) => s + (parseFloat(e.pnl)||0), 0);
   if (start > 0) return start + totalPnl;
   // Fallback: letzter Equity-Eintrag
