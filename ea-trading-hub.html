@@ -550,8 +550,8 @@ select option { background:var(--bg4); }
     <button class="pnl-filter-btn active" id="an-btn-all"  onclick="setAnalyticsType('',this)">Alle</button>
     <button class="pnl-filter-btn"        id="an-btn-live" onclick="setAnalyticsType('Live',this)">📈 Live</button>
     <button class="pnl-filter-btn"        id="an-btn-demo" onclick="setAnalyticsType('Demo',this)">🧪 Demo</button>
-    <select id="an-account" onchange="renderAnalytics()"><option value="">Alle Konten</option></select>
-    <select id="an-ea"      onchange="renderAnalytics()"><option value="">Alle EAs</option></select>
+    <select id="an-account" onchange="renderAnalytics()" style="width:160px"><option value="">Alle Konten</option></select>
+    <select id="an-ea"      onchange="renderAnalytics()" style="width:160px"><option value="">Alle EAs</option></select>
     <input type="hidden" id="an-type" value="">
   </div>
 
