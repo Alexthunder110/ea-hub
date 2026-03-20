@@ -461,7 +461,7 @@ select option { background:var(--bg4); }
 
   <div class="sh">Meine Konten</div>
   <div class="table-wrap">
-    <table><thead><tr><th>#</th><th>Nummer</th><th>Broker</th><th>Bezeichnung</th><th>MT</th><th>Typ</th><th>Guthaben</th><th>Ziel</th><th>Status</th><th>Notiz</th><th></th></tr></thead>
+    <table><thead><tr><th>#</th><th>Nummer</th><th>Broker</th><th>Bezeichnung</th><th>MT</th><th>Typ</th><th>Guthaben</th><th>EA</th><th>Status</th><th>Notiz</th><th></th></tr></thead>
     <tbody id="accountsTable"></tbody></table>
   </div>
 </div>
@@ -1079,28 +1079,29 @@ function resetAccForm() {
 
 function renderAccountsTable() {
   const tbody = document.getElementById('accountsTable');
-  if (!DB.accounts.length) { tbody.innerHTML='<tr><td colspan="12" class="empty">Noch keine Konten.</td></tr>'; return; }
+  if (!DB.accounts.length) { tbody.innerHTML='<tr><td colspan="11" class="empty">Noch keine Konten.</td></tr>'; return; }
   tbody.innerHTML = DB.accounts.map((a,i) => {
-    const rendite = a.startCapital ? (((a.balance - a.startCapital)/a.startCapital)*100).toFixed(1) : '–';
-    const progress = a.targetEquity && a.startCapital ? Math.min(100,Math.max(0,((a.balance - a.startCapital)/(a.targetEquity - a.startCapital))*100)).toFixed(0) : null;
     const statusBadge = a.status==='active'?'badge-active':a.status==='paused'?'badge-paused':'badge-off';
     const statusLabel = a.status==='active'?'Aktiv':a.status==='paused'?'Pause':'Aus';
-    return `<tr>
-      <td>${i+1}</td>
-      <td style="font-weight:600;color:#fff">${a.number}</td>
-      <td>${a.broker}</td>
-      <td>${a.name||'–'}</td>
-      <td style="color:var(--text2)">${a.mt}</td>
-      <td><span class="badge ${a.type==='Live'?'badge-live':'badge-demo'}">${a.type}</span></td>
-      <td style="color:#fff;font-weight:500">$${fmt(getAccountBalance(a))}</td>
-      <td>${progress!==null?`<div style="background:var(--bg5);border-radius:3px;height:5px;width:80px"><div style="background:var(--accent);height:100%;width:${progress}%;border-radius:3px"></div></div><span style="font-size:9px;color:var(--text3)">${progress}%</span>`:'–'}</td>
-      <td><span class="badge ${statusBadge}">${statusLabel}</span></td>
-      <td style="color:var(--text2);font-size:10px">${a.note||'–'}</td>
-      <td style="display:flex;gap:4px">
-        <button class="icon-btn edit" onclick="editAccount('${a.id}')" title="Bearbeiten">✎</button>
-        <button class="icon-btn" onclick="deleteAccount('${a.id}')" title="Löschen">✕</button>
-      </td>
-    </tr>`;
+    // Find EAs active on this account
+    const linkedEas = DB.eas.filter(ea => DB.pnl.some(p => p.eaId == ea.id && p.accountId == a.id));
+    const eaNames = linkedEas.length ? linkedEas.map(ea => '<span style="font-size:10px;color:var(--accent)">' + ea.name + '</span>').join(', ') : '<span style="color:var(--text3)">–</span>';
+    return '<tr>' +
+      '<td>' + (i+1) + '</td>' +
+      '<td style="font-weight:600;color:#fff">' + a.number + '</td>' +
+      '<td>' + a.broker + '</td>' +
+      '<td>' + (a.name||'–') + '</td>' +
+      '<td style="color:var(--text2)">' + a.mt + '</td>' +
+      '<td><span class="badge ' + (a.type==='Live'?'badge-live':'badge-demo') + '">' + a.type + '</span></td>' +
+      '<td style="color:#fff;font-weight:500">$' + fmt(getAccountBalance(a)) + '</td>' +
+      '<td>' + eaNames + '</td>' +
+      '<td><span class="badge ' + statusBadge + '">' + statusLabel + '</span></td>' +
+      '<td style="color:var(--text2);font-size:10px">' + (a.note||'–') + '</td>' +
+      '<td style="display:flex;gap:4px">' +
+        '<button class="icon-btn edit" onclick="editAccount(\'' + a.id + '\')" title="Bearbeiten">✎</button>' +
+        '<button class="icon-btn" onclick="deleteAccount(\'' + a.id + '\')" title="Löschen">✕</button>' +
+      '</td>' +
+    '</tr>';
   }).join('');
 }
 
