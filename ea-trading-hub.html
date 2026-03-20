@@ -1287,7 +1287,7 @@ function renderPnlTable() {
   if (fEA)  entries = entries.filter(e => e.eaId == fEA);
   if (fType) entries = entries.filter(e => {
     const acc = DB.accounts.find(a => a.id == e.accountId);
-    return acc && acc.type === fType && isActive(acc);
+    return acc && acc.type === fType;
   });
   if (fMon) entries = entries.filter(e => e.date && e.date.startsWith(fMon));
 
@@ -1428,12 +1428,12 @@ function renderSumCards() {
   const active   = DB.accounts.filter(a=>a.status==='active').length;
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
   const ws = weekStart.toISOString().split('T')[0];
-  // Filter P&L entries by account type
+  // Filter P&L entries by account type - NO isActive check for historical stats
   const filteredPnl = DB.pnl.filter(p => {
     if (p.entryType && p.entryType !== 'trade') return false;
     if (PNL_FILTER === 'all') return true;
     const acc = DB.accounts.find(a => a.id == p.accountId);
-    return acc && acc.type === PNL_FILTER && isActive(acc);
+    return acc && acc.type === PNL_FILTER;
   });
   const filterLabel = PNL_FILTER === 'all' ? '' : ` (${PNL_FILTER})`;
   const todayPnl = filteredPnl.filter(p=>p.date===today).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
@@ -1608,7 +1608,7 @@ function renderGoalProgress() {
   const liveTrades = DB.pnl.filter(p => {
     if (p.entryType && p.entryType !== 'trade') return false;
     const acc = DB.accounts.find(a => a.id == p.accountId);
-    return acc && acc.type === 'Live' && isActive(acc);
+    return acc && acc.type === 'Live';
   });
 
   const dayPnl   = liveTrades.filter(p => p.date === today).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
@@ -1663,7 +1663,7 @@ function renderAnalytics() {
   if (fEa)  entries = entries.filter(e => e.eaId == fEa);
   if (fType) entries = entries.filter(e => {
     const acc = DB.accounts.find(a => a.id == e.accountId);
-    return acc && acc.type === fType && isActive(acc);
+    return acc && acc.type === fType;
   });
 
   const today = new Date().toISOString().split('T')[0];
@@ -2213,18 +2213,27 @@ function renderForecast() {
   const el = document.getElementById('incomeForecast');
   if (!el) return;
 
-  // Load saved forecast settings
   const saved = DB.settings.forecastSettings || {};
+  // EA filter - which EAs to show in forecast (saved in settings)
+  if (!DB.settings.forecastEaFilter) DB.settings.forecastEaFilter = {};
 
-  const liveEas = DB.eas.filter(ea => {
-    // Only EAs that have at least one live account entry
+  // All EAs that have any live P&L entries (regardless of account status)
+  const allLiveEas = DB.eas.filter(ea => {
     return DB.pnl.some(p => {
       if (p.entryType && p.entryType !== 'trade') return false;
       if (p.eaId != ea.id) return false;
       const acc = DB.accounts.find(a => a.id == p.accountId);
-      return acc && acc.type === 'Live' && isActive(acc);
+      return acc && acc.type === 'Live';
     });
   });
+
+  // By default all EAs are enabled unless explicitly disabled
+  const eaEnabled = function(eaId) {
+    const f = DB.settings.forecastEaFilter;
+    return f[eaId] !== false;
+  };
+
+  const liveEas = allLiveEas.filter(ea => eaEnabled(ea.id));
 
   if (!liveEas.length) { el.innerHTML = ''; return; }
 
@@ -2233,10 +2242,19 @@ function renderForecast() {
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
   const ws = weekStart.toISOString().split('T')[0];
 
-  el.innerHTML = `
-    <div class="sh" style="margin-bottom:14px">📈 Forecast <span style="font-size:9px;color:var(--text3);font-weight:400">Nur Live-Konten</span></div>
-    <div id="forecastSummary" style="margin-bottom:18px"></div>
-    <div class="forecast-grid" id="forecastGrid"></div>`;
+  // Build EA toggle buttons
+  const eaToggles = allLiveEas.map(ea => {
+    const on = eaEnabled(ea.id);
+    return '<button onclick="toggleForecastEa(\'' + ea.id + '\')" style="font-size:10px;padding:3px 10px;border-radius:4px;border:1px solid ' + (on?'var(--pos)':'var(--border2)') + ';background:' + (on?'rgba(0,255,157,0.1)':'transparent') + ';color:' + (on?'var(--pos)':'var(--text3)') + ';cursor:pointer;font-family:var(--font-mono)">' + ea.name + '</button>';
+  }).join('');
+
+  el.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">' +
+      '<div class="sh" style="margin:0">📈 Forecast <span style="font-size:9px;color:var(--text3);font-weight:400">Nur Live-Konten</span></div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' + eaToggles + '</div>' +
+    '</div>' +
+    '<div id="forecastSummary" style="margin-bottom:18px"></div>' +
+    '<div class="forecast-grid" id="forecastGrid"></div>';
 
   const grid = document.getElementById('forecastGrid');
 
@@ -2248,12 +2266,12 @@ function renderForecast() {
       if (p.entryType && p.entryType !== 'trade') return false;
       if (p.eaId != ea.id) return false;
       const acc = DB.accounts.find(a => a.id == p.accountId);
-      return acc && acc.type === 'Live' && isActive(acc);
+      return acc && acc.type === 'Live';
     });
 
-    // Account linked to this EA
+    // Account linked to this EA - prefer active account
     const linkedAcc = DB.accounts.find(a => {
-      return a.type === 'Live' && isActive(a) && DB.pnl.some(p => p.eaId == ea.id && p.accountId == a.id);
+      return a.type === 'Live' && DB.pnl.some(p => p.eaId == ea.id && p.accountId == a.id);
     });
     const currentCap = linkedAcc ? getAccountBalance(linkedAcc) : 0;
 
@@ -2909,7 +2927,16 @@ function renderStrategy() {
           return '<select onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'eaId\',this.value)" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:2px 6px;width:110px">' + opts + '</select>';
         })() + '</td>' +
         '<td style="padding:8px 10px;text-align:center"><input type="month" value="' + (r.month||'') + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'month\',this.value);renderStrategy()" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:10px;padding:2px 6px"></td>' +
-        '<td style="padding:8px 10px;text-align:right;color:var(--text3)">$' + (r.from||0).toLocaleString() + '</td>' +
+        '<td style="padding:8px 10px;text-align:right;color:var(--text3)">$' + (function() {
+          if (r.eaId) {
+            const ea = DB.eas.find(function(e){ return String(e.id)===String(r.eaId); });
+            if (ea) {
+              const acc = DB.accounts.find(function(a){ return DB.pnl.some(function(p){ return p.eaId==ea.id && p.accountId==a.id; }); });
+              if (acc) return getAccountBalance(acc).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
+            }
+          }
+          return (r.from||0).toLocaleString();
+        })() + '</td>' +
         '<td style="padding:8px 10px;text-align:right"><input type="number" value="' + (r.to||0) + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'to\',parseFloat(this.value)||0);updateDeposit(\'' + r.id + '\')" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;width:80px;text-align:right;padding:2px 6px"></td>' +
         '<td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700">$' + (r.deposit||0).toLocaleString() + '</td>' +
         '<td style="padding:8px 10px"><select onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'status\',this.value)" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:' + (statusColor[r.status]||'var(--text3)') + ';font-family:var(--font-mono);font-size:10px;padding:2px 4px">' + opts + '</select></td>' +
@@ -3316,7 +3343,7 @@ function renderEaMonthChart() {
     if (anType) {
       monthEntries = monthEntries.filter(function(p) {
         const acc = DB.accounts.find(function(a){ return String(a.id) === String(p.accountId); });
-        return acc && acc.type === anType && isActive(acc);
+        return acc && acc.type === anType;
       });
     }
 
@@ -3376,6 +3403,15 @@ function setAnalyticsType(type, btn) {
   document.querySelectorAll('#an-btn-all,#an-btn-live,#an-btn-demo').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderAnalytics();
+}
+
+
+function toggleForecastEa(eaId) {
+  if (!DB.settings.forecastEaFilter) DB.settings.forecastEaFilter = {};
+  const current = DB.settings.forecastEaFilter[eaId];
+  DB.settings.forecastEaFilter[eaId] = current === false ? true : false;
+  saveLocal();
+  renderForecast();
 }
 
 </script>
