@@ -2235,7 +2235,7 @@ function renderForecast() {
 
   const liveEas = allLiveEas.filter(ea => eaEnabled(ea.id));
 
-  if (!liveEas.length) { el.innerHTML = ''; return; }
+  if (!allLiveEas.length) { el.innerHTML = ''; return; }
 
   const today = new Date().toISOString().split('T')[0];
   const month = today.substring(0,7);
@@ -2255,6 +2255,11 @@ function renderForecast() {
     '</div>' +
     '<div id="forecastSummary" style="margin-bottom:18px"></div>' +
     '<div class="forecast-grid" id="forecastGrid"></div>';
+
+  if (!liveEas.length) {
+    document.getElementById('forecastSummary').innerHTML = '<span style="color:var(--text3);font-size:11px">Keine EAs ausgewählt – klick oben auf einen EA um ihn anzuzeigen.</span>';
+    return;
+  }
 
   const grid = document.getElementById('forecastGrid');
 
