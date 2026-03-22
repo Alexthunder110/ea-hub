@@ -2115,8 +2115,6 @@ async function saveTodo() {
     priority: document.getElementById('todo-priority').value,
     status: document.getElementById('todo-status').value,
     description: document.getElementById('todo-desc').value.trim(),
-    buyUrl: document.getElementById('todo-buy').value.trim(),
-    trackUrl: document.getElementById('todo-track').value.trim(),
   };
   const existing = DB.todos.findIndex(t => t.id == obj.id);
   if (existing >= 0) DB.todos[existing] = obj;
@@ -2135,8 +2133,6 @@ function editTodo(id) {
   document.getElementById('todo-priority').value = t.priority||'medium';
   document.getElementById('todo-status').value = t.status||'open';
   document.getElementById('todo-desc').value = t.description||'';
-  document.getElementById('todo-buy').value = t.buyUrl||'';
-  document.getElementById('todo-track').value = t.trackUrl||'';
   document.getElementById('todoFormTitle').textContent = 'To Do bearbeiten';
   document.getElementById('view-todos').scrollIntoView({behavior:'smooth'});
 }
@@ -2158,7 +2154,7 @@ async function toggleTodoStatus(id) {
 }
 
 function resetTodoForm() {
-  ['todo-title','todo-desc','todo-buy','todo-track'].forEach(id => document.getElementById(id).value='');
+  ['todo-title','todo-desc'].forEach(id => document.getElementById(id).value='');
   document.getElementById('todo-priority').value='medium';
   document.getElementById('todo-status').value='open';
   document.getElementById('todo-edit-id').value='';
