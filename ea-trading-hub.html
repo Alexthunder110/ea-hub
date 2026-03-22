@@ -3676,10 +3676,14 @@ function renderOverviewEaLab() {
   const el = document.getElementById('overviewEaLab');
   if (!el) return;
   const data = getLabData();
-  const prioOrder = { high: 0, medium: 1, low: 2 };
+  const prioOrder  = { high: 0, medium: 1, low: 2 };
   const candidates = data
     .filter(function(e){ return e.status !== 'off'; })
-    .sort(function(a,b){ return (prioOrder[a.priority]||1) - (prioOrder[b.priority]||1); });
+    .sort(function(a,b){
+      const pa = prioOrder[a.priority] !== undefined ? prioOrder[a.priority] : 99;
+      const pb = prioOrder[b.priority] !== undefined ? prioOrder[b.priority] : 99;
+      return pa - pb;
+    });
 
   if (!candidates.length) {
     el.innerHTML = '<span style="color:var(--text3);font-size:11px">Keine Einträge im EA Lab.</span>';
@@ -3693,12 +3697,18 @@ function renderOverviewEaLab() {
   el.innerHTML = candidates.map(function(e) {
     const pc = prioColor[e.priority] || 'var(--text3)';
     const si = statusIcon[e.status] || '';
+    const links =
+      (e.buyUrl   ? '<a href="'+e.buyUrl+'"   target="_blank" class="todo-link"       style="font-size:13px;margin-left:6px" title="Kaufen"   onclick="event.stopPropagation()">🛒</a>' : '') +
+      (e.trackUrl ? '<a href="'+e.trackUrl+'" target="_blank" class="todo-link track" style="font-size:13px;margin-left:4px" title="Tracking" onclick="event.stopPropagation()">📊</a>' : '');
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">' +
-      '<div>' +
-        '<div style="font-size:11px;font-weight:600;color:var(--text)">' + si + ' ' + e.name + '</div>' +
-        '<div style="font-size:9px;color:var(--text3)">' + (e.tf||'') + (e.mt?' · '+e.mt:'') + (e.price?' · '+e.price:'') + '</div>' +
+      '<div style="display:flex;align-items:center;gap:4px">' +
+        '<div>' +
+          '<div style="font-size:11px;font-weight:600;color:var(--text)">' + si + ' ' + e.name + '</div>' +
+          '<div style="font-size:9px;color:var(--text3)">' + (e.tf||'') + (e.mt?' · '+e.mt:'') + (e.price?' · '+e.price:'') + '</div>' +
+        '</div>' +
+        links +
       '</div>' +
-      '<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:'+pc+'22;color:'+pc+';font-weight:500">' + (prioLabel[e.priority]||e.priority) + '</span>' +
+      '<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:'+pc+'22;color:'+pc+';font-weight:500;white-space:nowrap">' + (prioLabel[e.priority]||e.priority) + '</span>' +
     '</div>';
   }).join('');
 }
