@@ -1006,6 +1006,9 @@ async function syncAll() {
         if (row.key === 'strategy' && row.value) {
           try { localStorage.setItem('ea_hub_strategy', row.value); } catch(e) {}
         }
+        if (row.key === 'ealab' && row.value) {
+          try { localStorage.setItem('ea_hub_lab', row.value); } catch(e) {}
+        }
       });
     }
     saveLocal();
@@ -1033,6 +1036,7 @@ async function pushAllToSheets() {
       { name: 'Settings', data: [
         { key: 'settings', value: JSON.stringify(DB.settings) },
         { key: 'strategy', value: localStorage.getItem('ea_hub_strategy') || '{}' },
+        { key: 'ealab', value: localStorage.getItem('ea_hub_lab') || '[]' },
       ]},
     ];
     for (const s of sheets) {
@@ -1048,7 +1052,13 @@ async function pushAllToSheets() {
 function setSyncStatus(cls, txt) {
   const el = document.getElementById('syncStatus');
   el.className = 'sync-status ' + cls;
-  el.textContent = txt;
+  if (cls === 'ready') {
+    const now = new Date();
+    const time = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    el.textContent = txt + ' · ' + time;
+  } else {
+    el.textContent = txt;
+  }
 }
 
 function checkOnline() {
