@@ -352,7 +352,8 @@ select option { background:var(--bg4); }
   <div class="header-right">
     <span class="sync-status" id="syncStatus">●&nbsp;Bereit</span>
     <span class="header-date" id="headerDate"></span>
-    <button class="btn-icon" onclick="syncNow()" title="Sync">⟳ Sync</button>
+    <button class="btn-icon" onclick="syncNow()" title="Daten von Sheets laden">⬇ Laden</button>
+    <button class="btn-icon" onclick="pushAllToSheets()" title="Daten nach Sheets speichern">⬆ Speichern</button>
     <button class="btn-icon" onclick="exportCSV()" title="CSV Export">↓ CSV</button>
     <button class="btn-icon" onclick="openSettings()" title="Einstellungen">⚙</button>
   </div>
@@ -367,6 +368,7 @@ select option { background:var(--bg4); }
   <button class="nav-tab" onclick="showView('pnl',this)">📈 P&amp;L</button>
   <button class="nav-tab" onclick="showView('analytics',this)">📉 Analyse</button>
   <button class="nav-tab" onclick="showView('income',this)">💰 Einkommen</button>
+  <button class="nav-tab" onclick="showView('ealab',this)">🔬 EA Lab</button>
   <button class="nav-tab" onclick="showView('diary',this)">📓 Tagebuch</button>
   <button class="nav-tab" onclick="showView('todos',this)">✅ To Dos</button>
 </nav>
@@ -409,8 +411,24 @@ select option { background:var(--bg4); }
     <tbody id="todayRows"></tbody></table>
   </div>
 
-  <div class="sh">Offene To Dos</div>
-  <div id="todoSummary"></div>
+  <!-- 3-Spalten Dashboard -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px">
+    <!-- Links: Offene To-Dos -->
+    <div class="form-panel" style="margin:0">
+      <div class="sh" style="margin-bottom:12px">✅ Offene To Dos</div>
+      <div id="todoSummary"></div>
+    </div>
+    <!-- Mitte: EA Lab Vorschau -->
+    <div class="form-panel" style="margin:0">
+      <div class="sh" style="margin-bottom:12px">🔬 EA Lab – Top Priority</div>
+      <div id="overviewEaLab"></div>
+    </div>
+    <!-- Rechts: Wochengewinn -->
+    <div class="form-panel" style="margin:0">
+      <div class="sh" style="margin-bottom:12px">📤 Wochengewinn je EA</div>
+      <div id="overviewWeeklyPnl"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ===== KONTEN ===== -->
@@ -444,7 +462,7 @@ select option { background:var(--bg4); }
 
   <div class="sh">Meine Konten</div>
   <div class="table-wrap">
-    <table><thead><tr><th>#</th><th>Nummer</th><th>Broker</th><th>Bezeichnung</th><th>MT</th><th>Typ</th><th>Guthaben</th><th>Ziel</th><th>Status</th><th>Notiz</th><th></th></tr></thead>
+    <table><thead><tr><th>#</th><th>Nummer</th><th>Broker</th><th>Bezeichnung</th><th>MT</th><th>Typ</th><th>Guthaben</th><th>EA</th><th>Status</th><th>Notiz</th><th></th></tr></thead>
     <tbody id="accountsTable"></tbody></table>
   </div>
 </div>
@@ -456,13 +474,6 @@ select option { background:var(--bg4); }
     <div class="form-grid">
       <div class="form-group"><label>Name *</label><input type="text" id="ea-name" placeholder="Milion299k"></div>
       <div class="form-group"><label>Strategie</label><input type="text" id="ea-strategy" placeholder="M1 Grid, M5 Scalp..."></div>
-      <div class="form-group"><label>Status</label>
-        <select id="ea-status">
-          <option value="active">Aktiv</option>
-          <option value="paused">Pausiert</option>
-          <option value="off">Aus</option>
-        </select>
-      </div>
       <div class="form-group fg-2"><label>Beschreibung</label><input type="text" id="ea-desc" placeholder="optional"></div>
     </div>
     <input type="hidden" id="ea-edit-id">
@@ -474,7 +485,7 @@ select option { background:var(--bg4); }
 
   <div class="sh">Meine EAs</div>
   <div class="table-wrap">
-    <table><thead><tr><th>#</th><th>Name</th><th>Strategie</th><th>Beschreibung</th><th>Trades</th><th>Win Rate</th><th>Status</th><th></th></tr></thead>
+    <table><thead><tr><th>#</th><th>Name</th><th>Strategie</th><th>Beschreibung</th><th>Trades</th><th>Win Rate</th><th></th></tr></thead>
     <tbody id="easTable"></tbody></table>
   </div>
 </div>
@@ -536,10 +547,13 @@ select option { background:var(--bg4); }
 
 <!-- ===== ANALYSE ===== -->
 <div class="view" id="view-analytics">
-  <div class="filter-row" style="margin-bottom:18px">
-    <select id="an-type" onchange="renderAnalytics()"><option value="">Live + Demo</option><option value="Live">Nur Live</option><option value="Demo">Nur Demo</option></select>
-    <select id="an-account" onchange="renderAnalytics()"><option value="">Alle Konten</option></select>
-    <select id="an-ea" onchange="renderAnalytics()"><option value="">Alle EAs</option></select>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap">
+    <button class="pnl-filter-btn active" id="an-btn-all"  onclick="setAnalyticsType('',this)">Alle</button>
+    <button class="pnl-filter-btn"        id="an-btn-live" onclick="setAnalyticsType('Live',this)">📈 Live</button>
+    <button class="pnl-filter-btn"        id="an-btn-demo" onclick="setAnalyticsType('Demo',this)">🧪 Demo</button>
+    <select id="an-account" onchange="renderAnalytics()" style="width:160px"><option value="">Alle Konten</option></select>
+    <select id="an-ea"      onchange="renderAnalytics()" style="width:160px"><option value="">Alle EAs</option></select>
+    <input type="hidden" id="an-type" value="">
   </div>
 
   <div class="sum-grid" id="analyticsCards"></div>
@@ -555,11 +569,25 @@ select option { background:var(--bg4); }
     </div>
   </div>
 
+  <!-- EA Monatsvergleich Chart -->
+  <div style="margin-bottom:22px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+      <div class="sh" style="margin:0">📊 P&L Monat vs. Max DD</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block"></span>P&L Monat</span>
+        <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:#E24B4A;display:inline-block"></span>Max DD</span>
+      </div>
+    </div>
+    <div style="position:relative;width:100%;height:280px">
+      <canvas id="eaMonthChart"></canvas>
+    </div>
+  </div>
+
   <div class="grid-2">
     <div>
       <div class="sh">KPIs pro EA</div>
       <div class="table-wrap">
-        <table><thead><tr><th>EA</th><th>Strategie</th><th>Einträge</th><th>Gesamt P&L</th><th>Ø / Eintrag</th><th>Bester Tag</th><th>Schlechtester Tag</th></tr></thead>
+        <table><thead><tr><th>EA</th><th>Einträge</th><th>P&L Monat</th><th>Ø / Eintrag</th><th>Bester Tag</th><th>Schlechtester Tag</th><th>Max DD</th></tr></thead>
         <tbody id="winRateTable"></tbody></table>
       </div>
     </div>
@@ -571,20 +599,16 @@ select option { background:var(--bg4); }
     </div>
   </div>
 
-  <div class="grid-2">
-    <div>
-      <div class="sh">Live Konten</div>
-      <div class="table-wrap">
-        <table><thead><tr><th>Konto</th><th>P&L Monat</th><th>Max DD</th><th>Gesamt P&L</th></tr></thead>
-        <tbody id="liveTable"></tbody></table>
-      </div>
+  <!-- EA Bewertung -->
+  <div style="margin-top:22px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+      <div class="sh" style="margin:0">🏆 EA Bewertung</div>
     </div>
-    <div>
-      <div class="sh">Demo Konten</div>
-      <div class="table-wrap">
-        <table><thead><tr><th>Konto</th><th>P&L Monat</th><th>Max DD</th><th>Gesamt P&L</th></tr></thead>
-        <tbody id="demoTable"></tbody></table>
-      </div>
+    <div class="table-wrap">
+      <table id="eaRatingTable">
+        <thead><tr id="eaRatingHeader"></tr></thead>
+        <tbody id="eaRatingBody"></tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -635,6 +659,88 @@ select option { background:var(--bg4); }
 
   <!-- Auszahlungsplaner + Balance Chart -->
   <div id="incomeWithdrawalChart"></div>
+</div>
+
+<!-- ===== EA LAB ===== -->
+<div class="view" id="view-ealab">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="pnl-filter-btn active" id="lab-btn-all"   onclick="setLabFilter('all',this)">Alle</button>
+      <button class="pnl-filter-btn"        id="lab-btn-live"  onclick="setLabFilter('live',this)">🟢 Live</button>
+      <button class="pnl-filter-btn"        id="lab-btn-test"  onclick="setLabFilter('testing',this)">🧪 Testing</button>
+      <button class="pnl-filter-btn"        id="lab-btn-watch" onclick="setLabFilter('watchlist',this)">👁 Watchlist</button>
+      <button class="pnl-filter-btn"        id="lab-btn-off"   onclick="setLabFilter('off',this)">⛔ Aussortiert</button>
+    </div>
+    <button onclick="addLabEntry()" class="btn btn-primary" style="font-size:11px;padding:6px 14px">+ EA hinzufügen</button>
+  </div>
+
+  <!-- Add/Edit Form -->
+  <div id="labForm" style="display:none" class="form-panel">
+    <div class="sh" id="labFormTitle">EA hinzufügen</div>
+    <input type="hidden" id="lab-edit-id">
+    <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+      <div class="form-group"><label>Name *</label><input id="lab-name" placeholder="EA Name"></div>
+      <div class="form-group"><label>Status</label>
+        <select id="lab-status">
+          <option value="watchlist">👁 Watchlist</option>
+          <option value="testing">🧪 Testing</option>
+          <option value="live">🟢 Live</option>
+          <option value="off">⛔ Aussortiert</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Priority</label>
+        <select id="lab-priority">
+          <option value="high">🔴 Hoch</option>
+          <option value="medium" selected>🟡 Mittel</option>
+          <option value="low">🟢 Niedrig</option>
+        </select>
+      </div>
+      <div class="form-group"><label>MT</label>
+        <select id="lab-mt">
+          <option value="MT4">MT4</option>
+          <option value="MT5">MT5</option>
+          <option value="beide">MT4 + MT5</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Timeframe</label><input id="lab-tf" placeholder="M1, H1..."></div>
+      <div class="form-group"><label>Preis</label><input id="lab-price" placeholder="z.B. $299 oder kostenlos"></div>
+      <div class="form-group"><label>Quelle</label><input id="lab-source" placeholder="mql5.com, Telegram..."></div>
+      <div class="form-group"><label>Meine Bewertung (0-10)</label><input id="lab-myrating" type="number" min="0" max="10" step="0.1" placeholder="8.5"></div>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr;margin-top:10px">
+      <div class="form-group"><label>Kauflink (URL)</label><input id="lab-buyurl" placeholder="https://..."></div>
+      <div class="form-group"><label>Tracking-Link</label><input id="lab-trackurl" placeholder="https://myfxbook.com/..."></div>
+      <div class="form-group"><label>Telegram</label><input id="lab-telegram" placeholder="@kanal oder Link"></div>
+      <div class="form-group"><label>Screenshot-URL</label><input id="lab-screenshot" placeholder="https://..."></div>
+    </div>
+    <div class="form-group" style="margin-top:10px"><label>Settings</label><textarea id="lab-settings" rows="2" placeholder="Lot, TP, SL, Magic..."></textarea></div>
+    <div class="form-group"><label>Notizen</label><textarea id="lab-notes" rows="2" placeholder="Beobachtungen, Gedanken..."></textarea></div>
+    <div class="form-group"><label>KI-Bewertung</label><textarea id="lab-airating" rows="3" placeholder="KI-Einschätzung..."></textarea></div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn btn-primary" onclick="saveLabEntry()">💾 Speichern</button>
+      <button class="btn" onclick="cancelLabEntry()">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table id="labTable" style="table-layout:fixed;width:100%">
+      <thead><tr>
+        <th style="width:160px">EA</th>
+        <th style="width:90px">Status</th>
+        <th style="width:80px">Priority</th>
+        <th style="width:55px">MT</th>
+        <th style="width:45px">TF</th>
+        <th style="width:90px">Preis</th>
+        <th style="width:90px">Quelle</th>
+        <th style="width:65px;text-align:center">Meine ⭐</th>
+        <th style="width:55px;text-align:center">KI ⭐</th>
+        <th style="width:70px;text-align:center">Links</th>
+        <th style="width:50px"></th>
+      </tr></thead>
+      <tbody id="labBody"></tbody>
+    </table>
+  </div>
 </div>
 
 <!-- ===== TAGEBUCH ===== -->
@@ -690,8 +796,6 @@ select option { background:var(--bg4); }
         </select>
       </div>
       <div class="form-group fg-3"><label>Beschreibung</label><textarea id="todo-desc" rows="3" placeholder="Details, Gedanken, nächste Schritte..."></textarea></div>
-      <div class="form-group fg-2"><label>Kauf-Link (URL)</label><input type="url" id="todo-buy" placeholder="https://shop.mql5.com/..."></div>
-      <div class="form-group fg-2"><label>Tracking-Link (myfxbook etc.)</label><input type="url" id="todo-track" placeholder="https://myfxbook.com/..."></div>
     </div>
     <input type="hidden" id="todo-edit-id">
     <div class="action-row">
@@ -762,6 +866,7 @@ let PENDING_SYNC = [];
 let charts = {};
 let PNL_FILTER = 'all';
 let INCOME_FILTER = 'all';
+var eaRatingSort = { col: 'score', dir: -1 };
 
 // ============================================================
 // INIT
@@ -878,12 +983,13 @@ async function syncAll() {
   if (!API_URL) return;
   setSyncStatus('syncing','⟳ Laden...');
   try {
-    const [accounts, eas, pnl, diary, todos] = await Promise.all([
+    const [accounts, eas, pnl, diary, todos, settingsRaw] = await Promise.all([
       api('getAll','Accounts'),
       api('getAll','EAs'),
       api('getAll','PnL'),
       api('getAll','Diary'),
       api('getAll','Todos'),
+      api('getAll','Settings'),
     ]);
     // Only overwrite local data if remote actually has content
     if (accounts && accounts.length > 0) DB.accounts = accounts;
@@ -891,6 +997,20 @@ async function syncAll() {
     if (pnl && pnl.length > 0) DB.pnl = pnl.map(r => ({ ...r, date: normalizeDate(r.date) }));
     if (diary && diary.length > 0) DB.diary = diary.map(r => ({ ...r, date: normalizeDate(r.date) }));
     if (todos && todos.length > 0) DB.todos = todos;
+    // Settings: stored as single row with key 'settings' and key 'strategy'
+    if (settingsRaw && settingsRaw.length > 0) {
+      settingsRaw.forEach(function(row) {
+        if (row.key === 'settings' && row.value) {
+          try { DB.settings = JSON.parse(row.value); } catch(e) {}
+        }
+        if (row.key === 'strategy' && row.value) {
+          try { localStorage.setItem('ea_hub_strategy', row.value); } catch(e) {}
+        }
+        if (row.key === 'ealab' && row.value) {
+          try { localStorage.setItem('ea_hub_lab', row.value); } catch(e) {}
+        }
+      });
+    }
     saveLocal();
     renderAll();
     setSyncStatus('ready','● Synced');
@@ -913,6 +1033,11 @@ async function pushAllToSheets() {
       { name: 'PnL', data: DB.pnl },
       { name: 'Diary', data: DB.diary },
       { name: 'Todos', data: DB.todos },
+      { name: 'Settings', data: [
+        { key: 'settings', value: JSON.stringify(DB.settings) },
+        { key: 'strategy', value: localStorage.getItem('ea_hub_strategy') || '{}' },
+        { key: 'ealab', value: localStorage.getItem('ea_hub_lab') || '[]' },
+      ]},
     ];
     for (const s of sheets) {
       await api('pushAll', s.name, s.data);
@@ -927,7 +1052,13 @@ async function pushAllToSheets() {
 function setSyncStatus(cls, txt) {
   const el = document.getElementById('syncStatus');
   el.className = 'sync-status ' + cls;
-  el.textContent = txt;
+  if (cls === 'ready') {
+    const now = new Date();
+    const time = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    el.textContent = txt + ' · ' + time;
+  } else {
+    el.textContent = txt;
+  }
 }
 
 function checkOnline() {
@@ -948,6 +1079,12 @@ function renderAll() {
   renderTodos();
   renderTodoSummary();
   updateSelects();
+  setTimeout(function() {
+    renderOverviewDepositPlan();
+    renderOverviewWeeklyPnl();
+    renderLabTable();
+    renderOverviewEaLab();
+  }, 0);
   renderCharts();
   renderTodayRows();
   renderGoalProgress();
@@ -964,6 +1101,7 @@ function showView(id, btn) {
   btn.classList.add('active');
   if (id === 'overview' || id === 'analytics') { setTimeout(renderCharts, 50); }
   if (id === 'analytics') renderAnalytics();
+  if (id === 'ealab') renderLabTable();
   if (id === 'strategy') renderStrategy();
 }
 
@@ -1035,28 +1173,29 @@ function resetAccForm() {
 
 function renderAccountsTable() {
   const tbody = document.getElementById('accountsTable');
-  if (!DB.accounts.length) { tbody.innerHTML='<tr><td colspan="12" class="empty">Noch keine Konten.</td></tr>'; return; }
+  if (!DB.accounts.length) { tbody.innerHTML='<tr><td colspan="11" class="empty">Noch keine Konten.</td></tr>'; return; }
   tbody.innerHTML = DB.accounts.map((a,i) => {
-    const rendite = a.startCapital ? (((a.balance - a.startCapital)/a.startCapital)*100).toFixed(1) : '–';
-    const progress = a.targetEquity && a.startCapital ? Math.min(100,Math.max(0,((a.balance - a.startCapital)/(a.targetEquity - a.startCapital))*100)).toFixed(0) : null;
     const statusBadge = a.status==='active'?'badge-active':a.status==='paused'?'badge-paused':'badge-off';
     const statusLabel = a.status==='active'?'Aktiv':a.status==='paused'?'Pause':'Aus';
-    return `<tr>
-      <td>${i+1}</td>
-      <td style="font-weight:600;color:#fff">${a.number}</td>
-      <td>${a.broker}</td>
-      <td>${a.name||'–'}</td>
-      <td style="color:var(--text2)">${a.mt}</td>
-      <td><span class="badge ${a.type==='Live'?'badge-live':'badge-demo'}">${a.type}</span></td>
-      <td style="color:#fff;font-weight:500">$${fmt(getAccountBalance(a))}</td>
-      <td>${progress!==null?`<div style="background:var(--bg5);border-radius:3px;height:5px;width:80px"><div style="background:var(--accent);height:100%;width:${progress}%;border-radius:3px"></div></div><span style="font-size:9px;color:var(--text3)">${progress}%</span>`:'–'}</td>
-      <td><span class="badge ${statusBadge}">${statusLabel}</span></td>
-      <td style="color:var(--text2);font-size:10px">${a.note||'–'}</td>
-      <td style="display:flex;gap:4px">
-        <button class="icon-btn edit" onclick="editAccount('${a.id}')" title="Bearbeiten">✎</button>
-        <button class="icon-btn" onclick="deleteAccount('${a.id}')" title="Löschen">✕</button>
-      </td>
-    </tr>`;
+    // Find EAs active on this account
+    const linkedEas = DB.eas.filter(ea => DB.pnl.some(p => p.eaId == ea.id && p.accountId == a.id));
+    const eaNames = linkedEas.length ? linkedEas.map(ea => '<span style="font-size:10px;color:var(--accent)">' + ea.name + '</span>').join(', ') : '<span style="color:var(--text3)">–</span>';
+    return '<tr>' +
+      '<td>' + (i+1) + '</td>' +
+      '<td style="font-weight:600;color:#fff">' + a.number + '</td>' +
+      '<td>' + a.broker + '</td>' +
+      '<td>' + (a.name||'–') + '</td>' +
+      '<td style="color:var(--text2)">' + a.mt + '</td>' +
+      '<td><span class="badge ' + (a.type==='Live'?'badge-live':'badge-demo') + '">' + a.type + '</span></td>' +
+      '<td style="color:#fff;font-weight:500">$' + fmt(getAccountBalance(a)) + '</td>' +
+      '<td>' + eaNames + '</td>' +
+      '<td><span class="badge ' + statusBadge + '">' + statusLabel + '</span></td>' +
+      '<td style="color:var(--text2);font-size:10px">' + (a.note||'–') + '</td>' +
+      '<td style="display:flex;gap:4px">' +
+        '<button class="icon-btn edit" onclick="editAccount(\'' + a.id + '\')" title="Bearbeiten">✎</button>' +
+        '<button class="icon-btn" onclick="deleteAccount(\'' + a.id + '\')" title="Löschen">✕</button>' +
+      '</td>' +
+    '</tr>';
   }).join('');
 }
 
@@ -1072,7 +1211,6 @@ async function saveEA() {
     name,
     strategy: document.getElementById('ea-strategy').value.trim(),
     description: document.getElementById('ea-desc').value.trim(),
-    status: document.getElementById('ea-status').value || 'active',
   };
   const existing = DB.eas.findIndex(e => e.id == obj.id);
   if (existing >= 0) DB.eas[existing] = obj;
@@ -1090,7 +1228,6 @@ function editEA(id) {
   document.getElementById('ea-name').value = ea.name||'';
   document.getElementById('ea-strategy').value = ea.strategy||'';
   document.getElementById('ea-desc').value = ea.description||'';
-  document.getElementById('ea-status').value = ea.status||'active';
   document.getElementById('eaFormTitle').textContent = 'EA bearbeiten';
 }
 
@@ -1104,7 +1241,6 @@ async function deleteEA(id) {
 
 function resetEAForm() {
   ['ea-name','ea-strategy','ea-desc'].forEach(id => document.getElementById(id).value='');
-  document.getElementById('ea-status').value='active';
   document.getElementById('ea-edit-id').value='';
   document.getElementById('eaFormTitle').textContent='EA hinzufügen';
 }
@@ -1116,21 +1252,18 @@ function renderEAsTable() {
     const trades = DB.pnl.filter(p => p.eaId == ea.id);
     const wins = trades.filter(p => parseFloat(p.pnl) > 0).length;
     const wr = trades.length ? ((wins/trades.length)*100).toFixed(0)+'%' : '–';
-    const status = ea.status || 'active';
-    const statusBadge = status==='active'?'badge-active':status==='paused'?'badge-paused':'badge-off';
-    const statusLabel = status==='active'?'Aktiv':status==='paused'?'Pause':'Aus';
-    return '<tr>' +
-      '<td>' + (i+1) + '</td>' +
-      '<td style="color:var(--accent);font-weight:500">' + ea.name + '</td>' +
-      '<td style="color:var(--text2)">' + (ea.strategy||'–') + '</td>' +
-      '<td style="color:var(--text2);font-size:10px">' + (ea.description||'–') + '</td>' +
-      '<td>' + trades.length + '</td>' +
-      '<td class="' + (wins/trades.length>=0.5?'pos-val':'neg-val') + '">' + wr + '</td>' +
-      '<td><span class="badge ' + statusBadge + '">' + statusLabel + '</span></td>' +
-      '<td style="display:flex;gap:4px">' +
-        '<button class="icon-btn edit" onclick="editEA(\'' + ea.id + '\')" title="Bearbeiten">✎</button>' +
-        '<button class="icon-btn" onclick="deleteEA(\'' + ea.id + '\')" title="Löschen">✕</button>' +
-      '</td></tr>';
+    return `<tr>
+      <td>${i+1}</td>
+      <td style="color:var(--accent);font-weight:500">${ea.name}</td>
+      <td style="color:var(--text2)">${ea.strategy||'–'}</td>
+      <td style="color:var(--text2);font-size:10px">${ea.description||'–'}</td>
+      <td>${trades.length}</td>
+      <td class="${wins/trades.length>=0.5?'pos-val':'neg-val'}">${wr}</td>
+      <td style="display:flex;gap:4px">
+        <button class="icon-btn edit" onclick="editEA('${ea.id}')" title="Bearbeiten">✎</button>
+        <button class="icon-btn" onclick="deleteEA('${ea.id}')" title="Löschen">✕</button>
+      </td>
+    </tr>`;
   }).join('');
 }
 
@@ -1249,7 +1382,7 @@ function renderPnlTable() {
   if (fEA)  entries = entries.filter(e => e.eaId == fEA);
   if (fType) entries = entries.filter(e => {
     const acc = DB.accounts.find(a => a.id == e.accountId);
-    return acc && acc.type === fType && isActive(acc);
+    return acc && acc.type === fType;
   });
   if (fMon) entries = entries.filter(e => e.date && e.date.startsWith(fMon));
 
@@ -1368,10 +1501,10 @@ function setPnlFilter(type, btn) {
 }
 
 function getAccountBalance(acc) {
-  // Startkapital + Summe aller P&L Einträge
+  // Startkapital + alle Einträge die die Balance verändern (trade, transfer, withdrawal, deposit)
   const start = parseFloat(acc.startCapital) || 0;
   const totalPnl = DB.pnl
-    .filter(e => e.accountId == acc.id && (!e.entryType || e.entryType === 'trade'))
+    .filter(e => e.accountId == acc.id)
     .reduce((s,e) => s + (parseFloat(e.pnl)||0), 0);
   if (start > 0) return start + totalPnl;
   // Fallback: letzter Equity-Eintrag
@@ -1390,12 +1523,12 @@ function renderSumCards() {
   const active   = DB.accounts.filter(a=>a.status==='active').length;
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
   const ws = weekStart.toISOString().split('T')[0];
-  // Filter P&L entries by account type
+  // Filter P&L entries by account type - NO isActive check for historical stats
   const filteredPnl = DB.pnl.filter(p => {
     if (p.entryType && p.entryType !== 'trade') return false;
     if (PNL_FILTER === 'all') return true;
     const acc = DB.accounts.find(a => a.id == p.accountId);
-    return acc && acc.type === PNL_FILTER && isActive(acc);
+    return acc && acc.type === PNL_FILTER;
   });
   const filterLabel = PNL_FILTER === 'all' ? '' : ` (${PNL_FILTER})`;
   const todayPnl = filteredPnl.filter(p=>p.date===today).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
@@ -1403,15 +1536,28 @@ function renderSumCards() {
   const monthPnl = filteredPnl.filter(p=>p.date&&p.date.startsWith(month)).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
   const allPnl   = filteredPnl.reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
 
-  const cards = [
-    { label:'Gesamt Guthaben', val:'$'+fmt(totalBal), sub:`${active} aktive Konten`, cls:'' },
-    { label:'Live Guthaben',   val:'$'+fmt(liveBal),  sub:`${DB.accounts.filter(a=>a.type==='Live' && isActive(a)).length} Live Konten`, cls:'' },
-    { label:'Demo Guthaben',   val:'$'+fmt(demoBal),  sub:`${DB.accounts.filter(a=>a.type==='Demo').length} Demo Konten`, cls:'warn' },
-    { label:'P&L Heute',       val:(todayPnl>=0?'+$':'-$')+Math.abs(todayPnl).toFixed(2), sub:'Tagesperformance'+filterLabel, cls:todayPnl>=0?'pos':'neg' },
-    { label:'P&L Woche',       val:(weekPnl>=0?'+$':'-$')+Math.abs(weekPnl).toFixed(2), sub:'laufende Woche'+filterLabel, cls:weekPnl>=0?'pos':'neg' },
-    { label:'P&L Monat',       val:(monthPnl>=0?'+$':'-$')+Math.abs(monthPnl).toFixed(2), sub:new Date().toLocaleDateString('de-DE',{month:'long'})+filterLabel, cls:monthPnl>=0?'pos':'neg' },
-    { label:'P&L Gesamt',      val:(allPnl>=0?'+$':'-$')+Math.abs(allPnl).toFixed(2), sub:`${filteredPnl.length} Einträge`+filterLabel, cls:allPnl>=0?'pos':'neg' },
-  ];
+  const cards = [];
+
+  // Single balance card – filter-dependent
+  let balVal, balSub;
+  if (PNL_FILTER === 'Live') {
+    balVal = '$'+fmt(liveBal);
+    balSub = DB.accounts.filter(a=>a.type==='Live' && isActive(a)).length + ' Live Konten';
+  } else if (PNL_FILTER === 'Demo') {
+    balVal = '$'+fmt(demoBal);
+    balSub = DB.accounts.filter(a=>a.type==='Demo').length + ' Demo Konten';
+  } else {
+    balVal = '$'+fmt(totalBal);
+    balSub = active + ' aktive Konten';
+  }
+  cards.push({ label:'Guthaben', val:balVal, sub:balSub, cls:'' });
+
+  cards.push(
+    { label:'P&L Heute',  val:(todayPnl>=0?'+$':'-$')+Math.abs(todayPnl).toFixed(2), sub:'Tagesperformance'+filterLabel, cls:todayPnl>=0?'pos':'neg' },
+    { label:'P&L Woche',  val:(weekPnl>=0?'+$':'-$')+Math.abs(weekPnl).toFixed(2),   sub:'laufende Woche'+filterLabel,   cls:weekPnl>=0?'pos':'neg' },
+    { label:'P&L Monat',  val:(monthPnl>=0?'+$':'-$')+Math.abs(monthPnl).toFixed(2), sub:new Date().toLocaleDateString('de-DE',{month:'long'})+filterLabel, cls:monthPnl>=0?'pos':'neg' },
+    { label:'P&L Gesamt', val:(allPnl>=0?'+$':'-$')+Math.abs(allPnl).toFixed(2),     sub:filteredPnl.length+' Einträge'+filterLabel, cls:allPnl>=0?'pos':'neg' },
+  );
 
   // Calculate max weekly withdrawal from active live EAs
   const activeLiveAccs = DB.accounts.filter(a => a.type === 'Live' && isActive(a));
@@ -1430,7 +1576,17 @@ function renderSumCards() {
     const ratio = curLot > 0 ? targetLot / curLot : 1;
     maxForecast += avgDay * ratio * 5;
   });
-  cards.push({ label:'Max. Entnahme/Wo', val:'$'+maxIst.toFixed(0), sub:`Forecast: $${maxForecast.toFixed(0)}`, cls:'warn', special: true });
+  cards.push({ label:'Max. Entnahme/Wo', val:'$'+maxIst.toFixed(0), sub:`Forecast: $${maxForecast.toFixed(0)}`, cls:'', special: true });
+
+  // Ausgezahlt Monat + Noch entnehmbar Woche
+  const withdrawalsMonth = DB.pnl.filter(p => p.entryType === 'withdrawal' && p.date && p.date.startsWith(month));
+  const withdrawalsWeek  = DB.pnl.filter(p => p.entryType === 'withdrawal' && p.date && p.date >= ws && p.date <= today);
+  const paidMonth = Math.abs(withdrawalsMonth.reduce((s,p) => s+(parseFloat(p.pnl)||0), 0));
+  const paidWeek  = Math.abs(withdrawalsWeek.reduce((s,p)  => s+(parseFloat(p.pnl)||0), 0));
+  const stillAvail = weekPnl - paidWeek;
+
+  cards.push({ label:'Ausgezahlt Monat', val:'$'+paidMonth.toFixed(2), sub:new Date().toLocaleDateString('de-DE',{month:'long'}), cls:'' });
+  cards.push({ label:'Noch entnehmbar', val:(stillAvail>=0?'+$':'-$')+Math.abs(stillAvail).toFixed(2), sub:'Woche − Ausgezahlt', cls:stillAvail>=0?'pos':'neg' });
 
   document.getElementById('sumCards').innerHTML = cards.map(c => {
     const fmtVal = c.val.replace(/^([+\-]?)(\$)/, (m,sign,dollar) =>
@@ -1459,7 +1615,7 @@ function renderMissingEntries() {
     const dow = d.getDay();
     if (dow === 0 || dow === 6) continue;
     const ds = d.toISOString().split('T')[0];
-    DB.eas.filter(ea => (ea.status||'active') === 'active').forEach(ea => {
+    DB.eas.forEach(ea => {
       const liveAccs = DB.accounts.filter(a => a.type === 'Live' && isActive(a));
       liveAccs.forEach(acc => {
         const hasHistory = DB.pnl.some(p => p.eaId == ea.id && p.accountId == acc.id);
@@ -1479,7 +1635,7 @@ function renderMissingEntries() {
         <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(0,255,157,0.08);border:1px solid rgba(0,255,157,0.3);border-radius:8px;padding:7px 14px">
           <span style="font-size:14px">✅</span>
           <span style="font-size:11px;font-weight:600;color:var(--pos)">Alle Einträge vollständig</span>
-          <span style="font-size:10px;color:var(--text3)">– letzte 7 Werktage</span>
+          <span style="font-size:10px;color:var(--text3)">– Mo–Fr letzte Woche</span>
         </div>
       </div>`;
     return;
@@ -1505,7 +1661,7 @@ function renderMissingEntries() {
            onclick="document.getElementById('${detailId}').style.display=document.getElementById('${detailId}').style.display==='none'?'block':'none'">
         <span style="font-size:14px">🔴</span>
         <span style="font-size:11px;font-weight:600;color:#ff4060">${count} fehlende Eintrag${count>1?'e':''}</span>
-        <span style="font-size:10px;color:var(--text3)">– letzte 7 Werktage</span>
+        <span style="font-size:10px;color:var(--text3)">– Mo–Fr letzte Woche</span>
         <span style="font-size:10px;color:var(--text3);margin-left:4px">▼</span>
       </div>
       <div id="${detailId}" style="display:none;margin-top:8px;background:rgba(255,64,96,0.05);border:1px solid rgba(255,64,96,0.2);border-radius:8px;padding:12px 16px;font-size:11px">
@@ -1547,7 +1703,7 @@ function renderGoalProgress() {
   const liveTrades = DB.pnl.filter(p => {
     if (p.entryType && p.entryType !== 'trade') return false;
     const acc = DB.accounts.find(a => a.id == p.accountId);
-    return acc && acc.type === 'Live' && isActive(acc);
+    return acc && acc.type === 'Live';
   });
 
   const dayPnl   = liveTrades.filter(p => p.date === today).reduce((s,p) => s+(parseFloat(p.pnl)||0), 0);
@@ -1602,7 +1758,7 @@ function renderAnalytics() {
   if (fEa)  entries = entries.filter(e => e.eaId == fEa);
   if (fType) entries = entries.filter(e => {
     const acc = DB.accounts.find(a => a.id == e.accountId);
-    return acc && acc.type === fType && isActive(acc);
+    return acc && acc.type === fType;
   });
 
   const today = new Date().toISOString().split('T')[0];
@@ -1638,26 +1794,30 @@ function renderAnalytics() {
     ${c.sub?`<div class="sum-sub">${c.sub}</div>`:''}
   </div>`).join('');
 
-  // EA Performance Table
+  // EA Performance Table - updated columns
   const tbody = document.getElementById('winRateTable');
   if (!DB.eas.length) { tbody.innerHTML='<tr><td colspan="7" class="empty">Keine EAs.</td></tr>'; }
   else {
     tbody.innerHTML = DB.eas.map(ea => {
       const eaEntries = entries.filter(e => e.eaId == ea.id);
+      const tradingEntries = eaEntries.filter(e => (parseFloat(e.pnl)||0) !== 0);
       const totalEaPnl = eaEntries.reduce((s,e)=>s+(parseFloat(e.pnl)||0),0);
-      const avgPnl = eaEntries.length ? totalEaPnl/eaEntries.length : null;
-      const pnlValues = eaEntries.map(e=>parseFloat(e.pnl)||0);
+      const monthEaPnl = eaEntries.filter(e=>e.date&&e.date.startsWith(month)).reduce((s,e)=>s+(parseFloat(e.pnl)||0),0);
+      const avgPnl = tradingEntries.length ? totalEaPnl/tradingEntries.length : null;
+      const pnlValues = tradingEntries.map(e=>parseFloat(e.pnl)||0);
       const best  = pnlValues.length ? Math.max(...pnlValues) : null;
       const worst = pnlValues.length ? Math.min(...pnlValues) : null;
+      const ddValues = eaEntries.map(e=>parseFloat(e.dd)||0);
+      const maxDd = ddValues.length ? Math.max(...ddValues) : 0;
       const fmtPnl = v => v===null?'–':(v>=0?'+$':'-$')+Math.abs(v).toFixed(2);
       return `<tr>
         <td style="color:var(--accent);font-weight:500">${ea.name}</td>
-        <td style="color:var(--text2)">${ea.strategy||'–'}</td>
         <td>${eaEntries.length}</td>
-        <td class="${totalEaPnl>=0?'pos-val':'neg-val'}">${fmtPnl(totalEaPnl)}</td>
+        <td class="${monthEaPnl>=0?'pos-val':'neg-val'}">${fmtPnl(monthEaPnl)}</td>
         <td class="${avgPnl!==null&&avgPnl>=0?'pos-val':'neg-val'}">${fmtPnl(avgPnl)}</td>
         <td class="pos-val">${fmtPnl(best)}</td>
         <td class="neg-val">${fmtPnl(worst)}</td>
+        <td style="color:${maxDd?'var(--neg)':'var(--text3)'}">${maxDd?'-$'+maxDd.toFixed(2):'–'}</td>
       </tr>`;
     }).join('');
   }
@@ -1682,9 +1842,10 @@ function renderAnalytics() {
     </div>`;
   }).join('');
 
-  // Live / Demo tables
-  renderLiveDemoTables(entries, month);
+  // Live / Demo tables removed - data now in KPI table
   renderAnalyticsCharts(entries);
+  renderEaRating(entries);
+  setTimeout(renderEaMonthChart, 50);
 }
 
 function renderLiveDemoTables(entries, month) {
@@ -1964,8 +2125,6 @@ async function saveTodo() {
     priority: document.getElementById('todo-priority').value,
     status: document.getElementById('todo-status').value,
     description: document.getElementById('todo-desc').value.trim(),
-    buyUrl: document.getElementById('todo-buy').value.trim(),
-    trackUrl: document.getElementById('todo-track').value.trim(),
   };
   const existing = DB.todos.findIndex(t => t.id == obj.id);
   if (existing >= 0) DB.todos[existing] = obj;
@@ -1984,8 +2143,6 @@ function editTodo(id) {
   document.getElementById('todo-priority').value = t.priority||'medium';
   document.getElementById('todo-status').value = t.status||'open';
   document.getElementById('todo-desc').value = t.description||'';
-  document.getElementById('todo-buy').value = t.buyUrl||'';
-  document.getElementById('todo-track').value = t.trackUrl||'';
   document.getElementById('todoFormTitle').textContent = 'To Do bearbeiten';
   document.getElementById('view-todos').scrollIntoView({behavior:'smooth'});
 }
@@ -2007,7 +2164,7 @@ async function toggleTodoStatus(id) {
 }
 
 function resetTodoForm() {
-  ['todo-title','todo-desc','todo-buy','todo-track'].forEach(id => document.getElementById(id).value='');
+  ['todo-title','todo-desc'].forEach(id => document.getElementById(id).value='');
   document.getElementById('todo-priority').value='medium';
   document.getElementById('todo-status').value='open';
   document.getElementById('todo-edit-id').value='';
@@ -2147,30 +2304,53 @@ function renderForecast() {
   const el = document.getElementById('incomeForecast');
   if (!el) return;
 
-  // Load saved forecast settings
   const saved = DB.settings.forecastSettings || {};
+  // EA filter - which EAs to show in forecast (saved in settings)
+  if (!DB.settings.forecastEaFilter) DB.settings.forecastEaFilter = {};
 
-  const liveEas = DB.eas.filter(ea => {
-    // Only EAs that have at least one live account entry
+  // All EAs that have any live P&L entries (regardless of account status)
+  const allLiveEas = DB.eas.filter(ea => {
     return DB.pnl.some(p => {
       if (p.entryType && p.entryType !== 'trade') return false;
       if (p.eaId != ea.id) return false;
       const acc = DB.accounts.find(a => a.id == p.accountId);
-      return acc && acc.type === 'Live' && isActive(acc);
+      return acc && acc.type === 'Live';
     });
   });
 
-  if (!liveEas.length) { el.innerHTML = ''; return; }
+  // By default all EAs are enabled unless explicitly disabled
+  const eaEnabled = function(eaId) {
+    const f = DB.settings.forecastEaFilter;
+    return f[eaId] !== false;
+  };
+
+  const liveEas = allLiveEas.filter(ea => eaEnabled(ea.id));
+
+  if (!allLiveEas.length) { el.innerHTML = ''; return; }
 
   const today = new Date().toISOString().split('T')[0];
   const month = today.substring(0,7);
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
   const ws = weekStart.toISOString().split('T')[0];
 
-  el.innerHTML = `
-    <div class="sh" style="margin-bottom:14px">📈 Forecast <span style="font-size:9px;color:var(--text3);font-weight:400">Nur Live-Konten</span></div>
-    <div id="forecastSummary" style="margin-bottom:18px"></div>
-    <div class="forecast-grid" id="forecastGrid"></div>`;
+  // Build EA toggle buttons
+  const eaToggles = allLiveEas.map(ea => {
+    const on = eaEnabled(ea.id);
+    return '<button onclick="toggleForecastEa(\'' + ea.id + '\')" style="font-size:10px;padding:3px 10px;border-radius:4px;border:1px solid ' + (on?'var(--pos)':'var(--border2)') + ';background:' + (on?'rgba(0,255,157,0.1)':'transparent') + ';color:' + (on?'var(--pos)':'var(--text3)') + ';cursor:pointer;font-family:var(--font-mono)">' + ea.name + '</button>';
+  }).join('');
+
+  el.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">' +
+      '<div class="sh" style="margin:0">📈 Forecast <span style="font-size:9px;color:var(--text3);font-weight:400">Nur Live-Konten</span></div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' + eaToggles + '</div>' +
+    '</div>' +
+    '<div id="forecastSummary" style="margin-bottom:18px"></div>' +
+    '<div class="forecast-grid" id="forecastGrid"></div>';
+
+  if (!liveEas.length) {
+    document.getElementById('forecastSummary').innerHTML = '<span style="color:var(--text3);font-size:11px">Keine EAs ausgewählt – klick oben auf einen EA um ihn anzuzeigen.</span>';
+    return;
+  }
 
   const grid = document.getElementById('forecastGrid');
 
@@ -2182,12 +2362,12 @@ function renderForecast() {
       if (p.entryType && p.entryType !== 'trade') return false;
       if (p.eaId != ea.id) return false;
       const acc = DB.accounts.find(a => a.id == p.accountId);
-      return acc && acc.type === 'Live' && isActive(acc);
+      return acc && acc.type === 'Live';
     });
 
-    // Account linked to this EA
+    // Account linked to this EA - prefer active account
     const linkedAcc = DB.accounts.find(a => {
-      return a.type === 'Live' && isActive(a) && DB.pnl.some(p => p.eaId == ea.id && p.accountId == a.id);
+      return a.type === 'Live' && DB.pnl.some(p => p.eaId == ea.id && p.accountId == a.id);
     });
     const currentCap = linkedAcc ? getAccountBalance(linkedAcc) : 0;
 
@@ -2749,15 +2929,15 @@ function saveWithdrawalPlan(weekly, startMonth, mode) {
 
 const STRATEGY_SEED = {
   capitalPlan: [
-    { id:'s1', month:'2026-04', name:'Thai', from:1266, to:3000, deposit:1734, status:'planned', note:'' },
-    { id:'s2', month:'2026-04', name:'MM Flip', from:674, to:2000, deposit:1326, status:'planned', note:'' },
-    { id:'s3', month:'2026-04', name:'Xau 6', from:1322, to:3000, deposit:1678, status:'planned', note:'' },
-    { id:'s4', month:'2026-04', name:'299k (neu live)', from:0, to:1000, deposit:1000, status:'planned', note:'' },
-    { id:'s5', month:'2026-04', name:'QQ MT5 (ECN-Konto)', from:0, to:3000, deposit:3000, status:'planned', note:'' },
-    { id:'s6', month:'2026-05', name:'Quantum King', from:0, to:1000, deposit:1000, status:'planned', note:'' },
-    { id:'s7', month:'2026-06', name:'Thai $3k→$5k', from:3000, to:5000, deposit:2000, status:'planned', note:'Stufe 3 (bedingt)' },
-    { id:'s8', month:'2026-06', name:'MM Flip $2k→$3k', from:2000, to:3000, deposit:1000, status:'planned', note:'Stufe 3 (bedingt)' },
-    { id:'s9', month:'2026-06', name:'Xau 6 $3k→$5k', from:3000, to:5000, deposit:2000, status:'planned', note:'Stufe 3 (bedingt)' },
+    { id:'s1', month:'2026-04', name:'Thai', account:'37290571', eaId:'', from:1266, to:3000, deposit:1734, status:'planned', note:'' },
+    { id:'s2', month:'2026-04', name:'MM Flip', account:'24252766', eaId:'', from:674, to:2000, deposit:1326, status:'planned', note:'' },
+    { id:'s3', month:'2026-04', name:'Xau 6', account:'24252774', eaId:'', from:1322, to:3000, deposit:1678, status:'planned', note:'' },
+    { id:'s4', month:'2026-04', name:'299k (neu live)', account:'61337223', eaId:'', from:0, to:1000, deposit:1000, status:'planned', note:'' },
+    { id:'s5', month:'2026-04', name:'QQ MT5 (ECN-Konto)', account:'', eaId:'', from:0, to:3000, deposit:3000, status:'planned', note:'' },
+    { id:'s6', month:'2026-05', name:'Quantum King', account:'', eaId:'', from:0, to:1000, deposit:1000, status:'planned', note:'' },
+    { id:'s7', month:'2026-06', name:'Thai $3k→$5k', account:'37290571', eaId:'', from:3000, to:5000, deposit:2000, status:'planned', note:'Stufe 3 (bedingt)' },
+    { id:'s8', month:'2026-06', name:'MM Flip $2k→$3k', account:'24252766', eaId:'', from:2000, to:3000, deposit:1000, status:'planned', note:'Stufe 3 (bedingt)' },
+    { id:'s9', month:'2026-06', name:'Xau 6 $3k→$5k', account:'24252774', eaId:'', from:3000, to:5000, deposit:2000, status:'planned', note:'Stufe 3 (bedingt)' },
   ],
   eaCosts: [
     { id:'c1', name:'Quantum Queen MT5', price:550, type:'Einmalkauf', when:'April · sofort', note:'' },
@@ -2778,7 +2958,18 @@ const STRATEGY_SEED = {
 
 function getStrategy() {
   const saved = localStorage.getItem('ea_hub_strategy');
-  if (saved) { try { return JSON.parse(saved); } catch(e) {} }
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      // Migrate: add missing eaId field to capitalPlan entries
+      if (data.capitalPlan) {
+        data.capitalPlan.forEach(function(r) {
+          if (r.eaId === undefined) r.eaId = '';
+        });
+      }
+      return data;
+    } catch(e) {}
+  }
   return JSON.parse(JSON.stringify(STRATEGY_SEED));
 }
 
@@ -2794,14 +2985,16 @@ function fmtMonth(m) {
   return d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
 }
 
+;
+
 function renderStrategy() {
   const el = document.getElementById('strategyContent');
   if (!el) return;
   const data = getStrategy();
 
-  // Group capital plan by month
+  // Group capitalPlan by month
   const capMonths = {};
-  data.capitalPlan.forEach(r => {
+  data.capitalPlan.forEach(function(r) {
     const m = r.month || 'unbekannt';
     if (!capMonths[m]) capMonths[m] = [];
     capMonths[m].push(r);
@@ -2811,151 +3004,182 @@ function renderStrategy() {
   const statusLabel = { planned:'📋 Geplant', active:'⏳ Laufend', done:'✅ Erreicht' };
   const statusColor = { planned:'var(--text3)', active:'var(--warn)', done:'var(--pos)' };
 
-  let capitalHtml = Object.keys(capMonths).sort().map(month => {
+  // Build capital plan table rows
+  let capitalHtml = '';
+  Object.keys(capMonths).sort().forEach(function(month) {
     const rows = capMonths[month];
-    const total = rows.reduce((s,r) => s + (parseFloat(r.deposit)||0), 0);
-    const rowsHtml = rows.map(r => `<tr>
-      <td style="padding:8px 10px"><input value="${r.name}" onchange="updateStrategyItem('capitalPlan','${r.id}','name',this.value)" style="background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;width:160px"></td>
-      <td style="padding:8px 10px;text-align:center">
-        <input type="month" value="${r.month||''}" onchange="updateStrategyItem('capitalPlan','${r.id}','month',this.value);renderStrategy()" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:10px;padding:2px 6px">
-      </td>
-      <td style="padding:8px 10px;text-align:right;color:var(--text3)">$${(r.from||0).toLocaleString()}</td>
-      <td style="padding:8px 10px;text-align:right"><input type="number" value="${r.to}" onchange="updateStrategyItem('capitalPlan','${r.id}','to',parseFloat(this.value)||0);updateDeposit('${r.id}')" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;width:80px;text-align:right;padding:2px 6px"></td>
-      <td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700">$${(r.deposit||0).toLocaleString()}</td>
-      <td style="padding:8px 10px"><select onchange="updateStrategyItem('capitalPlan','${r.id}','status',this.value)" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:${statusColor[r.status]||'var(--text3)'};font-family:var(--font-mono);font-size:10px;padding:2px 4px">${statusOpts.map(s => `<option value="${s}" ${s===r.status?'selected':''}>${statusLabel[s]}</option>`).join('')}</select></td>
-      <td style="padding:8px 10px"><input value="${r.note||''}" placeholder="Notiz..." onchange="updateStrategyItem('capitalPlan','${r.id}','note',this.value)" style="background:transparent;border:none;color:var(--text3);font-family:var(--font-mono);font-size:10px;width:140px"></td>
-      <td style="padding:8px 10px"><button onclick="deleteStrategyItem('capitalPlan','${r.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px">✕</button></td>
-    </tr>`).join('');
-    return `<tr style="background:var(--bg3)"><td colspan="8" style="padding:6px 10px;font-size:10px;font-weight:700;color:var(--text2);letter-spacing:0.08em;text-transform:uppercase">${fmtMonth(month)}</td></tr>
-    ${rowsHtml}
-    <tr style="border-top:1px solid var(--border)">
-      <td colspan="4" style="padding:6px 10px;font-size:11px;font-weight:700;color:var(--text2)">Gesamt ${fmtMonth(month)}</td>
-      <td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--accent)">$${total.toLocaleString()}</td>
-      <td colspan="3"></td>
-    </tr>`;
-  }).join('');
+    const total = rows.reduce(function(s,r){ return s + (parseFloat(r.deposit)||0); }, 0);
+    capitalHtml += '<tr style="background:var(--bg3)"><td colspan="8" style="padding:6px 10px;font-size:10px;font-weight:700;color:var(--text2);letter-spacing:0.08em;text-transform:uppercase">' + fmtMonth(month) + '</td></tr>';
+    rows.forEach(function(r) {
+      const opts = statusOpts.map(function(s) {
+        return '<option value="' + s + '"' + (s===r.status?' selected':'') + '>' + statusLabel[s] + '</option>';
+      }).join('');
+      capitalHtml += '<tr>' +
+        '<td style="padding:8px 10px"><input value="' + (r.name||'').replace(/"/g,'&quot;') + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'name\',this.value)" style="background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;width:160px"></td>' +
+        '<td style="padding:8px 10px">' + (function() {
+          var opts = '<option value="">– kein EA –</option>' + DB.eas.map(function(ea) {
+            return '<option value="' + ea.id + '"' + (String(ea.id)===String(r.eaId)?' selected':'') + '>' + ea.name + '</option>';
+          }).join('');
+          return '<select onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'eaId\',this.value)" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:2px 6px;width:110px">' + opts + '</select>';
+        })() + '</td>' +
+        '<td style="padding:8px 10px;text-align:center"><input type="month" value="' + (r.month||'') + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'month\',this.value);renderStrategy()" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:10px;padding:2px 6px"></td>' +
+        '<td style="padding:8px 10px;text-align:right;color:var(--text3)">$' + (function() {
+          if (r.eaId) {
+            const ea = DB.eas.find(function(e){ return String(e.id)===String(r.eaId); });
+            if (ea) {
+              const acc = DB.accounts.find(function(a){ return DB.pnl.some(function(p){ return p.eaId==ea.id && p.accountId==a.id; }); });
+              if (acc) return getAccountBalance(acc).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
+            }
+          }
+          return (r.from||0).toLocaleString();
+        })() + '</td>' +
+        '<td style="padding:8px 10px;text-align:right"><input type="number" value="' + (r.to||0) + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'to\',parseFloat(this.value)||0);updateDeposit(\'' + r.id + '\')" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;width:80px;text-align:right;padding:2px 6px"></td>' +
+        '<td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700">$' + (r.deposit||0).toLocaleString() + '</td>' +
+        '<td style="padding:8px 10px"><select onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'status\',this.value)" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:' + (statusColor[r.status]||'var(--text3)') + ';font-family:var(--font-mono);font-size:10px;padding:2px 4px">' + opts + '</select></td>' +
+        '<td style="padding:8px 10px"><input value="' + (r.note||'').replace(/"/g,'&quot;') + '" placeholder="Notiz..." onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'note\',this.value)" style="background:transparent;border:none;color:var(--text3);font-family:var(--font-mono);font-size:10px;width:140px"></td>' +
+        '<td style="padding:8px 10px"><button onclick="deleteStrategyItem(\'capitalPlan\',\'' + r.id + '\')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px">✕</button></td>' +
+        '</tr>';
+    });
+    capitalHtml += '<tr style="border-top:1px solid var(--border)"><td colspan="6" style="padding:6px 10px;font-size:11px;font-weight:700;color:var(--text2)">Gesamt ' + fmtMonth(month) + '</td><td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--accent)">$' + total.toLocaleString() + '</td><td colspan="3"></td></tr>';
+  });
 
   // EA costs
-  const costsHtml = data.eaCosts.map(r => `<tr>
-    <td style="padding:8px 10px"><input value="${r.name}" onchange="updateStrategyItem('eaCosts','${r.id}','name',this.value)" style="background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;width:180px"></td>
-    <td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700">$<input type="number" value="${r.price}" onchange="updateStrategyItem('eaCosts','${r.id}','price',parseFloat(this.value)||0)" style="background:transparent;border:none;color:var(--accent);font-family:var(--font-mono);font-size:11px;width:90px;font-weight:700"></td>
-    <td style="padding:8px 10px"><input value="${r.type}" onchange="updateStrategyItem('eaCosts','${r.id}','type',this.value)" style="background:transparent;border:none;color:var(--text3);font-family:var(--font-mono);font-size:11px;width:100px"></td>
-    <td style="padding:8px 10px"><input value="${r.when}" onchange="updateStrategyItem('eaCosts','${r.id}','when',this.value)" style="background:transparent;border:none;color:var(--text3);font-family:var(--font-mono);font-size:11px;width:120px"></td>
-    <td style="padding:8px 10px"><button onclick="deleteStrategyItem('eaCosts','${r.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px">✕</button></td>
-  </tr>`).join('');
-  const totalCosts = data.eaCosts.reduce((s,r) => s + (parseFloat(r.price)||0), 0);
+  let costsHtml = '';
+  data.eaCosts.forEach(function(r) {
+    costsHtml += '<tr>' +
+      '<td style="padding:8px 10px"><input value="' + (r.name||'').replace(/"/g,'&quot;') + '" onchange="updateStrategyItem(\'eaCosts\',\'' + r.id + '\',\'name\',this.value)" style="background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;width:180px"></td>' +
+      '<td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700">$<input type="number" value="' + (r.price||0) + '" onchange="updateStrategyItem(\'eaCosts\',\'' + r.id + '\',\'price\',parseFloat(this.value)||0)" style="background:transparent;border:none;color:var(--accent);font-family:var(--font-mono);font-size:11px;width:90px;font-weight:700"></td>' +
+      '<td style="padding:8px 10px"><input value="' + (r.type||'').replace(/"/g,'&quot;') + '" onchange="updateStrategyItem(\'eaCosts\',\'' + r.id + '\',\'type\',this.value)" style="background:transparent;border:none;color:var(--text3);font-family:var(--font-mono);font-size:11px;width:100px"></td>' +
+      '<td style="padding:8px 10px"><input value="' + (r.when||'').replace(/"/g,'&quot;') + '" onchange="updateStrategyItem(\'eaCosts\',\'' + r.id + '\',\'when\',this.value)" style="background:transparent;border:none;color:var(--text3);font-family:var(--font-mono);font-size:11px;width:120px"></td>' +
+      '<td style="padding:8px 10px"><button onclick="deleteStrategyItem(\'eaCosts\',\'' + r.id + '\')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px">✕</button></td>' +
+      '</tr>';
+  });
+  const totalCosts = data.eaCosts.reduce(function(s,r){ return s + (parseFloat(r.price)||0); }, 0);
 
-  // EA cards - group by month, dynamic filter tabs
-  const allMonths = [...new Set(data.eaCards.map(e => e.month||'').filter(Boolean))].sort();
-  const filtered = strategyFilter === 'all' ? data.eaCards : data.eaCards.filter(e => e.month === strategyFilter);
+  // EA cards from capitalPlan – auto-calculate stats from P&L DB
+  const allMonths = [];
+  data.capitalPlan.forEach(function(r) { if (r.month && allMonths.indexOf(r.month)<0) allMonths.push(r.month); });
+  allMonths.sort();
 
-  const filterTabs = [
-    `<button onclick="strategyFilter='all';renderStrategy()" class="pnl-filter-btn ${strategyFilter==='all'?'active':''}" style="font-size:10px;padding:4px 10px">Alle</button>`,
-    ...allMonths.map(m => `<button onclick="strategyFilter='${m}';renderStrategy()" class="pnl-filter-btn ${strategyFilter===m?'active':''}" style="font-size:10px;padding:4px 10px">${fmtMonth(m)}</button>`)
-  ].join('');
+  const filteredPlan = strategyFilter === 'all' ? data.capitalPlan :
+    strategyFilter === 'live' ? (function() {
+      const seen = {};
+      return data.capitalPlan.filter(function(r) {
+        if (!r.eaId) return false;
+        const isLive = DB.pnl.some(function(p) {
+          if (String(p.eaId) != String(r.eaId)) return false;
+          var acc = DB.accounts.find(function(a){ return a.id == p.accountId; });
+          return acc && acc.type === 'Live' && isActive(acc);
+        });
+        if (!isLive) return false;
+        if (seen[r.eaId]) return false;
+        seen[r.eaId] = true;
+        return true;
+      });
+    })() :
+    data.capitalPlan.filter(function(r){ return r.month === strategyFilter; });
 
-  const badgeColor = b => b.includes('Live') ? 'rgba(0,255,157,0.15)' : b.includes('kaufen') || b.includes('schalten') ? 'rgba(240,192,64,0.15)' : 'rgba(100,100,100,0.2)';
-  const badgeTextColor = b => b.includes('Live') ? 'var(--pos)' : b.includes('kaufen') || b.includes('schalten') ? 'var(--warn)' : 'var(--text3)';
-  const statColor = cls => cls === 'pos' ? 'var(--pos)' : cls === 'neg' ? 'var(--neg)' : 'var(--text)';
+  const liveAccNumbers = new Set(DB.accounts.filter(function(a){ return a.type==='Live' && isActive(a); }).map(function(a){ return a.number; }));
+  let filterTabs = '<button onclick="strategyFilter=\'all\';renderStrategy()" class="pnl-filter-btn ' + (strategyFilter==='all'?'active':'') + '" style="font-size:10px;padding:4px 10px">Alle</button>' +
+    '<button onclick="strategyFilter=\'live\';renderStrategy()" class="pnl-filter-btn ' + (strategyFilter==='live'?'active':'') + '" style="font-size:10px;padding:4px 10px">🟢 Live</button>';
+  allMonths.forEach(function(m) {
+    filterTabs += '<button onclick="strategyFilter=\'' + m + '\';renderStrategy()" class="pnl-filter-btn ' + (strategyFilter===m?'active':'') + '" style="font-size:10px;padding:4px 10px">' + fmtMonth(m) + '</button>';
+  });
 
-  const cardsHtml = filtered.map(e => `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:16px">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-      <div><span style="font-size:15px;font-weight:800;color:var(--text);font-family:'Bebas Neue',sans-serif;letter-spacing:1px">${e.name}</span>${e.account?`<span style="font-size:9px;color:var(--text3);margin-left:6px">#${e.account}</span>`:''}</div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <span style="font-size:9px;padding:3px 8px;border-radius:4px;background:${badgeColor(e.badge)};color:${badgeTextColor(e.badge)};font-weight:600">${e.badge}</span>
-        <button onclick="deleteStrategyItem('eaCards','${e.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px">✕</button>
-      </div>
-    </div>
-    <div style="font-size:10px;color:var(--text3);margin-bottom:4px">${e.account?`Konto <strong style="color:var(--text2)">#${e.account}</strong> &nbsp;`:''}Kapital <strong style="color:var(--text2)">$${(e.capitalFrom||0).toLocaleString()} → $${(e.capitalTo||0).toLocaleString()}</strong></div>
-    <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Instrument <strong style="color:var(--text2)">${e.instrument}</strong>${e.note?` &nbsp; ${e.note}`:''}</div>
-    <div style="font-size:9px;color:var(--accent);margin-bottom:8px">📅 ${fmtMonth(e.month)}</div>
-    <div style="border-top:1px solid var(--border);padding-top:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-      <div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">${e.stat1Label}</div><div style="font-size:13px;font-weight:700;color:${statColor(e.stat1cls)}">${e.stat1}</div></div>
-      <div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">${e.stat2Label}</div><div style="font-size:13px;font-weight:700;color:${statColor(e.stat2cls)}">${e.stat2}</div></div>
-      <div><div style="font-size:9px;color:var(--text3);margin-bottom:2px">${e.stat3Label}</div><div style="font-size:11px;font-weight:700;color:${statColor(e.stat3cls)}">${e.stat3}</div></div>
-    </div>
-  </div>`).join('');
+  let cardsHtml = '';
+  filteredPlan.forEach(function(r) {
+    // Find linked account
+    const acc = DB.accounts.find(function(a){ return a.number == r.account || a.id == r.accountId; });
 
-  // EA add form month options - dynamic from existing months + future months
-  const monthOpts = ['2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12']
-    .map(m => `<option value="${m}">${fmtMonth(m)}</option>`).join('');
+    const statusBadge = r.status==='done' ? '✅ Erreicht' : r.status==='active' ? '⏳ Laufend' : '📋 Geplant';
+    const badgeBg = r.status==='done' ? 'rgba(0,255,157,0.15)' : r.status==='active' ? 'rgba(0,200,240,0.15)' : 'rgba(100,100,100,0.15)';
+    const badgeCol = r.status==='done' ? 'var(--pos)' : r.status==='active' ? 'var(--accent)' : 'var(--text3)';
 
-  el.innerHTML = `<div style="display:flex;flex-direction:column;gap:24px">
-    <div class="form-panel">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <div class="sh" style="margin:0">💰 Kapital-Einzahlungen</div>
-        <button onclick="addStrategyCapital()" class="btn btn-primary" style="font-size:10px;padding:5px 12px">+ Position</button>
-      </div>
-      <div class="table-wrap"><table><thead><tr>
-        <th>Position</th><th>Monat</th><th style="text-align:right">Von</th><th style="text-align:right">Auf</th>
-        <th style="text-align:right">Einzahlung</th><th>Status</th><th>Notiz</th><th></th>
-      </tr></thead><tbody>${capitalHtml}</tbody></table></div>
-    </div>
-    <div class="form-panel">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <div class="sh" style="margin:0">🛒 EA-Kaufkosten</div>
-        <button onclick="addStrategyCost()" class="btn btn-primary" style="font-size:10px;padding:5px 12px">+ EA</button>
-      </div>
-      <div class="table-wrap"><table><thead><tr><th>EA</th><th style="text-align:right">Preis</th><th>Typ</th><th>Wann</th><th></th></tr></thead>
-      <tbody>${costsHtml}<tr style="border-top:1px solid var(--border)"><td style="padding:6px 10px;font-weight:700;color:var(--text2)">Gesamt</td><td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--accent)">$${totalCosts.toLocaleString()}</td><td colspan="3"></td></tr></tbody></table>
-      </div>
-    </div>
-    <div class="form-panel">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
-        <div class="sh" style="margin:0">🤖 Expert Advisors</div>
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          <div style="display:flex;gap:6px;flex-wrap:wrap">${filterTabs}</div>
-          <button onclick="document.getElementById('eaAddForm').style.display=document.getElementById('eaAddForm').style.display==='none'?'block':'none'" class="btn btn-primary" style="font-size:10px;padding:5px 12px">+ EA</button>
-        </div>
-      </div>
-      <div id="eaAddForm" style="display:none;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;padding:16px;margin-bottom:16px">
-        <div class="sh" style="margin-bottom:12px;font-size:11px">Neuen EA anlegen</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
-          <div><label style="font-size:9px;color:var(--text3)">NAME</label><input id="ea-new-name" placeholder="EA Name" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-          <div><label style="font-size:9px;color:var(--text3)">BADGE</label><input id="ea-new-badge" placeholder="z.B. Juni – kaufen" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-          <div><label style="font-size:9px;color:var(--text3)">MONAT</label><select id="ea-new-phase" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box">${monthOpts}</select></div>
-          <div><label style="font-size:9px;color:var(--text3)">KONTO #</label><input id="ea-new-account" placeholder="optional" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-          <div><label style="font-size:9px;color:var(--text3)">KAPITAL VON</label><input id="ea-new-capfrom" type="number" placeholder="0" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-          <div><label style="font-size:9px;color:var(--text3)">KAPITAL BIS</label><input id="ea-new-capto" type="number" placeholder="1000" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-          <div><label style="font-size:9px;color:var(--text3)">INSTRUMENT</label><input id="ea-new-instrument" placeholder="XAUUSD" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-          <div><label style="font-size:9px;color:var(--text3)">NOTIZ</label><input id="ea-new-note" placeholder="z.B. Entwickler: Puscasu" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:5px 8px;box-sizing:border-box"></div>
-        </div>
-        <div style="font-size:9px;color:var(--text3);margin-bottom:8px;letter-spacing:0.08em">KENNZAHLEN</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
-          <div><input id="ea-new-s1l" placeholder="Label (z.B. P&L)" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:4px 8px;box-sizing:border-box;margin-bottom:4px"><input id="ea-new-s1v" placeholder="Wert" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:4px 8px;box-sizing:border-box"><select id="ea-new-s1c" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:3px;margin-top:3px;box-sizing:border-box"><option value="">neutral</option><option value="pos">grün</option><option value="neg">rot</option></select></div>
-          <div><input id="ea-new-s2l" placeholder="Label" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:4px 8px;box-sizing:border-box;margin-bottom:4px"><input id="ea-new-s2v" placeholder="Wert" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:4px 8px;box-sizing:border-box"><select id="ea-new-s2c" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:3px;margin-top:3px;box-sizing:border-box"><option value="">neutral</option><option value="pos">grün</option><option value="neg">rot</option></select></div>
-          <div><input id="ea-new-s3l" placeholder="Label" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:4px 8px;box-sizing:border-box;margin-bottom:4px"><input id="ea-new-s3v" placeholder="Wert" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:4px 8px;box-sizing:border-box"><select id="ea-new-s3c" style="width:100%;background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:3px;margin-top:3px;box-sizing:border-box"><option value="">neutral</option><option value="pos">grün</option><option value="neg">rot</option></select></div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button onclick="saveNewStrategyEA()" class="btn btn-primary" style="font-size:10px;padding:5px 14px">💾 Speichern</button>
-          <button onclick="document.getElementById('eaAddForm').style.display='none'" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--text3);font-family:var(--font-mono);font-size:10px;padding:5px 14px;cursor:pointer">Abbrechen</button>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">${cardsHtml}</div>
-    </div>
-  </div>`;
+    cardsHtml +=
+      '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:16px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">' +
+          (function() {
+        var ea = r.eaId ? DB.eas.find(function(e){ return String(e.id) === String(r.eaId); }) : null;
+        var displayName = ea ? ea.name : (r.name||'–');
+        return '<span style="font-size:15px;font-weight:800;color:var(--text);font-family:\'Bebas Neue\',sans-serif;letter-spacing:1px">' + displayName + '</span>';
+      })() +
+          '<div style="display:flex;gap:6px;align-items:center">' +
+            '<span style="font-size:9px;padding:3px 8px;border-radius:4px;background:' + badgeBg + ';color:' + badgeCol + ';font-weight:600">' + statusBadge + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div style="font-size:10px;color:var(--text3);margin-bottom:4px">Kapital <strong style="color:var(--text2)">$' + (r.from||0).toLocaleString() + ' → $' + (r.to||0).toLocaleString() + '</strong></div>' +
+        '<div style="font-size:9px;color:var(--accent);margin-bottom:8px">📅 ' + fmtMonth(r.month) + '</div>' +
+        (r.note ? '<div style="font-size:10px;color:var(--text3);margin-bottom:8px">' + r.note + '</div>' : '') +
+
+      '</div>';
+  });
+
+  el.innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:24px">' +
+      '<div class="form-panel">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">' +
+          '<div class="sh" style="margin:0">💰 Kapital-Einzahlungen</div>' +
+          '<div style="display:flex;gap:6px">' +
+          '<button onclick="addStrategyCapital()" class="btn btn-primary" style="font-size:10px;padding:5px 12px">+ Position</button>' +
+          '<button onclick="if(confirm(\'Strategie-Daten zurücksetzen?\')){{ localStorage.removeItem(\'ea_hub_strategy\'); renderStrategy(); }}" style="background:none;border:1px solid var(--border2);border-radius:5px;color:var(--text3);font-family:var(--font-mono);font-size:9px;padding:5px 10px;cursor:pointer">↺ Reset</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="table-wrap"><table><thead><tr>' +
+          '<th>Position</th><th>EA</th><th>Monat</th><th style="text-align:right">Von</th><th style="text-align:right">Auf</th>' +
+          '<th style="text-align:right">Einzahlung</th><th>Status</th><th>Notiz</th><th></th>' +
+        '</tr></thead><tbody>' + capitalHtml + '</tbody></table></div>' +
+      '</div>' +
+      '<div class="form-panel">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">' +
+          '<div class="sh" style="margin:0">🛒 EA-Kaufkosten</div>' +
+          '<button onclick="addStrategyCost()" class="btn btn-primary" style="font-size:10px;padding:5px 12px">+ EA</button>' +
+        '</div>' +
+        '<div class="table-wrap"><table><thead><tr><th>EA</th><th style="text-align:right">Preis</th><th>Typ</th><th>Wann</th><th></th></tr></thead>' +
+        '<tbody>' + costsHtml +
+          '<tr style="border-top:1px solid var(--border)"><td style="padding:6px 10px;font-weight:700;color:var(--text2)">Gesamt</td>' +
+          '<td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--accent)">$' + totalCosts.toLocaleString() + '</td><td colspan="3"></td></tr>' +
+        '</tbody></table></div>' +
+      '</div>' +
+      '<div class="form-panel">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">' +
+          '<div class="sh" style="margin:0">🤖 Expert Advisors</div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap">' + filterTabs + '</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">' + cardsHtml + '</div>' +
+      '</div>' +
+    '</div>';
 }
+
+
+
+
 function updateStrategyItem(section, id, key, value) {
   const data = getStrategy();
-  const item = data[section].find(r => r.id === id);
-  if (item) { item[key] = value; saveStrategy(data); }
+  const item = data[section].find(function(r){ return r.id === id; });
+  if (item) {
+    item[key] = value;
+    saveStrategy(data);
+    if (key === 'status' || key === 'month') renderStrategy();
+  }
 }
 
 function updateDeposit(id) {
   const data = getStrategy();
-  const item = data.capitalPlan.find(r => r.id === id);
+  const item = data.capitalPlan.find(function(r){ return r.id === id; });
   if (item) { item.deposit = Math.max(0, (item.to||0) - (item.from||0)); saveStrategy(data); renderStrategy(); }
 }
 
 function deleteStrategyItem(section, id) {
   const data = getStrategy();
-  data[section] = data[section].filter(r => r.id !== id);
+  data[section] = data[section].filter(function(r){ return r.id !== id; });
   saveStrategy(data); renderStrategy();
 }
 
 function addStrategyCapital() {
   const data = getStrategy();
-  const nextMonth = new Date(); nextMonth.setMonth(nextMonth.getMonth()+1); const nm = nextMonth.toISOString().substring(0,7); data.capitalPlan.push({ id:'s'+Date.now(), month:nm, name:'', from:0, to:0, deposit:0, status:'planned', note:'' });
+  const nextMonth = new Date(); nextMonth.setMonth(nextMonth.getMonth()+1);
+  const nm = nextMonth.toISOString().substring(0,7);
+  data.capitalPlan.push({ id:'s'+Date.now(), month:nm, name:'', account:'', from:0, to:0, deposit:0, status:'planned', note:'' });
   saveStrategy(data); renderStrategy();
 }
 
@@ -2965,219 +3189,319 @@ function addStrategyCost() {
   saveStrategy(data); renderStrategy();
 }
 
-function addStrategyEA() {
-  const data = getStrategy();
-  data.eaCards.push({ id:'e'+Date.now(), name:'Neuer EA', badge:'Geplant', account:'', capitalFrom:0, capitalTo:0, instrument:'', stat1Label:'', stat1:'', stat1cls:'', stat2Label:'', stat2:'', stat2cls:'', stat3Label:'', stat3:'', stat3cls:'', phase:'live', note:'' });
-  saveStrategy(data); renderStrategy();
-}
 
-
-function renameStrategyPhase(oldPhase, newPhase) {
-  if (!newPhase.trim()) return;
+function renderOverviewDepositPlan() {
+  const el = document.getElementById('overviewDepositPlan');
+  if (!el) return;
   const data = getStrategy();
-  data.capitalPlan.forEach(r => { if (r.phase === oldPhase) r.phase = newPhase; });
-  saveStrategy(data);
-}
+  const today = new Date().toISOString().substring(0,7);
+  const upcoming = data.capitalPlan
+    .filter(function(r) { return r.status !== 'done' && r.month >= today; })
+    .sort(function(a,b) { return (a.month||'').localeCompare(b.month||''); })
+    .slice(0, 6);
 
-function saveNewStrategyEA() {
-  const g = id => document.getElementById(id);
-  const name = g('ea-new-name').value.trim();
-  if (!name) { alert('Name ist Pflicht'); return; }
-  const data = getStrategy();
-  data.eaCards.push({
-    id: 'e'+Date.now(),
-    name,
-    badge: g('ea-new-badge').value || 'Geplant',
-    account: g('ea-new-account').value || '',
-    capitalFrom: parseFloat(g('ea-new-capfrom').value) || 0,
-    capitalTo: parseFloat(g('ea-new-capto').value) || 0,
-    instrument: g('ea-new-instrument').value || '',
-    note: g('ea-new-note').value || '',
-    month: g('ea-new-phase').value || '2026-04',
-    stat1Label: g('ea-new-s1l').value || '',
-    stat1: g('ea-new-s1v').value || '',
-    stat1cls: g('ea-new-s1c').value || '',
-    stat2Label: g('ea-new-s2l').value || '',
-    stat2: g('ea-new-s2v').value || '',
-    stat2cls: g('ea-new-s2c').value || '',
-    stat3Label: g('ea-new-s3l').value || '',
-    stat3: g('ea-new-s3v').value || '',
-    stat3cls: g('ea-new-s3c').value || '',
+  if (!upcoming.length) {
+    el.innerHTML = '<span style="color:var(--text3);font-size:11px">Keine geplanten Einzahlungen.</span>';
+    return;
+  }
+
+  let html = '';
+  upcoming.forEach(function(r) {
+    const ea = r.eaId ? DB.eas.find(function(e){ return String(e.id)===String(r.eaId); }) : null;
+    const name = ea ? ea.name : (r.name || '–');
+    const statusColor = r.status==='active' ? 'var(--accent)' : 'var(--text3)';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">' +
+      '<div>' +
+        '<div style="font-size:11px;font-weight:600;color:var(--text)">' + name + '</div>' +
+        '<div style="font-size:9px;color:var(--text3)">' + fmtMonth(r.month) + '</div>' +
+      '</div>' +
+      '<div style="font-size:13px;font-weight:700;color:var(--accent)">+$' + (r.deposit||0).toLocaleString() + '</div>' +
+    '</div>';
   });
-  saveStrategy(data);
-  document.getElementById('eaAddForm').style.display = 'none';
-  renderStrategy();
+
+  const total = upcoming.reduce(function(s,r){ return s+(parseFloat(r.deposit)||0); }, 0);
+  html += '<div style="display:flex;justify-content:space-between;padding-top:8px">' +
+    '<span style="font-size:10px;color:var(--text3)">Gesamt geplant</span>' +
+    '<span style="font-size:13px;font-weight:700;color:var(--accent)">$' + total.toLocaleString() + '</span>' +
+  '</div>';
+
+  el.innerHTML = html;
 }
 
+function renderOverviewWeeklyPnl() {
+  const el = document.getElementById('overviewWeeklyPnl');
+  if (!el) return;
 
-function setAnalyticsType(type, btn) {
-  document.getElementById('an-type').value = type;
-  document.querySelectorAll('#an-btn-all,#an-btn-live,#an-btn-demo').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
-  renderAnalytics();
+  const today = new Date().toISOString().split('T')[0];
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+  const ws = weekStart.toISOString().split('T')[0];
+
+  const liveAccs = DB.accounts.filter(function(a){ return a.type==='Live' && isActive(a); });
+
+  let rows = [];
+  DB.eas.forEach(function(ea) {
+    const entries = DB.pnl.filter(function(p) {
+      if (p.entryType && p.entryType !== 'trade') return false;
+      if (p.eaId != ea.id) return false;
+      if (!p.date || p.date < ws || p.date > today) return false;
+      return liveAccs.some(function(a){ return a.id == p.accountId; });
+    });
+    if (!entries.length) return;
+    const weekPnl = entries.reduce(function(s,p){ return s+(parseFloat(p.pnl)||0); }, 0);
+    rows.push({ name: ea.name, weekPnl: weekPnl });
+  });
+
+  if (!rows.length) {
+    el.innerHTML = '<span style="color:var(--text3);font-size:11px">Noch keine Einträge diese Woche.</span>';
+    return;
+  }
+
+  let html = '';
+  rows.forEach(function(r) {
+    const cls = r.weekPnl >= 0 ? 'var(--pos)' : 'var(--neg)';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">' +
+      '<span style="font-size:11px;font-weight:600;color:var(--text)">' + r.name + '</span>' +
+      '<span style="font-size:13px;font-weight:700;color:' + cls + '">' + (r.weekPnl>=0?'+$':'-$') + Math.abs(r.weekPnl).toFixed(2) + '</span>' +
+    '</div>';
+  });
+
+  const total = rows.reduce(function(s,r){ return s+r.weekPnl; }, 0);
+  const isFriday = new Date().getDay() === 5;
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px">' +
+    '<span style="font-size:10px;color:var(--text3)">' + (isFriday ? '🟢 Entnehmbar heute' : 'Gesamt diese Woche') + '</span>' +
+    '<span style="font-size:14px;font-weight:700;color:' + (total>=0?'var(--pos)':'var(--neg)') + '">' + (total>=0?'+$':'-$') + Math.abs(total).toFixed(2) + '</span>' +
+  '</div>';
+
+  el.innerHTML = html;
 }
 
 
 // ============================================================
-// EA RATING
+// EA RATING TABLE
 // ============================================================
-var eaRatingSort = { col: 'score', dir: -1 };
 
 function renderEaRating(entries) {
   const header = document.getElementById('eaRatingHeader');
   const body = document.getElementById('eaRatingBody');
   if (!header || !body) return;
+
   const cols = [
-    { key:'name',     label:'EA',             tip:null },
-    { key:'winRate',  label:'Win-Rate',        tip:'Anteil positiver Handelstage. >80% = sehr gut.' },
-    { key:'pf',       label:'Profit Factor',   tip:'Summe Gewinne ÷ Summe Verluste. >2 = gut, >3 = sehr gut. ∞ = keine Verlusttage.' },
-    { key:'exp',      label:'Expectancy',      tip:'Erwarteter Gewinn pro Tag.' },
-    { key:'sharpe',   label:'Sharpe Ratio',    tip:'Avg. Tagesgewinn ÷ Standardabweichung. >1 = gut.' },
-    { key:'recovery', label:'Recovery Factor', tip:'Gesamt P&L ÷ Max DD. >3 = gut.' },
-    { key:'maxDd',    label:'Max DD',          tip:'Größter Einzelverlust eines Tages.' },
-    { key:'score',    label:'Score',           tip:'Gewichteter Gesamtscore 0–10.' },
+    { key:'name',     label:'EA',             tip:null,                                                                                   fmt: v => v },
+    { key:'winRate',  label:'Win-Rate',        tip:'Anteil positiver Handelstage. >80% = sehr gut.',                                       fmt: v => v===null?'–':v.toFixed(0)+'%' },
+    { key:'pf',       label:'Profit Factor',   tip:'Summe Gewinne ÷ Summe Verluste. >2 = gut, >3 = sehr gut. ∞ = keine Verlusttage.',     fmt: v => v===null?'–':v===Infinity?'∞':v.toFixed(2) },
+    { key:'exp',      label:'Expectancy',      tip:'Erwarteter Gewinn pro Tag: (Win-Rate × Avg.Gewinn) − (Loss-Rate × Avg.Verlust).',      fmt: v => v===null?'–':(v>=0?'+$':'-$')+Math.abs(v).toFixed(2) },
+    { key:'sharpe',   label:'Sharpe Ratio',    tip:'Avg. Tagesgewinn ÷ Standardabweichung. >1 = gut, >2 = sehr gut.',                    fmt: v => v===null?'–':v.toFixed(2) },
+    { key:'recovery', label:'Recovery Factor', tip:'Gesamt P&L ÷ Max DD. Zeigt wie gut der EA seinen Drawdown aufholt. >3 = gut.',        fmt: v => v===null?'–':v===Infinity?'∞':v.toFixed(2) },
+    { key:'maxDd',    label:'Max DD',          tip:'Größter Einzelverlust eines Tages.',                                                   fmt: v => v===null?'–':'-$'+Math.abs(v).toFixed(2) },
+    { key:'score',    label:'Score',           tip:'Gewichteter Gesamtscore 0–10 aus allen Kennzahlen.',                                  fmt: v => v===null?'–':'⭐ '+v.toFixed(1) },
   ];
-  header.innerHTML = cols.map(function(c) {
+
+  // Build header
+  header.innerHTML = cols.map(c => {
     const sorted = eaRatingSort.col === c.key;
     const arrow = sorted ? (eaRatingSort.dir === -1 ? ' ▼' : ' ▲') : '';
     const tip = c.tip ? ' title="' + c.tip + '"' : '';
     const cursor = c.key !== 'name' ? 'cursor:pointer;' : '';
-    const onclick = c.key !== 'name' ? ' onclick="sortEaRating(\'' + c.key + '\')' + '"' : '';
+    const onclick = c.key !== 'name' ? ' onclick="sortEaRating(\'' + c.key + '\')"' : '';
     return '<th style="' + cursor + 'white-space:nowrap"' + tip + onclick + '>' +
-      c.label + (c.tip ? ' <span style="color:var(--accent);font-size:10px">ⓘ</span>' : '') + arrow + '</th>';
+      c.label + (c.tip ? ' <span style="color:var(--accent);font-size:10px">ⓘ</span>' : '') + arrow +
+      '</th>';
   }).join('');
 
-  const stats = DB.eas.map(function(ea) {
-    const eaEntries = entries.filter(function(p){ return p.eaId == ea.id; });
-    const tradingEntries = eaEntries.filter(function(p){ return (parseFloat(p.pnl)||0) !== 0; });
+  // Calculate stats per EA
+  const eaMap = {};
+  DB.eas.forEach(ea => { eaMap[ea.id] = ea; });
+
+  const stats = DB.eas.map(ea => {
+    const eaEntries = entries.filter(p => p.eaId == ea.id);
+    // Ignore zero P&L entries for statistics
+    const tradingEntries = eaEntries.filter(p => (parseFloat(p.pnl)||0) !== 0);
     if (!tradingEntries.length) return null;
-    const pnls = tradingEntries.map(function(p){ return parseFloat(p.pnl)||0; });
-    const dds  = eaEntries.map(function(p){ return parseFloat(p.dd)||0; });
+
+    const pnls = tradingEntries.map(p => parseFloat(p.pnl)||0);
+    const dds  = eaEntries.map(p => parseFloat(p.dd)||0);
     const n = pnls.length;
-    const wins   = pnls.filter(function(v){ return v > 0; });
-    const losses = pnls.filter(function(v){ return v < 0; });
+
+    const wins   = pnls.filter(v => v > 0);
+    const losses = pnls.filter(v => v < 0);
     const winRate = (wins.length / n) * 100;
-    const sumWin  = wins.reduce(function(s,v){ return s+v; }, 0);
-    const sumLoss = Math.abs(losses.reduce(function(s,v){ return s+v; }, 0));
+
+    const sumWin  = wins.reduce((s,v) => s+v, 0);
+    const sumLoss = Math.abs(losses.reduce((s,v) => s+v, 0));
     const pf = sumLoss === 0 ? Infinity : sumWin / sumLoss;
+
     const avgWin  = wins.length  ? sumWin  / wins.length  : 0;
     const avgLoss = losses.length ? sumLoss / losses.length : 0;
     const exp = (winRate/100 * avgWin) - ((1 - winRate/100) * avgLoss);
-    const avg = pnls.reduce(function(s,v){ return s+v; }, 0) / n;
-    const variance = pnls.reduce(function(s,v){ return s + Math.pow(v-avg,2); }, 0) / n;
+
+    const avg = pnls.reduce((s,v) => s+v, 0) / n;
+    const variance = pnls.reduce((s,v) => s + Math.pow(v-avg, 2), 0) / n;
     const stdDev = Math.sqrt(variance);
     const sharpe = stdDev === 0 ? null : avg / stdDev;
-    const totalPnl = pnls.reduce(function(s,v){ return s+v; }, 0);
-    const maxDd = dds.length ? -Math.max.apply(null,dds) : 0;
+
+    const totalPnl = pnls.reduce((s,v) => s+v, 0);
+    const maxDd = dds.length ? -Math.max(...dds) : 0;
     const recovery = maxDd === 0 ? Infinity : totalPnl / Math.abs(maxDd);
-    const confidence = Math.min(1, n / 20);
+
+    // Score 0-10 weighted - confidence factor based on number of entries
+    const confidence = Math.min(1, n / 20); // full confidence at 20+ entries
     const scoreWinRate  = Math.min(10, winRate / 10);
     const scorePf       = pf === Infinity ? 10 : Math.min(10, pf * 2);
     const scoreExp      = exp <= 0 ? 0 : Math.min(10, exp / 10);
     const scoreSharpe   = sharpe === null ? 5 : Math.min(10, Math.max(0, sharpe * 3 + 5));
     const scoreRecovery = recovery === Infinity ? 10 : Math.min(10, Math.max(0, recovery));
     const rawScore = (scoreWinRate*2 + scorePf*2 + scoreExp*2 + scoreSharpe*2 + scoreRecovery*2) / 10;
-    const score = rawScore * confidence + (rawScore * 0.5) * (1 - confidence);
+    const score = rawScore * confidence + (rawScore * 0.5) * (1 - confidence); // reduce score for few entries
+
     return { name: ea.name, winRate, pf, exp, sharpe, recovery, maxDd, score, n };
   }).filter(Boolean);
 
-  stats.sort(function(a,b) {
-    const av = a[eaRatingSort.col]; const bv = b[eaRatingSort.col];
+  // Sort
+  stats.sort((a,b) => {
+    const av = a[eaRatingSort.col];
+    const bv = b[eaRatingSort.col];
     if (av === Infinity && bv !== Infinity) return -eaRatingSort.dir;
     if (bv === Infinity && av !== Infinity) return eaRatingSort.dir;
     return (av - bv) * eaRatingSort.dir;
   });
 
-  const colorWinRate  = function(v){ return v >= 80 ? 'var(--pos)' : v >= 60 ? 'var(--warn)' : 'var(--neg)'; };
-  const colorPf       = function(v){ return v === Infinity || v >= 3 ? 'var(--pos)' : v >= 2 ? 'var(--warn)' : 'var(--neg)'; };
-  const colorExp      = function(v){ return v > 0 ? 'var(--pos)' : 'var(--neg)'; };
-  const colorSharpe   = function(v){ return v === null ? 'var(--text3)' : v >= 1 ? 'var(--pos)' : v >= 0 ? 'var(--warn)' : 'var(--neg)'; };
-  const colorRecovery = function(v){ return v === Infinity || v >= 3 ? 'var(--pos)' : v >= 1 ? 'var(--warn)' : 'var(--neg)'; };
-  const colorScore    = function(v){ return v >= 7 ? 'var(--pos)' : v >= 5 ? 'var(--warn)' : 'var(--neg)'; };
-  const fmtPf  = function(v){ return v===null?'–':v===Infinity?'∞':v.toFixed(2); };
-  const fmtExp = function(v){ return v===null?'–':(v>=0?'+$':'-$')+Math.abs(v).toFixed(2); };
+  // Color helpers
+  const colorWinRate  = v => v >= 80 ? 'var(--pos)' : v >= 60 ? 'var(--warn)' : 'var(--neg)';
+  const colorPf       = v => v === Infinity || v >= 3 ? 'var(--pos)' : v >= 2 ? 'var(--warn)' : 'var(--neg)';
+  const colorExp      = v => v > 0 ? 'var(--pos)' : 'var(--neg)';
+  const colorSharpe   = v => v === null ? 'var(--text3)' : v >= 1 ? 'var(--pos)' : v >= 0 ? 'var(--warn)' : 'var(--neg)';
+  const colorRecovery = v => v === Infinity || v >= 3 ? 'var(--pos)' : v >= 1 ? 'var(--warn)' : 'var(--neg)';
+  const colorScore    = v => v >= 7 ? 'var(--pos)' : v >= 5 ? 'var(--warn)' : 'var(--neg)';
 
-  body.innerHTML = stats.map(function(s) {
+  body.innerHTML = stats.map(s => {
+    const scoreColor = colorScore(s.score);
     return '<tr>' +
       '<td style="font-weight:600;color:var(--accent)">' + s.name + '</td>' +
-      '<td style="color:' + colorWinRate(s.winRate) + '">' + s.winRate.toFixed(0) + '%</td>' +
-      '<td style="color:' + colorPf(s.pf) + '">' + fmtPf(s.pf) + '</td>' +
-      '<td style="color:' + colorExp(s.exp) + '">' + fmtExp(s.exp) + '</td>' +
-      '<td style="color:' + colorSharpe(s.sharpe) + '">' + (s.sharpe===null?'–':s.sharpe.toFixed(2)) + '</td>' +
-      '<td style="color:' + colorRecovery(s.recovery) + '">' + (s.recovery===Infinity?'∞':s.recovery.toFixed(2)) + '</td>' +
-      '<td style="color:var(--neg)">-$' + Math.abs(s.maxDd).toFixed(2) + '</td>' +
-      '<td style="color:' + colorScore(s.score) + ';font-weight:700;font-size:13px">⭐ ' + s.score.toFixed(1) + '</td>' +
-    '</tr>';
+      '<td style="color:' + colorWinRate(s.winRate) + '">' + cols[1].fmt(s.winRate) + '</td>' +
+      '<td style="color:' + colorPf(s.pf) + '">' + cols[2].fmt(s.pf) + '</td>' +
+      '<td style="color:' + colorExp(s.exp) + '">' + cols[3].fmt(s.exp) + '</td>' +
+      '<td style="color:' + colorSharpe(s.sharpe) + '">' + cols[4].fmt(s.sharpe) + '</td>' +
+      '<td style="color:' + colorRecovery(s.recovery) + '">' + cols[5].fmt(s.recovery) + '</td>' +
+      '<td style="color:var(--neg)">' + cols[6].fmt(s.maxDd) + '</td>' +
+      '<td style="color:' + scoreColor + ';font-weight:700;font-size:13px">' + cols[7].fmt(s.score) + '</td>' +
+      '</tr>';
   }).join('');
 }
 
 function sortEaRating(col) {
-  if (eaRatingSort.col === col) { eaRatingSort.dir *= -1; }
-  else { eaRatingSort.col = col; eaRatingSort.dir = -1; }
+  if (eaRatingSort.col === col) {
+    eaRatingSort.dir *= -1;
+  } else {
+    eaRatingSort.col = col;
+    eaRatingSort.dir = -1;
+  }
   renderAnalytics();
 }
+
 
 // ============================================================
 // EA MONTH CHART
 // ============================================================
 var eaMonthChartInstance = null;
+var eaMonthFilter = 'all';
+
+function setEaChartFilter(type) {
+  eaMonthFilter = type;
+  ['Live','Demo','all'].forEach(function(t) {
+    const btn = document.getElementById('eaChart-btn-' + t.toLowerCase());
+    if (btn) {
+      btn.classList.toggle('active', t === type);
+    }
+  });
+  renderEaMonthChart();
+}
 
 function renderEaMonthChart() {
   const canvas = document.getElementById('eaMonthChart');
   if (!canvas) return;
   const today = new Date().toISOString().split('T')[0];
   const month = today.substring(0,7);
-  const anType = (document.getElementById('an-type') || {}).value || '';
+
   const labels = [], pnlData = [], ddData = [];
+
   DB.eas.forEach(function(ea) {
+    // Get all P&L entries for this EA this month
     let monthEntries = DB.pnl.filter(function(p) {
       if (String(p.eaId) !== String(ea.id)) return false;
       if (!p.date || !p.date.startsWith(month)) return false;
       if (p.entryType && p.entryType !== 'trade') return false;
       return true;
     });
+
+    // Apply filter
+    const anType = (document.getElementById('an-type') || {}).value || '';
     if (anType) {
       monthEntries = monthEntries.filter(function(p) {
         const acc = DB.accounts.find(function(a){ return String(a.id) === String(p.accountId); });
         return acc && acc.type === anType;
       });
     }
+
     if (!monthEntries.length) return;
-    const pnl = monthEntries.reduce(function(s,p){ return s+(parseFloat(p.pnl)||0); }, 0);
+
+    const pnl = monthEntries.reduce(function(s,p){ return s + (parseFloat(p.pnl)||0); }, 0);
     const maxDd = Math.max.apply(null, monthEntries.map(function(p){ return parseFloat(p.dd)||0; }));
+
     labels.push(ea.name);
     pnlData.push(parseFloat(pnl.toFixed(2)));
     ddData.push(parseFloat((-maxDd).toFixed(2)));
   });
+
   if (eaMonthChartInstance) { eaMonthChartInstance.destroy(); eaMonthChartInstance = null; }
+
   const wrap = canvas.parentElement;
   if (!labels.length) {
     wrap.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:11px;padding:40px">Keine Daten für diesen Monat.</div>';
     return;
   }
+
+  // Restore canvas if it was replaced
   if (!document.getElementById('eaMonthChart')) {
-    const c = document.createElement('canvas'); c.id = 'eaMonthChart';
-    wrap.innerHTML = ''; wrap.appendChild(c);
+    const c = document.createElement('canvas');
+    c.id = 'eaMonthChart';
+    wrap.innerHTML = '';
+    wrap.appendChild(c);
   }
+
   eaMonthChartInstance = new Chart(document.getElementById('eaMonthChart'), {
     type: 'bar',
-    data: { labels: labels, datasets: [
-      { label:'P&L Monat', data:pnlData, backgroundColor:'#1D9E75', borderRadius:4, barPercentage:1.0, categoryPercentage:0.5 },
-      { label:'Max DD',    data:ddData,  backgroundColor:'#E24B4A', borderRadius:4, barPercentage:1.0, categoryPercentage:0.5 }
-    ]},
-    options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:function(c){ return (c.parsed.y>=0?'+$':'-$')+Math.abs(c.parsed.y).toFixed(2); }}}},
-      scales:{
-        x:{ticks:{color:'#3d5166',font:{size:10},autoSkip:false,maxRotation:30},grid:{color:'rgba(30,45,61,0.5)'}},
-        y:{ticks:{color:'#3d5166',font:{size:10},callback:function(v){return (v>=0?'+$':'-$')+Math.abs(v);}},grid:{color:'rgba(30,45,61,0.5)'}}
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'P&L Monat', data: pnlData, backgroundColor: '#1D9E75', borderRadius: 4, barPercentage: 1.0, categoryPercentage: 0.5 },
+        { label: 'Max DD',    data: ddData,  backgroundColor: '#E24B4A', borderRadius: 4, barPercentage: 1.0, categoryPercentage: 0.5 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(c){ return (c.parsed.y >= 0 ? '+$' : '-$') + Math.abs(c.parsed.y).toFixed(2); } } }
+      },
+      scales: {
+        x: { ticks: { color: '#3d5166', font: { size: 10 }, autoSkip: false, maxRotation: 30 }, grid: { color: 'rgba(30,45,61,0.5)' } },
+        y: { ticks: { color: '#3d5166', font: { size: 10 }, callback: function(v){ return (v >= 0 ? '+$' : '-$') + Math.abs(v); } }, grid: { color: 'rgba(30,45,61,0.5)' } }
       }
     }
   });
 }
 
-// ============================================================
-// FORECAST EA TOGGLE
-// ============================================================
+
+function setAnalyticsType(type, btn) {
+  document.getElementById('an-type').value = type;
+  document.querySelectorAll('#an-btn-all,#an-btn-live,#an-btn-demo').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAnalytics();
+}
+
+
 function toggleForecastEa(eaId) {
   if (!DB.settings.forecastEaFilter) DB.settings.forecastEaFilter = {};
   const current = DB.settings.forecastEaFilter[eaId];
@@ -3185,6 +3509,7 @@ function toggleForecastEa(eaId) {
   saveLocal();
   renderForecast();
 }
+
 
 // ============================================================
 // EA LAB
@@ -3200,7 +3525,7 @@ function saveLabData(data) { localStorage.setItem('ea_hub_lab', JSON.stringify(d
 
 function setLabFilter(f, btn) {
   labFilter = f;
-  document.querySelectorAll('[id^="lab-btn-"]').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('[id^="lab-btn-"]').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderLabTable();
 }
@@ -3209,7 +3534,7 @@ function addLabEntry() {
   document.getElementById('labFormTitle').textContent = 'EA hinzufügen';
   document.getElementById('lab-edit-id').value = '';
   ['lab-name','lab-tf','lab-price','lab-source','lab-buyurl','lab-trackurl',
-   'lab-telegram','lab-screenshot','lab-settings','lab-notes','lab-airating'].forEach(function(id) {
+   'lab-telegram','lab-screenshot','lab-settings','lab-notes','lab-airating'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   document.getElementById('lab-status').value = 'watchlist';
@@ -3252,7 +3577,6 @@ function saveLabEntry() {
   saveLabData(data);
   document.getElementById('labForm').style.display = 'none';
   renderLabTable();
-  renderOverviewEaLab();
 }
 
 function editLabEntry(id) {
@@ -3285,7 +3609,6 @@ function deleteLabEntry(id) {
   const data = getLabData().filter(function(e){ return e.id !== id; });
   saveLabData(data);
   renderLabTable();
-  renderOverviewEaLab();
 }
 
 function toggleLabRow(id) {
@@ -3302,13 +3625,19 @@ function renderLabTable() {
   if (!tbody) return;
   const data = getLabData();
   const filtered = labFilter === 'all' ? data : data.filter(function(e){ return e.status === labFilter; });
+
   const statusLabel = { live:'🟢 Live', testing:'🧪 Testing', watchlist:'👁 Watchlist', off:'⛔ Aussortiert' };
   const statusColor = { live:'#1D9E75', testing:'#BA7517', watchlist:'#185FA5', off:'#5F5E5A' };
   const prioLabel   = { high:'🔴 Hoch', medium:'🟡 Mittel', low:'🟢 Niedrig' };
   const prioColor   = { high:'rgba(226,75,74,0.15)', medium:'rgba(186,117,23,0.15)', low:'rgba(136,135,128,0.15)' };
   const prioText    = { high:'#A32D2D', medium:'#BA7517', low:'#5F5E5A' };
   const mtColor     = { MT4:'#534AB7', MT5:'#993556', 'MT4 + MT5':'#185FA5' };
-  if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="11" class="empty">Keine Einträge.</td></tr>'; return; }
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="11" class="empty">Keine Einträge.</td></tr>';
+    return;
+  }
+
   tbody.innerHTML = filtered.map(function(e) {
     const sc = statusColor[e.status]||'#888';
     const sl = statusLabel[e.status]||e.status;
@@ -3328,30 +3657,32 @@ function renderLabTable() {
       '<td style="text-align:center;color:var(--text3)">–</td>' +
       '<td style="text-align:center">'+links+'</td>' +
       '<td style="white-space:nowrap">' +
-        '<button class="icon-btn edit" onclick="event.stopPropagation();editLabEntry(\''+e.id+'\')" title="Bearbeiten">✎</button>' +
-        '<button class="icon-btn" onclick="event.stopPropagation();deleteLabEntry(\''+e.id+'\')" title="Löschen">✕</button>' +
-      '</td></tr>' +
-      '<tr id="lab-detail-'+e.id+'" style="display:none">' +
-        '<td colspan="11" style="padding:0">' +
-          '<div style="background:var(--bg4);padding:14px 16px;border-top:1px solid var(--border)">' +
-            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:12px">' +
-              '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Telegram</div><div style="font-size:12px;color:var(--text2)">'+(e.telegram||'–')+'</div></div>' +
-              '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Settings</div><div style="font-size:12px;color:var(--text2)">'+(e.settings||'–')+'</div></div>' +
-              '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Screenshot</div><div style="font-size:12px">'+(e.screenshot?'<a href="'+e.screenshot+'" target="_blank" class="todo-link">🔗 öffnen</a>':'–')+'</div></div>' +
-            '</div>' +
-            '<div style="margin-bottom:10px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Notizen</div><div style="font-size:12px;color:var(--text2)">'+(e.notes||'–')+'</div></div>' +
-            (e.aiRating ? '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.6"><span style="font-size:10px;color:var(--accent);font-weight:600;margin-right:6px">KI-BEWERTUNG</span>'+escHtml(e.aiRating)+'</div>' : '') +
+        '<button class="icon-btn edit" onclick="event.stopPropagation();editLabEntry(\'' + e.id + '\')" title="Bearbeiten">✎</button>' +
+        '<button class="icon-btn" onclick="event.stopPropagation();deleteLabEntry(\'' + e.id + '\')" title="Löschen">✕</button>' +
+      '</td>' +
+    '</tr>' +
+    '<tr id="lab-detail-'+e.id+'" style="display:none">' +
+      '<td colspan="11" style="padding:0">' +
+        '<div style="background:var(--bg4);padding:14px 16px;border-top:1px solid var(--border)">' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:12px">' +
+            '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Telegram</div><div style="font-size:12px;color:var(--text2)">'+(e.telegram||'–')+'</div></div>' +
+            '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Settings</div><div style="font-size:12px;color:var(--text2)">'+(e.settings||'–')+'</div></div>' +
+            '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Screenshot</div><div style="font-size:12px">'+(e.screenshot?'<a href="'+e.screenshot+'" target="_blank" class="todo-link">🔗 öffnen</a>':'–')+'</div></div>' +
           '</div>' +
-        '</td>' +
-      '</tr>';
+          '<div style="margin-bottom:10px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Notizen</div><div style="font-size:12px;color:var(--text2)">'+(e.notes||'–')+'</div></div>' +
+          (e.aiRating ? '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.6"><span style="font-size:10px;color:var(--accent);font-weight:600;margin-right:6px">KI-BEWERTUNG</span>'+escHtml(e.aiRating)+'</div>' : '') +
+        '</div>' +
+      '</td>' +
+    '</tr>';
   }).join('');
 }
+
 
 function renderOverviewEaLab() {
   const el = document.getElementById('overviewEaLab');
   if (!el) return;
   const data = getLabData();
-  const prioOrder = { high: 0, medium: 1, low: 2 };
+  const prioOrder  = { high: 0, medium: 1, low: 2 };
   const candidates = data
     .filter(function(e){ return e.status !== 'off'; })
     .sort(function(a,b){
@@ -3359,13 +3690,16 @@ function renderOverviewEaLab() {
       const pb = prioOrder[b.priority] !== undefined ? prioOrder[b.priority] : 99;
       return pa - pb;
     });
+
   if (!candidates.length) {
     el.innerHTML = '<span style="color:var(--text3);font-size:11px">Keine Einträge im EA Lab.</span>';
     return;
   }
+
   const prioColor  = { high:'#E24B4A', medium:'#BA7517', low:'#3d5166' };
   const prioLabel  = { high:'Hoch', medium:'Mittel', low:'Niedrig' };
   const statusIcon = { live:'🟢', testing:'🧪', watchlist:'👁' };
+
   el.innerHTML = candidates.map(function(e) {
     const pc = prioColor[e.priority] || 'var(--text3)';
     const si = statusIcon[e.status] || '';
@@ -3374,8 +3708,10 @@ function renderOverviewEaLab() {
       (e.trackUrl ? '<a href="'+e.trackUrl+'" target="_blank" class="todo-link track" style="font-size:13px;margin-left:4px" title="Tracking" onclick="event.stopPropagation()">📊</a>' : '');
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">' +
       '<div style="display:flex;align-items:center;gap:4px">' +
-        '<div><div style="font-size:11px;font-weight:600;color:var(--text)">' + si + ' ' + e.name + '</div>' +
-        '<div style="font-size:9px;color:var(--text3)">' + (e.tf||'') + (e.mt?' · '+e.mt:'') + (e.price?' · '+e.price:'') + '</div></div>' +
+        '<div>' +
+          '<div style="font-size:11px;font-weight:600;color:var(--text)">' + si + ' ' + e.name + '</div>' +
+          '<div style="font-size:9px;color:var(--text3)">' + (e.tf||'') + (e.mt?' · '+e.mt:'') + (e.price?' · '+e.price:'') + '</div>' +
+        '</div>' +
         links +
       '</div>' +
       '<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:'+pc+'22;color:'+pc+';font-weight:500;white-space:nowrap">' + (prioLabel[e.priority]||e.priority) + '</span>' +
