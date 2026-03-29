@@ -474,12 +474,6 @@ select option { background:var(--bg4); }
     <div class="form-grid">
       <div class="form-group"><label>Name *</label><input type="text" id="ea-name" placeholder="Milion299k"></div>
       <div class="form-group"><label>Strategie</label><input type="text" id="ea-strategy" placeholder="M1 Grid, M5 Scalp..."></div>
-      <div class="form-group"><label>Status</label>
-        <select id="ea-status">
-          <option value="active">🟢 Aktiv</option>
-          <option value="off">⛔ Aus</option>
-        </select>
-      </div>
       <div class="form-group fg-2"><label>Beschreibung</label><input type="text" id="ea-desc" placeholder="optional"></div>
     </div>
     <input type="hidden" id="ea-edit-id">
@@ -491,7 +485,7 @@ select option { background:var(--bg4); }
 
   <div class="sh">Meine EAs</div>
   <div class="table-wrap">
-    <table><thead><tr><th>#</th><th>Name</th><th>Strategie</th><th>Beschreibung</th><th>Trades</th><th>Win Rate</th><th>Status</th><th></th></tr></thead>
+    <table><thead><tr><th>#</th><th>Name</th><th>Strategie</th><th>Beschreibung</th><th>Trades</th><th>Win Rate</th><th></th></tr></thead>
     <tbody id="easTable"></tbody></table>
   </div>
 </div>
@@ -1217,7 +1211,6 @@ async function saveEA() {
     name,
     strategy: document.getElementById('ea-strategy').value.trim(),
     description: document.getElementById('ea-desc').value.trim(),
-    status: document.getElementById('ea-status').value || 'active',
   };
   const existing = DB.eas.findIndex(e => e.id == obj.id);
   if (existing >= 0) DB.eas[existing] = obj;
@@ -1235,7 +1228,6 @@ function editEA(id) {
   document.getElementById('ea-name').value = ea.name||'';
   document.getElementById('ea-strategy').value = ea.strategy||'';
   document.getElementById('ea-desc').value = ea.description||'';
-  document.getElementById('ea-status').value = ea.status||'active';
   document.getElementById('eaFormTitle').textContent = 'EA bearbeiten';
 }
 
@@ -1249,22 +1241,17 @@ async function deleteEA(id) {
 
 function resetEAForm() {
   ['ea-name','ea-strategy','ea-desc'].forEach(id => document.getElementById(id).value='');
-  document.getElementById('ea-status').value='active';
   document.getElementById('ea-edit-id').value='';
   document.getElementById('eaFormTitle').textContent='EA hinzufügen';
 }
 
 function renderEAsTable() {
   const tbody = document.getElementById('easTable');
-  if (!DB.eas.length) { tbody.innerHTML='<tr><td colspan="8" class="empty">Noch keine EAs.</td></tr>'; return; }
+  if (!DB.eas.length) { tbody.innerHTML='<tr><td colspan="7" class="empty">Noch keine EAs.</td></tr>'; return; }
   tbody.innerHTML = DB.eas.map((ea,i) => {
     const trades = DB.pnl.filter(p => p.eaId == ea.id);
     const wins = trades.filter(p => parseFloat(p.pnl) > 0).length;
     const wr = trades.length ? ((wins/trades.length)*100).toFixed(0)+'%' : '–';
-    const status = ea.status || 'active';
-    const statusBadge = status === 'active'
-      ? '<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(29,158,117,0.15);color:#1D9E75;font-weight:500">🟢 Aktiv</span>'
-      : '<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(136,135,128,0.15);color:#5F5E5A;font-weight:500">⛔ Aus</span>';
     return `<tr>
       <td>${i+1}</td>
       <td style="color:var(--accent);font-weight:500">${ea.name}</td>
@@ -1272,7 +1259,6 @@ function renderEAsTable() {
       <td style="color:var(--text2);font-size:10px">${ea.description||'–'}</td>
       <td>${trades.length}</td>
       <td class="${wins/trades.length>=0.5?'pos-val':'neg-val'}">${wr}</td>
-      <td>${statusBadge}</td>
       <td style="display:flex;gap:4px">
         <button class="icon-btn edit" onclick="editEA('${ea.id}')" title="Bearbeiten">✎</button>
         <button class="icon-btn" onclick="deleteEA('${ea.id}')" title="Löschen">✕</button>
@@ -1324,7 +1310,11 @@ async function savePnl(fromQuick) {
   const existing = DB.pnl.findIndex(p => p.id == obj.id);
   if (existing >= 0) DB.pnl[existing] = obj;
   else DB.pnl.push(obj);
-  DB.pnl.sort((a,b) => b.date.localeCompare(a.date));
+  DB.pnl.sort((a,b) => {
+    const dateDiff = b.date.localeCompare(a.date);
+    if (dateDiff !== 0) return dateDiff;
+    return String(b.id).localeCompare(String(a.id));
+  });
   saveLocal(); renderAll();
   await api('upsert','PnL',obj);
   toast('✅ P&L gespeichert');
@@ -1629,7 +1619,7 @@ function renderMissingEntries() {
     const dow = d.getDay();
     if (dow === 0 || dow === 6) continue;
     const ds = d.toISOString().split('T')[0];
-    DB.eas.filter(ea => (ea.status||'active') === 'active').forEach(ea => {
+    DB.eas.forEach(ea => {
       const liveAccs = DB.accounts.filter(a => a.type === 'Live' && isActive(a));
       liveAccs.forEach(acc => {
         const hasHistory = DB.pnl.some(p => p.eaId == ea.id && p.accountId == acc.id);
@@ -2335,9 +2325,7 @@ function renderForecast() {
   // By default all EAs are enabled unless explicitly disabled
   const eaEnabled = function(eaId) {
     const f = DB.settings.forecastEaFilter;
-    if (f[eaId] !== undefined) return f[eaId] !== false;
-    const ea = DB.eas.find(function(e){ return String(e.id) === String(eaId); });
-    return !ea || (ea.status||'active') === 'active';
+    return f[eaId] !== false;
   };
 
   const liveEas = allLiveEas.filter(ea => eaEnabled(ea.id));
@@ -3024,53 +3012,43 @@ function renderStrategy() {
   let capitalHtml = '';
   Object.keys(capMonths).sort().forEach(function(month) {
     const rows = capMonths[month];
-    const total = rows.reduce(function(s,r){ return s + (parseFloat(r.deposit)||0); }, 0);
     capitalHtml += '<tr style="background:var(--bg3)"><td colspan="8" style="padding:6px 10px;font-size:10px;font-weight:700;color:var(--text2);letter-spacing:0.08em;text-transform:uppercase">' + fmtMonth(month) + '</td></tr>';
+    let monthTotal = 0;
     rows.forEach(function(r) {
       const opts = statusOpts.map(function(s) {
         return '<option value="' + s + '"' + (s===r.status?' selected':'') + '>' + statusLabel[s] + '</option>';
       }).join('');
+      // Compute Von dynamically
+      let fromVal = r.from || 0;
+      if (r.eaId) {
+        const _ea = DB.eas.find(function(e){ return String(e.id)===String(r.eaId); });
+        if (_ea) {
+          const _accs = DB.accounts.filter(function(a){ return DB.pnl.some(function(p){ return p.eaId==_ea.id && p.accountId==a.id; }); });
+          const _acc = _accs.find(function(a){ return a.type==='Live' && isActive(a); }) || _accs[0];
+          if (_acc && _acc.type === 'Live') fromVal = getAccountBalance(_acc);
+          else if (_acc) fromVal = 0;
+        }
+      }
+      const dynDeposit = Math.max(0, (r.to||0) - fromVal);
+      monthTotal += dynDeposit;
       capitalHtml += '<tr>' +
         '<td style="padding:8px 10px"><input value="' + (r.name||'').replace(/"/g,'&quot;') + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'name\',this.value)" style="background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;width:160px"></td>' +
         '<td style="padding:8px 10px">' + (function() {
-          var opts = '<option value="">– kein EA –</option>' + DB.eas.map(function(ea) {
+          var eaOpts = '<option value="">– kein EA –</option>' + DB.eas.map(function(ea) {
             return '<option value="' + ea.id + '"' + (String(ea.id)===String(r.eaId)?' selected':'') + '>' + ea.name + '</option>';
           }).join('');
-          return '<select onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'eaId\',this.value)" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:2px 6px;width:110px">' + opts + '</select>';
+          return '<select onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'eaId\',this.value);renderStrategy()" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:2px 6px;width:110px">' + eaOpts + '</select>';
         })() + '</td>' +
         '<td style="padding:8px 10px;text-align:center"><input type="month" value="' + (r.month||'') + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'month\',this.value);renderStrategy()" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:10px;padding:2px 6px"></td>' +
-        '<td style="padding:8px 10px;text-align:right;color:var(--text3)">$' + (function() {
-          if (r.eaId) {
-            const ea = DB.eas.find(function(e){ return String(e.id)===String(r.eaId); });
-            if (ea) {
-              const accs = DB.accounts.filter(function(a){ return DB.pnl.some(function(p){ return p.eaId==ea.id && p.accountId==a.id; }); });
-              const acc = accs.find(function(a){ return a.type==='Live' && isActive(a); }) || accs[0];
-              if (acc && acc.type === 'Live') return getAccountBalance(acc).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
-              if (acc && acc.type !== 'Live') return '0,00';
-            }
-          }
-          return (r.from||0).toLocaleString();
-        })() + '</td>' +
-        '<td style="padding:8px 10px;text-align:right"><input type="number" value="' + (r.to||0) + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'to\',parseFloat(this.value)||0);updateDeposit(\'' + r.id + '\')" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;width:80px;text-align:right;padding:2px 6px"></td>' +
-        '<td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700">$' + (function() {
-          let fv = r.from || 0;
-          if (r.eaId) {
-            const ea = DB.eas.find(function(e){ return String(e.id)===String(r.eaId); });
-            if (ea) {
-              const accs = DB.accounts.filter(function(a){ return DB.pnl.some(function(p){ return p.eaId==ea.id && p.accountId==a.id; }); });
-              const acc = accs.find(function(a){ return a.type==='Live' && isActive(a); }) || accs[0];
-              if (acc && acc.type === 'Live') fv = getAccountBalance(acc);
-              else fv = 0;
-            }
-          }
-          return Math.max(0, (r.to||0) - fv).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
-        })() + '</td>' +
+        '<td style="padding:8px 10px;text-align:right;color:var(--text3)">$' + fromVal.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
+        '<td style="padding:8px 10px;text-align:right"><input type="number" value="' + (r.to||0) + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'to\',parseFloat(this.value)||0);renderStrategy()" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;width:80px;text-align:right;padding:2px 6px"></td>' +
+        '<td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700">$' + dynDeposit.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
         '<td style="padding:8px 10px"><select onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'status\',this.value)" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:' + (statusColor[r.status]||'var(--text3)') + ';font-family:var(--font-mono);font-size:10px;padding:2px 4px">' + opts + '</select></td>' +
         '<td style="padding:8px 10px"><input value="' + (r.note||'').replace(/"/g,'&quot;') + '" placeholder="Notiz..." onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'note\',this.value)" style="background:transparent;border:none;color:var(--text3);font-family:var(--font-mono);font-size:10px;width:140px"></td>' +
         '<td style="padding:8px 10px"><button onclick="deleteStrategyItem(\'capitalPlan\',\'' + r.id + '\')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px">✕</button></td>' +
         '</tr>';
     });
-    capitalHtml += '<tr style="border-top:1px solid var(--border)"><td colspan="6" style="padding:6px 10px;font-size:11px;font-weight:700;color:var(--text2)">Gesamt ' + fmtMonth(month) + '</td><td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--accent)">$' + total.toLocaleString() + '</td><td colspan="3"></td></tr>';
+    capitalHtml += '<tr style="border-top:1px solid var(--border)"><td colspan="5" style="padding:6px 10px;font-size:11px;font-weight:700;color:var(--text2)">Gesamt ' + fmtMonth(month) + '</td><td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--accent)">$' + monthTotal.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</td><td colspan="3"></td></tr>';
   });
 
   // EA costs
@@ -3196,19 +3174,7 @@ function updateStrategyItem(section, id, key, value) {
 function updateDeposit(id) {
   const data = getStrategy();
   const item = data.capitalPlan.find(function(r){ return r.id === id; });
-  if (!item) return;
-  let fromVal = item.from || 0;
-  if (item.eaId) {
-    const ea = DB.eas.find(function(e){ return String(e.id)===String(item.eaId); });
-    if (ea) {
-      const accs = DB.accounts.filter(function(a){ return DB.pnl.some(function(p){ return p.eaId==ea.id && p.accountId==a.id; }); });
-      const acc = accs.find(function(a){ return a.type==='Live' && isActive(a); }) || accs[0];
-      if (acc && acc.type === 'Live') fromVal = getAccountBalance(acc);
-      else fromVal = 0;
-    }
-  }
-  item.deposit = Math.max(0, (item.to||0) - fromVal);
-  saveStrategy(data); renderStrategy();
+  if (item) { item.deposit = Math.max(0, (item.to||0) - (item.from||0)); saveStrategy(data); renderStrategy(); }
 }
 
 function deleteStrategyItem(section, id) {
@@ -3329,108 +3295,100 @@ function renderEaRating(entries) {
   if (!header || !body) return;
 
   const cols = [
-    { key:'name',     label:'EA',             tip:null,                                                                                   fmt: v => v },
-    { key:'winRate',  label:'Win-Rate',        tip:'Anteil positiver Handelstage. >80% = sehr gut.',                                       fmt: v => v===null?'–':v.toFixed(0)+'%' },
-    { key:'pf',       label:'Profit Factor',   tip:'Summe Gewinne ÷ Summe Verluste. >2 = gut, >3 = sehr gut. ∞ = keine Verlusttage.',     fmt: v => v===null?'–':v===Infinity?'∞':v.toFixed(2) },
-    { key:'exp',      label:'Expectancy',      tip:'Erwarteter Gewinn pro Tag: (Win-Rate × Avg.Gewinn) − (Loss-Rate × Avg.Verlust).',      fmt: v => v===null?'–':(v>=0?'+$':'-$')+Math.abs(v).toFixed(2) },
-    { key:'sharpe',   label:'Sharpe Ratio',    tip:'Avg. Tagesgewinn ÷ Standardabweichung. >1 = gut, >2 = sehr gut.',                    fmt: v => v===null?'–':v.toFixed(2) },
-    { key:'recovery', label:'Recovery Factor', tip:'Gesamt P&L ÷ Max DD. Zeigt wie gut der EA seinen Drawdown aufholt. >3 = gut.',        fmt: v => v===null?'–':v===Infinity?'∞':v.toFixed(2) },
-    { key:'maxDd',    label:'Max DD',          tip:'Größter Einzelverlust eines Tages.',                                                   fmt: v => v===null?'–':'-$'+Math.abs(v).toFixed(2) },
-    { key:'score',    label:'Score',           tip:'Gewichteter Gesamtscore 0–10 aus allen Kennzahlen.',                                  fmt: v => v===null?'–':'⭐ '+v.toFixed(1) },
+    { key:'name',     label:'EA',             tip:null,                                                                                   fmt: function(v){ return v; } },
+    { key:'winRate',  label:'Win-Rate',        tip:'Anteil positiver Handelstage. >80% = sehr gut.',                                       fmt: function(v){ return v===null?'–':v.toFixed(0)+'%'; } },
+    { key:'pddRatio', label:'P&L/DD Ratio',   tip:'Avg. Tagesgewinn ÷ Avg. Tages-DD. >1 = verdient mehr als riskiert. >2 = sehr gut.',   fmt: function(v){ return v===null?'–':v===Infinity?'∞':v.toFixed(2); } },
+    { key:'exp',      label:'Expectancy',      tip:'Erwarteter Gewinn pro Tag: (Win-Rate × Avg.Gewinn) − (Loss-Rate × Avg.Verlust).',      fmt: function(v){ return v===null?'–':(v>=0?'+$':'-$')+Math.abs(v).toFixed(2); } },
+    { key:'sharpe',   label:'Sharpe Ratio',    tip:'Avg. Tagesgewinn ÷ Standardabweichung. >1 = gut, >2 = sehr gut.',                    fmt: function(v){ return v===null?'–':v.toFixed(2); } },
+    { key:'recovery', label:'Recovery Factor', tip:'Gesamt P&L ÷ Max DD. Zeigt wie gut der EA seinen Drawdown aufholt. >3 = gut.',        fmt: function(v){ return v===null?'–':v===Infinity?'∞':v.toFixed(2); } },
+    { key:'maxDd',    label:'Max DD',          tip:'Größter Einzelverlust eines Tages.',                                                   fmt: function(v){ return v===null?'–':'-$'+Math.abs(v).toFixed(2); } },
+    { key:'score',    label:'Score',           tip:'Gewichteter Gesamtscore 0–10 aus allen Kennzahlen.',                                  fmt: function(v){ return v===null?'–':'⭐ '+v.toFixed(1); } },
   ];
 
-  // Build header
-  header.innerHTML = cols.map(c => {
-    const sorted = eaRatingSort.col === c.key;
-    const arrow = sorted ? (eaRatingSort.dir === -1 ? ' ▼' : ' ▲') : '';
-    const tip = c.tip ? ' title="' + c.tip + '"' : '';
-    const cursor = c.key !== 'name' ? 'cursor:pointer;' : '';
-    const onclick = c.key !== 'name' ? ' onclick="sortEaRating(\'' + c.key + '\')"' : '';
+  header.innerHTML = cols.map(function(c) {
+    var sorted = eaRatingSort.col === c.key;
+    var arrow = sorted ? (eaRatingSort.dir === -1 ? ' ▼' : ' ▲') : '';
+    var tip = c.tip ? ' title="' + c.tip + '"' : '';
+    var cursor = c.key !== 'name' ? 'cursor:pointer;' : '';
+    var onclick = c.key !== 'name' ? ' onclick="sortEaRating(\'' + c.key + '\''+ ')"' : '';
     return '<th style="' + cursor + 'white-space:nowrap"' + tip + onclick + '>' +
-      c.label + (c.tip ? ' <span style="color:var(--accent);font-size:10px">ⓘ</span>' : '') + arrow +
-      '</th>';
+      c.label + (c.tip ? ' <span style="color:var(--accent);font-size:10px">ⓘ</span>' : '') + arrow + '</th>';
   }).join('');
 
-  // Calculate stats per EA
-  const eaMap = {};
-  DB.eas.forEach(ea => { eaMap[ea.id] = ea; });
-
-  const stats = DB.eas.map(ea => {
-    const eaEntries = entries.filter(p => p.eaId == ea.id);
-    // Ignore zero P&L entries for statistics
-    const tradingEntries = eaEntries.filter(p => (parseFloat(p.pnl)||0) !== 0);
+  var stats = DB.eas.map(function(ea) {
+    var eaEntries = entries.filter(function(p){ return p.eaId == ea.id; });
+    var tradingEntries = eaEntries.filter(function(p){ return (parseFloat(p.pnl)||0) !== 0; });
     if (!tradingEntries.length) return null;
 
-    const pnls = tradingEntries.map(p => parseFloat(p.pnl)||0);
-    const dds  = eaEntries.map(p => parseFloat(p.dd)||0);
-    const n = pnls.length;
+    var pnls = tradingEntries.map(function(p){ return parseFloat(p.pnl)||0; });
+    var dds  = eaEntries.map(function(p){ return Math.abs(parseFloat(p.dd)||0); }).filter(function(v){ return v > 0; });
+    var n = pnls.length;
 
-    const wins   = pnls.filter(v => v > 0);
-    const losses = pnls.filter(v => v < 0);
-    const winRate = (wins.length / n) * 100;
+    var wins   = pnls.filter(function(v){ return v > 0; });
+    var losses = pnls.filter(function(v){ return v < 0; });
+    var winRate = (wins.length / n) * 100;
 
-    const sumWin  = wins.reduce((s,v) => s+v, 0);
-    const sumLoss = Math.abs(losses.reduce((s,v) => s+v, 0));
-    const pf = sumLoss === 0 ? Infinity : sumWin / sumLoss;
+    var sumWin  = wins.reduce(function(s,v){ return s+v; }, 0);
+    var sumLoss = Math.abs(losses.reduce(function(s,v){ return s+v; }, 0));
+    var avgWin  = wins.length  ? sumWin  / wins.length  : 0;
+    var avgLoss = losses.length ? sumLoss / losses.length : 0;
+    var exp = (winRate/100 * avgWin) - ((1 - winRate/100) * avgLoss);
 
-    const avgWin  = wins.length  ? sumWin  / wins.length  : 0;
-    const avgLoss = losses.length ? sumLoss / losses.length : 0;
-    const exp = (winRate/100 * avgWin) - ((1 - winRate/100) * avgLoss);
+    var avg = pnls.reduce(function(s,v){ return s+v; }, 0) / n;
+    var variance = pnls.reduce(function(s,v){ return s + Math.pow(v-avg, 2); }, 0) / n;
+    var stdDev = Math.sqrt(variance);
+    var sharpe = stdDev === 0 ? null : avg / stdDev;
 
-    const avg = pnls.reduce((s,v) => s+v, 0) / n;
-    const variance = pnls.reduce((s,v) => s + Math.pow(v-avg, 2), 0) / n;
-    const stdDev = Math.sqrt(variance);
-    const sharpe = stdDev === 0 ? null : avg / stdDev;
+    var totalPnl = pnls.reduce(function(s,v){ return s+v; }, 0);
+    var maxDdVal = dds.length ? Math.max.apply(null, dds) : 0;
+    var maxDd = -maxDdVal;
+    var recovery = maxDdVal === 0 ? Infinity : totalPnl / maxDdVal;
 
-    const totalPnl = pnls.reduce((s,v) => s+v, 0);
-    const maxDd = dds.length ? -Math.max(...dds) : 0;
-    const recovery = maxDd === 0 ? Infinity : totalPnl / Math.abs(maxDd);
+    // P&L/DD Ratio
+    var avgPnl = totalPnl / n;
+    var avgDd  = dds.length ? dds.reduce(function(s,v){ return s+v; }, 0) / dds.length : 0;
+    var pddRatio = avgDd === 0 ? Infinity : avgPnl / avgDd;
 
-    // Score 0-10 weighted - confidence factor based on number of entries
-    const confidence = Math.min(1, n / 20); // full confidence at 20+ entries
-    const scoreWinRate  = Math.min(10, winRate / 10);
-    const scorePf       = pf === Infinity ? 10 : Math.min(10, pf * 2);
-    const scoreExp      = exp <= 0 ? 0 : Math.min(10, exp / 10);
-    const scoreSharpe   = sharpe === null ? 5 : Math.min(10, Math.max(0, sharpe * 3 + 5));
-    const scoreRecovery = recovery === Infinity ? 10 : Math.min(10, Math.max(0, recovery));
-    const rawScore = (scoreWinRate*2 + scorePf*2 + scoreExp*2 + scoreSharpe*2 + scoreRecovery*2) / 10;
-    const score = rawScore * confidence + (rawScore * 0.5) * (1 - confidence); // reduce score for few entries
+    var confidence = Math.min(1, n / 20);
+    var scoreWinRate  = Math.min(10, winRate / 10);
+    var scorePdd      = pddRatio === Infinity ? 10 : Math.min(10, Math.max(0, pddRatio * 5));
+    var scoreExp      = exp <= 0 ? 0 : Math.min(10, exp / 10);
+    var scoreSharpe   = sharpe === null ? 5 : Math.min(10, Math.max(0, sharpe * 3 + 5));
+    var scoreRecovery = recovery === Infinity ? 10 : Math.min(10, Math.max(0, recovery));
+    var rawScore = (scoreWinRate*2 + scorePdd*2 + scoreExp*2 + scoreSharpe*2 + scoreRecovery*2) / 10;
+    var score = rawScore * confidence + (rawScore * 0.5) * (1 - confidence);
 
-    return { name: ea.name, winRate, pf, exp, sharpe, recovery, maxDd, score, n };
+    return { name: ea.name, winRate: winRate, pddRatio: pddRatio, exp: exp, sharpe: sharpe, recovery: recovery, maxDd: maxDd, score: score, n: n };
   }).filter(Boolean);
 
-  // Sort
-  stats.sort((a,b) => {
-    const av = a[eaRatingSort.col];
-    const bv = b[eaRatingSort.col];
+  stats.sort(function(a,b) {
+    var av = a[eaRatingSort.col];
+    var bv = b[eaRatingSort.col];
     if (av === Infinity && bv !== Infinity) return -eaRatingSort.dir;
     if (bv === Infinity && av !== Infinity) return eaRatingSort.dir;
     return (av - bv) * eaRatingSort.dir;
   });
 
-  // Color helpers
-  const colorWinRate  = v => v >= 80 ? 'var(--pos)' : v >= 60 ? 'var(--warn)' : 'var(--neg)';
-  const colorPf       = v => v === Infinity || v >= 3 ? 'var(--pos)' : v >= 2 ? 'var(--warn)' : 'var(--neg)';
-  const colorExp      = v => v > 0 ? 'var(--pos)' : 'var(--neg)';
-  const colorSharpe   = v => v === null ? 'var(--text3)' : v >= 1 ? 'var(--pos)' : v >= 0 ? 'var(--warn)' : 'var(--neg)';
-  const colorRecovery = v => v === Infinity || v >= 3 ? 'var(--pos)' : v >= 1 ? 'var(--warn)' : 'var(--neg)';
-  const colorScore    = v => v >= 7 ? 'var(--pos)' : v >= 5 ? 'var(--warn)' : 'var(--neg)';
+  var colorWinRate  = function(v){ return v >= 80 ? 'var(--pos)' : v >= 60 ? 'var(--warn)' : 'var(--neg)'; };
+  var colorPdd      = function(v){ return v === Infinity || v >= 2 ? 'var(--pos)' : v >= 1 ? 'var(--warn)' : 'var(--neg)'; };
+  var colorExp      = function(v){ return v > 0 ? 'var(--pos)' : 'var(--neg)'; };
+  var colorSharpe   = function(v){ return v === null ? 'var(--text3)' : v >= 1 ? 'var(--pos)' : v >= 0 ? 'var(--warn)' : 'var(--neg)'; };
+  var colorRecovery = function(v){ return v === Infinity || v >= 3 ? 'var(--pos)' : v >= 1 ? 'var(--warn)' : 'var(--neg)'; };
+  var colorScore    = function(v){ return v >= 7 ? 'var(--pos)' : v >= 5 ? 'var(--warn)' : 'var(--neg)'; };
 
-  body.innerHTML = stats.map(s => {
-    const scoreColor = colorScore(s.score);
+  body.innerHTML = stats.map(function(s) {
     return '<tr>' +
       '<td style="font-weight:600;color:var(--accent)">' + s.name + '</td>' +
       '<td style="color:' + colorWinRate(s.winRate) + '">' + cols[1].fmt(s.winRate) + '</td>' +
-      '<td style="color:' + colorPf(s.pf) + '">' + cols[2].fmt(s.pf) + '</td>' +
+      '<td style="color:' + colorPdd(s.pddRatio) + '">' + cols[2].fmt(s.pddRatio) + '</td>' +
       '<td style="color:' + colorExp(s.exp) + '">' + cols[3].fmt(s.exp) + '</td>' +
       '<td style="color:' + colorSharpe(s.sharpe) + '">' + cols[4].fmt(s.sharpe) + '</td>' +
       '<td style="color:' + colorRecovery(s.recovery) + '">' + cols[5].fmt(s.recovery) + '</td>' +
       '<td style="color:var(--neg)">' + cols[6].fmt(s.maxDd) + '</td>' +
-      '<td style="color:' + scoreColor + ';font-weight:700;font-size:13px">' + cols[7].fmt(s.score) + '</td>' +
+      '<td style="color:' + colorScore(s.score) + ';font-weight:700;font-size:13px">' + cols[7].fmt(s.score) + '</td>' +
       '</tr>';
   }).join('');
 }
-
 function sortEaRating(col) {
   if (eaRatingSort.col === col) {
     eaRatingSort.dir *= -1;
