@@ -3008,23 +3008,11 @@ function renderStrategy() {
   let capitalHtml = '';
   Object.keys(capMonths).sort().forEach(function(month) {
     const rows = capMonths[month];
-    let monthTotal = 0;
+    const total = rows.reduce(function(s,r){ return s + (parseFloat(r.deposit)||0); }, 0);
     capitalHtml += '<tr style="background:var(--bg3)"><td colspan="8" style="padding:6px 10px;font-size:10px;font-weight:700;color:var(--text2);letter-spacing:0.08em;text-transform:uppercase">' + fmtMonth(month) + '</td></tr>';
     rows.forEach(function(r) {
       const opts = statusOpts.map(function(s) {
         return '<option value="' + s + '"' + (s===r.status?' selected':'') + '>' + statusLabel[s] + '</option>';
-      // Dynamic Von from account balance
-      let fromVal = r.from || 0;
-      if (r.eaId) {
-        const _ea = DB.eas.find(function(e){ return String(e.id)===String(r.eaId); });
-        if (_ea) {
-          // Find active live account for this EA, fall back to any account
-          const _accs = DB.accounts.filter(function(a){ return DB.pnl.some(function(p){ return p.eaId==_ea.id && p.accountId==a.id; }); });
-          const _acc = _accs.find(function(a){ return a.type==='Live' && isActive(a); }) || _accs[0];
-          if (_acc) fromVal = getAccountBalance(_acc);
-        }
-      }
-      const dynDeposit = Math.max(0, (r.to||0) - fromVal);
       }).join('');
       capitalHtml += '<tr>' +
         '<td style="padding:8px 10px"><input value="' + (r.name||'').replace(/"/g,'&quot;') + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'name\',this.value)" style="background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;width:160px"></td>' +
@@ -3035,16 +3023,36 @@ function renderStrategy() {
           return '<select onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'eaId\',this.value)" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:2px 6px;width:110px">' + opts + '</select>';
         })() + '</td>' +
         '<td style="padding:8px 10px;text-align:center"><input type="month" value="' + (r.month||'') + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'month\',this.value);renderStrategy()" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:10px;padding:2px 6px"></td>' +
-        '<td style="padding:8px 10px;text-align:right;color:var(--text3)">$' + fromVal.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
-        '<td style="padding:8px 10px;text-align:right"><input type="number" value="' + (r.to||0) + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'to\',parseFloat(this.value)||0);renderStrategy()" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;width:80px;text-align:right;padding:2px 6px"></td>' +
-        '<td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700">$' + dynDeposit.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>' +
+        '<td style="padding:8px 10px;text-align:right;color:var(--text3)">$' + (function() {
+          if (r.eaId) {
+            const ea = DB.eas.find(function(e){ return String(e.id)===String(r.eaId); });
+            if (ea) {
+              const accs = DB.accounts.filter(function(a){ return DB.pnl.some(function(p){ return p.eaId==ea.id && p.accountId==a.id; }); });
+              const acc = accs.find(function(a){ return a.type==='Live' && isActive(a); }) || accs[0];
+              if (acc) return getAccountBalance(acc).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
+            }
+          }
+          return (r.from||0).toLocaleString();
+        })() + '</td>' +
+        '<td style="padding:8px 10px;text-align:right"><input type="number" value="' + (r.to||0) + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'to\',parseFloat(this.value)||0);updateDeposit(\'' + r.id + '\')" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font-mono);font-size:11px;width:80px;text-align:right;padding:2px 6px"></td>' +
+        '<td style="padding:8px 10px;text-align:right;color:var(--accent);font-weight:700">$' + (function() {
+          let fv = r.from || 0;
+          if (r.eaId) {
+            const ea = DB.eas.find(function(e){ return String(e.id)===String(r.eaId); });
+            if (ea) {
+              const accs = DB.accounts.filter(function(a){ return DB.pnl.some(function(p){ return p.eaId==ea.id && p.accountId==a.id; }); });
+              const acc = accs.find(function(a){ return a.type==='Live' && isActive(a); }) || accs[0];
+              if (acc) fv = getAccountBalance(acc);
+            }
+          }
+          return Math.max(0, (r.to||0) - fv).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
+        })() + '</td>' +
         '<td style="padding:8px 10px"><select onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'status\',this.value)" style="background:var(--bg5);border:1px solid var(--border2);border-radius:4px;color:' + (statusColor[r.status]||'var(--text3)') + ';font-family:var(--font-mono);font-size:10px;padding:2px 4px">' + opts + '</select></td>' +
         '<td style="padding:8px 10px"><input value="' + (r.note||'').replace(/"/g,'&quot;') + '" placeholder="Notiz..." onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'note\',this.value)" style="background:transparent;border:none;color:var(--text3);font-family:var(--font-mono);font-size:10px;width:140px"></td>' +
         '<td style="padding:8px 10px"><button onclick="deleteStrategyItem(\'capitalPlan\',\'' + r.id + '\')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px">✕</button></td>' +
         '</tr>';
-      monthTotal += dynDeposit;
     });
-    capitalHtml += '<tr style="border-top:1px solid var(--border)"><td colspan="6" style="padding:6px 10px;font-size:11px;font-weight:700;color:var(--text2)">Gesamt ' + fmtMonth(month) + '</td><td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--accent)">$' + monthTotal.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</td><td colspan="3"></td></tr>';
+    capitalHtml += '<tr style="border-top:1px solid var(--border)"><td colspan="6" style="padding:6px 10px;font-size:11px;font-weight:700;color:var(--text2)">Gesamt ' + fmtMonth(month) + '</td><td style="padding:6px 10px;text-align:right;font-weight:700;color:var(--accent)">$' + total.toLocaleString() + '</td><td colspan="3"></td></tr>';
   });
 
   // EA costs
@@ -3170,7 +3178,19 @@ function updateStrategyItem(section, id, key, value) {
 function updateDeposit(id) {
   const data = getStrategy();
   const item = data.capitalPlan.find(function(r){ return r.id === id; });
-  if (item) { item.deposit = Math.max(0, (item.to||0) - (item.from||0)); saveStrategy(data); renderStrategy(); }
+  if (!item) return;
+  let fromVal = item.from || 0;
+  if (item.eaId) {
+    const ea = DB.eas.find(function(e){ return String(e.id)===String(item.eaId); });
+    if (ea) {
+      const accs = DB.accounts.filter(function(a){ return DB.pnl.some(function(p){ return p.eaId==ea.id && p.accountId==a.id; }); });
+      const acc = accs.find(function(a){ return a.type==='Live' && isActive(a); }) || accs[0];
+      if (acc) fromVal = getAccountBalance(acc);
+    }
+  }
+  item.deposit = Math.max(0, (item.to||0) - fromVal);
+  saveStrategy(data);
+  renderStrategy();
 }
 
 function deleteStrategyItem(section, id) {
