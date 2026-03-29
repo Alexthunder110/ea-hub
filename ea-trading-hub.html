@@ -474,6 +474,12 @@ select option { background:var(--bg4); }
     <div class="form-grid">
       <div class="form-group"><label>Name *</label><input type="text" id="ea-name" placeholder="Milion299k"></div>
       <div class="form-group"><label>Strategie</label><input type="text" id="ea-strategy" placeholder="M1 Grid, M5 Scalp..."></div>
+      <div class="form-group"><label>Status</label>
+        <select id="ea-status">
+          <option value="active">🟢 Aktiv</option>
+          <option value="off">⛔ Aus</option>
+        </select>
+      </div>
       <div class="form-group fg-2"><label>Beschreibung</label><input type="text" id="ea-desc" placeholder="optional"></div>
     </div>
     <input type="hidden" id="ea-edit-id">
@@ -485,7 +491,7 @@ select option { background:var(--bg4); }
 
   <div class="sh">Meine EAs</div>
   <div class="table-wrap">
-    <table><thead><tr><th>#</th><th>Name</th><th>Strategie</th><th>Beschreibung</th><th>Trades</th><th>Win Rate</th><th></th></tr></thead>
+    <table><thead><tr><th>#</th><th>Name</th><th>Strategie</th><th>Beschreibung</th><th>Trades</th><th>Win Rate</th><th>Status</th><th></th></tr></thead>
     <tbody id="easTable"></tbody></table>
   </div>
 </div>
@@ -1211,6 +1217,7 @@ async function saveEA() {
     name,
     strategy: document.getElementById('ea-strategy').value.trim(),
     description: document.getElementById('ea-desc').value.trim(),
+    status: document.getElementById('ea-status').value || 'active',
   };
   const existing = DB.eas.findIndex(e => e.id == obj.id);
   if (existing >= 0) DB.eas[existing] = obj;
@@ -1228,6 +1235,7 @@ function editEA(id) {
   document.getElementById('ea-name').value = ea.name||'';
   document.getElementById('ea-strategy').value = ea.strategy||'';
   document.getElementById('ea-desc').value = ea.description||'';
+  document.getElementById('ea-status').value = ea.status||'active';
   document.getElementById('eaFormTitle').textContent = 'EA bearbeiten';
 }
 
@@ -1241,17 +1249,22 @@ async function deleteEA(id) {
 
 function resetEAForm() {
   ['ea-name','ea-strategy','ea-desc'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('ea-status').value='active';
   document.getElementById('ea-edit-id').value='';
   document.getElementById('eaFormTitle').textContent='EA hinzufügen';
 }
 
 function renderEAsTable() {
   const tbody = document.getElementById('easTable');
-  if (!DB.eas.length) { tbody.innerHTML='<tr><td colspan="7" class="empty">Noch keine EAs.</td></tr>'; return; }
+  if (!DB.eas.length) { tbody.innerHTML='<tr><td colspan="8" class="empty">Noch keine EAs.</td></tr>'; return; }
   tbody.innerHTML = DB.eas.map((ea,i) => {
     const trades = DB.pnl.filter(p => p.eaId == ea.id);
     const wins = trades.filter(p => parseFloat(p.pnl) > 0).length;
     const wr = trades.length ? ((wins/trades.length)*100).toFixed(0)+'%' : '–';
+    const status = ea.status || 'active';
+    const statusBadge = status === 'active'
+      ? '<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(29,158,117,0.15);color:#1D9E75;font-weight:500">🟢 Aktiv</span>'
+      : '<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(136,135,128,0.15);color:#5F5E5A;font-weight:500">⛔ Aus</span>';
     return `<tr>
       <td>${i+1}</td>
       <td style="color:var(--accent);font-weight:500">${ea.name}</td>
@@ -1259,6 +1272,7 @@ function renderEAsTable() {
       <td style="color:var(--text2);font-size:10px">${ea.description||'–'}</td>
       <td>${trades.length}</td>
       <td class="${wins/trades.length>=0.5?'pos-val':'neg-val'}">${wr}</td>
+      <td>${statusBadge}</td>
       <td style="display:flex;gap:4px">
         <button class="icon-btn edit" onclick="editEA('${ea.id}')" title="Bearbeiten">✎</button>
         <button class="icon-btn" onclick="deleteEA('${ea.id}')" title="Löschen">✕</button>
@@ -1615,7 +1629,7 @@ function renderMissingEntries() {
     const dow = d.getDay();
     if (dow === 0 || dow === 6) continue;
     const ds = d.toISOString().split('T')[0];
-    DB.eas.forEach(ea => {
+    DB.eas.filter(ea => (ea.status||'active') === 'active').forEach(ea => {
       const liveAccs = DB.accounts.filter(a => a.type === 'Live' && isActive(a));
       liveAccs.forEach(acc => {
         const hasHistory = DB.pnl.some(p => p.eaId == ea.id && p.accountId == acc.id);
@@ -2321,7 +2335,9 @@ function renderForecast() {
   // By default all EAs are enabled unless explicitly disabled
   const eaEnabled = function(eaId) {
     const f = DB.settings.forecastEaFilter;
-    return f[eaId] !== false;
+    if (f[eaId] !== undefined) return f[eaId] !== false;
+    const ea = DB.eas.find(function(e){ return String(e.id) === String(eaId); });
+    return !ea || (ea.status||'active') === 'active';
   };
 
   const liveEas = allLiveEas.filter(ea => eaEnabled(ea.id));
@@ -3029,7 +3045,8 @@ function renderStrategy() {
             if (ea) {
               const accs = DB.accounts.filter(function(a){ return DB.pnl.some(function(p){ return p.eaId==ea.id && p.accountId==a.id; }); });
               const acc = accs.find(function(a){ return a.type==='Live' && isActive(a); }) || accs[0];
-              if (acc) return getAccountBalance(acc).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
+              if (acc && acc.type === 'Live') return getAccountBalance(acc).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
+              if (acc && acc.type !== 'Live') return '0,00';
             }
           }
           return (r.from||0).toLocaleString();
@@ -3042,7 +3059,8 @@ function renderStrategy() {
             if (ea) {
               const accs = DB.accounts.filter(function(a){ return DB.pnl.some(function(p){ return p.eaId==ea.id && p.accountId==a.id; }); });
               const acc = accs.find(function(a){ return a.type==='Live' && isActive(a); }) || accs[0];
-              if (acc) fv = getAccountBalance(acc);
+              if (acc && acc.type === 'Live') fv = getAccountBalance(acc);
+              else fv = 0;
             }
           }
           return Math.max(0, (r.to||0) - fv).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -3185,12 +3203,12 @@ function updateDeposit(id) {
     if (ea) {
       const accs = DB.accounts.filter(function(a){ return DB.pnl.some(function(p){ return p.eaId==ea.id && p.accountId==a.id; }); });
       const acc = accs.find(function(a){ return a.type==='Live' && isActive(a); }) || accs[0];
-      if (acc) fromVal = getAccountBalance(acc);
+      if (acc && acc.type === 'Live') fromVal = getAccountBalance(acc);
+      else fromVal = 0;
     }
   }
   item.deposit = Math.max(0, (item.to||0) - fromVal);
-  saveStrategy(data);
-  renderStrategy();
+  saveStrategy(data); renderStrategy();
 }
 
 function deleteStrategyItem(section, id) {
