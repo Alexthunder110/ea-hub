@@ -1279,7 +1279,10 @@ function fillEAStrategy() {
 async function savePnl(fromQuick) {
   const editId = document.getElementById('pnl-edit-id').value;
   const date = document.getElementById('pnl-date').value;
-  const pnl = parseFloat(document.getElementById('pnl-value').value);
+  const entryType = document.getElementById('pnl-type').value;
+  const nonTrade = ['deposit','withdrawal','transfer'].includes(entryType);
+  const pnlRaw = document.getElementById('pnl-value').value;
+  const pnl = pnlRaw === '' && nonTrade ? 0 : parseFloat(pnlRaw);
   if (!date || isNaN(pnl)) { toast('⚠ Datum und P&L sind Pflicht','err'); return; }
 
   const accountId = document.getElementById('pnl-account').value;
