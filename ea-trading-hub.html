@@ -3257,7 +3257,7 @@ function renderOverviewWeeklyPnl() {
 
   const liveAccIds = new Set(DB.accounts.filter(function(a){ return a.type==='Live'; }).map(function(a){ return a.id; }));
 
-  let rows = [];
+  const byName = {};
   DB.eas.forEach(function(ea) {
     const entries = DB.pnl.filter(function(p) {
       if (p.entryType && p.entryType !== 'trade') return false;
@@ -3267,8 +3267,10 @@ function renderOverviewWeeklyPnl() {
     });
     if (!entries.length) return;
     const weekPnl = entries.reduce(function(s,p){ return s+(parseFloat(p.pnl)||0); }, 0);
-    rows.push({ name: ea.name, weekPnl: weekPnl });
+    if (byName[ea.name]) byName[ea.name] += weekPnl;
+    else byName[ea.name] = weekPnl;
   });
+  let rows = Object.keys(byName).map(function(name){ return { name: name, weekPnl: byName[name] }; });
 
   if (!rows.length) {
     el.innerHTML = '<span style="color:var(--text3);font-size:11px">Noch keine Einträge diese Woche.</span>';
