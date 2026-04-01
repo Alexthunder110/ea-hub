@@ -2982,6 +2982,11 @@ function getStrategy() {
 
 function saveStrategy(data) {
   localStorage.setItem('ea_hub_strategy', JSON.stringify(data));
+  api('pushAll', 'Settings', [
+    { key: 'settings', value: JSON.stringify(DB.settings) },
+    { key: 'strategy', value: JSON.stringify(data) },
+    { key: 'ealab', value: localStorage.getItem('ea_hub_lab') || '[]' },
+  ]).catch(function(){});
 }
 
 let strategyFilter = 'all';
@@ -3032,9 +3037,11 @@ function renderStrategy() {
           else if (_acc) fromVal = 0;
         }
       }
-      const dynDeposit = Math.max(0, (r.to||0) - fromVal);
+      const isDone = r.status === 'done';
+      const dynDeposit = isDone ? 0 : Math.max(0, (r.to||0) - fromVal);
       monthTotal += dynDeposit;
-      capitalHtml += '<tr>' +
+      const rowBg = isDone ? 'background:rgba(0,255,157,0.05);' : '';
+      capitalHtml += '<tr style="' + rowBg + '">' +
         '<td style="padding:8px 10px"><input value="' + (r.name||'').replace(/"/g,'&quot;') + '" onchange="updateStrategyItem(\'capitalPlan\',\'' + r.id + '\',\'name\',this.value)" style="background:transparent;border:none;color:var(--text);font-family:var(--font-mono);font-size:11px;width:160px"></td>' +
         '<td style="padding:8px 10px">' + (function() {
           var eaOpts = '<option value="">– kein EA –</option>' + DB.eas.map(function(ea) {
@@ -3248,7 +3255,7 @@ function renderOverviewWeeklyPnl() {
   weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
   const ws = weekStart.toISOString().split('T')[0];
 
-  const liveAccs = DB.accounts.filter(function(a){ return a.type==='Live' && isActive(a); });
+  const liveAccIds = new Set(DB.accounts.filter(function(a){ return a.type==='Live'; }).map(function(a){ return a.id; }));
 
   let rows = [];
   DB.eas.forEach(function(ea) {
@@ -3256,7 +3263,7 @@ function renderOverviewWeeklyPnl() {
       if (p.entryType && p.entryType !== 'trade') return false;
       if (p.eaId != ea.id) return false;
       if (!p.date || p.date < ws || p.date > today) return false;
-      return liveAccs.some(function(a){ return a.id == p.accountId; });
+      return liveAccIds.has(p.accountId);
     });
     if (!entries.length) return;
     const weekPnl = entries.reduce(function(s,p){ return s+(parseFloat(p.pnl)||0); }, 0);
