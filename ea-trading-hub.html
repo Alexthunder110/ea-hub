@@ -828,6 +828,13 @@ select option { background:var(--bg4); }
 <div class="toast" id="toast"></div>
 
 <script>
+function localToday() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
 // ============================================================
 // LOGIN
 // ============================================================
@@ -912,7 +919,7 @@ function normalizeDate(val) {
 }
 
 function setDefaultDates() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const month = today.substring(0,7);
   ['pnl-date','q-date','d-date','goal-date-live'].forEach(id => {
     const el = document.getElementById(id);
@@ -1523,7 +1530,7 @@ function getAccountBalance(acc) {
 }
 
 function renderSumCards() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const month = today.substring(0,7);
   const totalBal = DB.accounts.reduce((s,a) => s+getAccountBalance(a),0);
   const liveBal  = DB.accounts.filter(a=>a.type==='Live' && isActive(a)).reduce((s,a) => s+getAccountBalance(a),0);
@@ -1696,7 +1703,7 @@ function saveGoal(type) {
 }
 
 function renderGoalProgress() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const month = today.substring(0,7);
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
   const ws = weekStart.toISOString().split('T')[0];
@@ -1769,7 +1776,7 @@ function renderAnalytics() {
     return acc && acc.type === fType;
   });
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const month = today.substring(0,7);
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
   const ws = weekStart.toISOString().split('T')[0];
@@ -2061,7 +2068,7 @@ function chartOpts(showLine) {
 // TODAY + SELECTS
 // ============================================================
 function renderTodayRows() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const entries = DB.pnl.filter(p => {
     if (p.date !== today) return false;
     if (PNL_FILTER === 'all') return true;
@@ -2115,7 +2122,7 @@ function exportCSV() {
   const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href=url;
-  a.download = 'ea-trading-hub-'+new Date().toISOString().split('T')[0]+'.csv';
+  a.download = 'ea-trading-hub-'+localToday()+'.csv';
   a.click(); URL.revokeObjectURL(url);
   toast('✅ CSV exportiert');
 }
@@ -2336,7 +2343,7 @@ function renderForecast() {
 
   if (!allLiveEas.length) { el.innerHTML = ''; return; }
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const month = today.substring(0,7);
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
   const ws = weekStart.toISOString().split('T')[0];
@@ -2541,7 +2548,7 @@ function renderIncome() {
   if (goals.week)  document.getElementById('inc-goal-week').value  = goals.week;
   if (goals.month) document.getElementById('inc-goal-month').value = goals.month;
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const month = today.substring(0,7);
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
   const ws = weekStart.toISOString().split('T')[0];
@@ -2762,7 +2769,7 @@ function renderWithdrawalChart() {
 
   // Calculate forecast daily profit from EA forecast cards (targetLot / curLot * avgDay per EA)
   const forecastSaved = DB.settings.forecastSettings || {};
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const avgDailyForecast = DB.eas.reduce((total, ea) => {
     const eaEntries = activePnl.filter(p => p.eaId == ea.id);
     if (!eaEntries.length) return total;
@@ -3251,7 +3258,7 @@ function renderOverviewWeeklyPnl() {
   const el = document.getElementById('overviewWeeklyPnl');
   if (!el) return;
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const weekStart = new Date();
   weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
   const ws = weekStart.toISOString().split('T')[0];
@@ -3434,7 +3441,7 @@ function setEaChartFilter(type) {
 function renderEaMonthChart() {
   const canvas = document.getElementById('eaMonthChart');
   if (!canvas) return;
-  const today = new Date().toISOString().split('T')[0];
+  const today = localToday();
   const month = today.substring(0,7);
 
   const labels = [], pnlData = [], ddData = [];
