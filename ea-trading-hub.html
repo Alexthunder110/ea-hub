@@ -587,7 +587,7 @@ select option { background:var(--bg4); }
     <div>
       <div class="sh">KPIs pro EA</div>
       <div class="table-wrap">
-        <table><thead><tr><th>EA</th><th>Einträge</th><th>P&L Monat</th><th>Ø / Eintrag</th><th>Bester Tag</th><th>Schlechtester Tag</th><th>Max DD</th></tr></thead>
+        <table><thead><tr><th>EA</th><th>Einträge</th><th>P&L Gesamt</th><th>Ø / Eintrag</th><th>Bester Tag</th><th>Schlechtester Tag</th><th>Max DD</th></tr></thead>
         <tbody id="winRateTable"></tbody></table>
       </div>
     </div>
@@ -1821,7 +1821,7 @@ function renderAnalytics() {
       return `<tr>
         <td style="color:var(--accent);font-weight:500">${ea.name}</td>
         <td>${eaEntries.length}</td>
-        <td class="${monthEaPnl>=0?'pos-val':'neg-val'}">${fmtPnl(monthEaPnl)}</td>
+        <td class="${totalEaPnl>=0?'pos-val':'neg-val'}">${fmtPnl(totalEaPnl)}</td>
         <td class="${avgPnl!==null&&avgPnl>=0?'pos-val':'neg-val'}">${fmtPnl(avgPnl)}</td>
         <td class="pos-val">${fmtPnl(best)}</td>
         <td class="neg-val">${fmtPnl(worst)}</td>
