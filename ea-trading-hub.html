@@ -1505,6 +1505,7 @@ function setPnlFilter(type, btn) {
   renderSumCards();
   renderTodayRows();
   renderCharts();
+  renderOverviewWeeklyPnl();
 }
 
 function getAccountBalance(acc) {
@@ -3255,7 +3256,8 @@ function renderOverviewWeeklyPnl() {
   weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
   const ws = weekStart.toISOString().split('T')[0];
 
-  const liveAccIds = new Set(DB.accounts.filter(function(a){ return a.type==='Live'; }).map(function(a){ return a.id; }));
+  const accFilter = PNL_FILTER === 'all' ? DB.accounts : DB.accounts.filter(function(a){ return a.type === PNL_FILTER; });
+  const liveAccIds = new Set(accFilter.map(function(a){ return a.id; }));
 
   const byName = {};
   DB.eas.forEach(function(ea) {
