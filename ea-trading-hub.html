@@ -3542,7 +3542,14 @@ function getLabData() {
   if (saved) { try { return JSON.parse(saved); } catch(e) {} }
   return [];
 }
-function saveLabData(data) { localStorage.setItem('ea_hub_lab', JSON.stringify(data)); }
+function saveLabData(data) {
+  localStorage.setItem('ea_hub_lab', JSON.stringify(data));
+  api('pushAll', 'Settings', [
+    { key: 'settings', value: JSON.stringify(DB.settings) },
+    { key: 'strategy', value: localStorage.getItem('ea_hub_strategy') || '{}' },
+    { key: 'ealab', value: JSON.stringify(data) },
+  ]).catch(function(){});
+}
 
 function setLabFilter(f, btn) {
   labFilter = f;
