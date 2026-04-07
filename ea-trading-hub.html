@@ -1624,23 +1624,21 @@ function renderMissingEntries() {
 
   const today = new Date();
   const missing = [];
+  const liveAccs = DB.accounts.filter(a => a.type === 'Live' && isActive(a));
   for (let i = 1; i <= 7; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
     const dow = d.getDay();
     if (dow === 0 || dow === 6) continue;
     const ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-    DB.eas.forEach(ea => {
-      const liveAccs = DB.accounts.filter(a => a.type === 'Live' && isActive(a));
-      liveAccs.forEach(acc => {
-        const hasHistory = DB.pnl.some(p => p.eaId == ea.id && p.accountId == acc.id);
-        if (!hasHistory) return;
-        const hasEntry = DB.pnl.some(p =>
-          p.eaId == ea.id && p.accountId == acc.id && p.date === ds &&
-          (!p.entryType || p.entryType === 'trade')
-        );
-        if (!hasEntry) missing.push({ ea: ea.name, acc: acc.number, date: ds });
-      });
+    liveAccs.forEach(acc => {
+      const hasHistory = DB.pnl.some(p => p.accountId == acc.id);
+      if (!hasHistory) return;
+      const hasEntry = DB.pnl.some(p =>
+        p.accountId == acc.id && p.date === ds &&
+        (!p.entryType || p.entryType === 'trade')
+      );
+      if (!hasEntry) missing.push({ acc: acc.number, date: ds });
     });
   }
 
@@ -1659,7 +1657,7 @@ function renderMissingEntries() {
   const byDate = {};
   missing.forEach(m => {
     if (!byDate[m.date]) byDate[m.date] = [];
-    byDate[m.date].push(`${m.ea} #${m.acc}`);
+    byDate[m.date].push(`#${m.acc}`);
   });
 
   const count = missing.length;
