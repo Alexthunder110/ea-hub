@@ -593,8 +593,8 @@ select option { background:var(--bg4); }
 </div>
 
 <!-- ===== P&L ===== -->
-<div class="view" id="view-strategy">
-  <div id="strategyContent"></div>
+<div class="view" id="view-strategy-old" style="display:none">
+  <div id="strategyContentOld"></div>
 </div>
 
 <div class="view" id="view-pnl">
@@ -3872,13 +3872,14 @@ function renderLiveTab() {
       {label:'P&L Woche', val:fmt(weekPnl), sub:'laufende Woche', cls:cls(weekPnl)},
       {label:'P&L Monat', val:fmt(monthPnl), sub:new Date().toLocaleDateString('de-DE',{month:'long'}), cls:cls(monthPnl)},
       {label:'P&L Gesamt', val:fmt(totalPnl), sub:'alle Einträge (Live)', cls:cls(totalPnl)},
-      {label:'Entnahme/Woche', val:(function(){ 
+      {label:'Noch entnehmbar', val:(function(){
         const ws2 = (function(){ const w=new Date(); w.setDate(w.getDate()-w.getDay()+1); return w.getFullYear()+'-'+String(w.getMonth()+1).padStart(2,'0')+'-'+String(w.getDate()).padStart(2,'0'); })();
         const liveIds = new Set(DB.accounts.filter(a=>a.type==='Live'&&isActive(a)).map(a=>a.id));
-        const wpnl = DB.pnl.filter(p=>p.entryType==='withdrawal'&&p.date&&p.date>=ws2&&p.date<=today&&liveIds.has(p.accountId));
-        const paid = Math.abs(wpnl.reduce((s,p)=>s+(parseFloat(p.pnl)||0),0));
-        return '$'+paid.toFixed(2);
-      })(), sub:'Diese Woche ausgezahlt', cls:''},
+        const wPnl = DB.pnl.filter(p=>(!p.entryType||p.entryType==='trade')&&p.date&&p.date>=ws2&&p.date<=today&&liveIds.has(p.accountId)).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+        const wPaid = Math.abs(DB.pnl.filter(p=>p.entryType==='withdrawal'&&p.date&&p.date>=ws2&&p.date<=today&&liveIds.has(p.accountId)).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0));
+        const avail = wPnl - wPaid;
+        return (avail>=0?'+$':'-$')+Math.abs(avail).toFixed(2);
+      })(), sub:'Wochenprofil − Ausgezahlt', cls:''},
     ].map(c=>`<div class="sum-card ${c.cls}"><div class="sum-label">${c.label}</div><div class="sum-value ${c.cls}">${c.val}</div>${c.sub?`<div class="sum-sub">${c.sub}</div>`:''}</div>`).join('');
   }
 
