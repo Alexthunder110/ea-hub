@@ -759,7 +759,7 @@ select option { background:var(--bg4); }
   <!-- Fortschritt -->
   <div id="incomeProgress" style="margin-bottom:22px"></div>
 
-  <!-- EA Aufschlüsselung wurde zu Analyse verschoben -->
+  <div id="incomeEaBreakdown" style="display:none"></div>
 
   <!-- Forecast -->
   <div id="incomeForecast" style="margin-bottom:22px"></div>
@@ -2787,7 +2787,7 @@ function renderIncome() {
 
   // EA Aufschlüsselung
   const eaEl = document.getElementById('incomeEaBreakdown');
-  if (DB.eas.length) {
+  if (eaEl && DB.eas.length) {
     const today2 = today;
     const eaRows = DB.eas.map(ea => {
       const eaEntries = entries.filter(p => p.eaId == ea.id);
