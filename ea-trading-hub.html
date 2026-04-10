@@ -479,7 +479,11 @@ select option { background:var(--bg4); }
     <span style="font-size:12px;font-weight:600;color:var(--text2)">🧪 Demo-Konten – Analyse</span>
   </div>
   <div id="demoAnalyticsCards" class="sum-grid" style="margin-bottom:18px"></div>
-  <div class="grid-2" style="margin-bottom:22px">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:22px">
+    <div class="chart-wrap">
+      <div class="chart-title">Diese Woche nach Tag (Demo)</div>
+      <canvas id="demoWeekDayChart"></canvas>
+    </div>
     <div class="chart-wrap">
       <div class="chart-title">Performance pro Woche (Demo)</div>
       <canvas id="demoWeeklyChart"></canvas>
@@ -685,6 +689,9 @@ select option { background:var(--bg4); }
     </div>
   </div>
 
+  <!-- EA Beitrag -->
+  <div id="eaBreakdownAnalytics" style="margin-bottom:22px"></div>
+
   <div class="grid-2">
     <div>
       <div class="sh">KPIs pro EA</div>
@@ -717,8 +724,9 @@ select option { background:var(--bg4); }
 
 <!-- ===== EINKOMMEN ===== -->
 <div class="view" id="view-forecast">
+  <!-- EA Kaufkosten + Kapitalplan -->
   <div id="strategyContent" style="margin-bottom:22px"></div>
-  <!-- Filter -->
+  <!-- Ziele + Income -->
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
     <span style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text3)">Filter:</span>
     <div style="display:flex;gap:6px">
@@ -751,8 +759,7 @@ select option { background:var(--bg4); }
   <!-- Fortschritt -->
   <div id="incomeProgress" style="margin-bottom:22px"></div>
 
-  <!-- EA Aufschlüsselung -->
-  <div id="incomeEaBreakdown" style="margin-bottom:22px"></div>
+  <!-- EA Aufschlüsselung wurde zu Analyse verschoben -->
 
   <!-- Forecast -->
   <div id="incomeForecast" style="margin-bottom:22px"></div>
@@ -1952,6 +1959,32 @@ function renderAnalytics() {
 
   // Live / Demo tables removed - data now in KPI table
   renderAnalyticsCharts(entries);
+
+  // EA-Beitrag Tabelle
+  const eaBreakEl = document.getElementById('eaBreakdownAnalytics');
+  if (eaBreakEl && DB.eas.length) {
+    const eaRows = DB.eas.map(ea => {
+      const eaEntries = entries.filter(p => p.eaId == ea.id);
+      const eaDay   = eaEntries.filter(p => p.date === today).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+      const eaWeek  = eaEntries.filter(p => p.date >= ws && p.date <= today).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+      const eaMonth = eaEntries.filter(p => p.date && p.date.startsWith(month)).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+      return { ea, eaDay, eaWeek, eaMonth };
+    }).filter(r => r.eaMonth !== 0 || r.eaWeek !== 0 || r.eaDay !== 0);
+    if (eaRows.length) {
+      const maxMonth = Math.max(...eaRows.map(r=>Math.abs(r.eaMonth)),1);
+      const cls = v => v>=0?'pos-val':'neg-val';
+      const fmt = v => (v>=0?'+$':'-$')+Math.abs(v).toFixed(2);
+      eaBreakEl.innerHTML = `<div class="sh">EA-Beitrag</div><div class="table-wrap"><table><thead><tr><th>EA</th><th>Heute</th><th>Woche</th><th>Monat</th><th>Anteil</th></tr></thead><tbody>${
+        eaRows.sort((a,b)=>b.eaMonth-a.eaMonth).map(r=>`<tr>
+          <td style="color:var(--accent);font-weight:500">${r.ea.name}</td>
+          <td class="${cls(r.eaDay)}">${fmt(r.eaDay)}</td>
+          <td class="${cls(r.eaWeek)}">${fmt(r.eaWeek)}</td>
+          <td class="${cls(r.eaMonth)}">${fmt(r.eaMonth)}</td>
+          <td style="width:120px"><div style="background:var(--bg4);border-radius:3px;height:6px;overflow:hidden"><div style="width:${(Math.abs(r.eaMonth)/maxMonth*100).toFixed(0)}%;height:100%;background:${r.eaMonth>=0?'var(--pos)':'var(--neg)'};border-radius:3px"></div></div></td>
+        </tr>`).join('')
+      }</tbody></table></div>`;
+    } else eaBreakEl.innerHTML = '';
+  }
   renderEaRating(entries);
   setTimeout(renderEaMonthChart, 50);
 }
@@ -4033,11 +4066,15 @@ function renderLiveEaCards(livePnl, today, ws, month) {
     const weekV   = eaP.filter(p=>p.date>=ws&&p.date<=today).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
     const monthV  = eaP.filter(p=>p.date&&p.date.startsWith(month)).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
     const totalV  = eaP.reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
-    if (!byName[ea.name]) byName[ea.name] = {today:0,week:0,month:0,total:0};
-    byName[ea.name].today += todayV;
-    byName[ea.name].week  += weekV;
-    byName[ea.name].month += monthV;
-    byName[ea.name].total += totalV;
+    const ddWeekV  = Math.max(...eaP.filter(p=>p.date>=ws&&p.date<=today).map(p=>parseFloat(p.dd)||0), 0);
+    const ddTotalV = Math.max(...eaP.map(p=>parseFloat(p.dd)||0), 0);
+    if (!byName[ea.name]) byName[ea.name] = {today:0,week:0,month:0,total:0,ddWeek:0,ddTotal:0};
+    byName[ea.name].today   += todayV;
+    byName[ea.name].week    += weekV;
+    byName[ea.name].month   += monthV;
+    byName[ea.name].total   += totalV;
+    byName[ea.name].ddWeek   = Math.max(byName[ea.name].ddWeek,  ddWeekV);
+    byName[ea.name].ddTotal  = Math.max(byName[ea.name].ddTotal, ddTotalV);
   });
 
   const fmt = v => (v>=0?'+$':'-$')+Math.abs(v).toFixed(2);
@@ -4048,10 +4085,12 @@ function renderLiveEaCards(livePnl, today, ws, month) {
     return `<div class="form-panel" style="margin:0;padding:16px">
       <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px">${name}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Heute</div><div style="font-size:15px;font-weight:700;color:${col(d.today)}">${fmt(d.today)}</div></div>
-        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Woche</div><div style="font-size:15px;font-weight:700;color:${col(d.week)}">${fmt(d.week)}</div></div>
-        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Monat</div><div style="font-size:15px;font-weight:700;color:${col(d.month)}">${fmt(d.month)}</div></div>
-        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Gesamt</div><div style="font-size:15px;font-weight:700;color:${col(d.total)}">${fmt(d.total)}</div></div>
+        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Heute</div><div style="font-size:14px;font-weight:700;color:${col(d.today)}">${fmt(d.today)}</div></div>
+        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Woche</div><div style="font-size:14px;font-weight:700;color:${col(d.week)}">${fmt(d.week)}</div></div>
+        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Monat</div><div style="font-size:14px;font-weight:700;color:${col(d.month)}">${fmt(d.month)}</div></div>
+        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Gesamt</div><div style="font-size:14px;font-weight:700;color:${col(d.total)}">${fmt(d.total)}</div></div>
+        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Max DD Woche</div><div style="font-size:14px;font-weight:700;color:${d.ddWeek?'var(--neg)':'var(--text3)'}">${d.ddWeek?'-$'+d.ddWeek.toFixed(2):'–'}</div></div>
+        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Max DD Gesamt</div><div style="font-size:14px;font-weight:700;color:${d.ddTotal?'var(--neg)':'var(--text3)'}">${d.ddTotal?'-$'+d.ddTotal.toFixed(2):'–'}</div></div>
       </div>
     </div>`;
   }).join('');
@@ -4092,6 +4131,26 @@ function renderDemoTab() {
 function renderDemoCharts() {
   const demoAccIds = new Set(DB.accounts.filter(a=>a.type==='Demo').map(a=>a.id));
   const entries = DB.pnl.filter(p=>(!p.entryType||p.entryType==='trade')&&demoAccIds.has(p.accountId));
+
+  // Diese Woche nach Tag (Demo)
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+  const dayLabels = ['Mo','Di','Mi','Do','Fr'];
+  const dayData = [];
+  for (let i=0;i<5;i++) {
+    const d = new Date(weekStart); d.setDate(weekStart.getDate()+i);
+    const ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    dayData.push(parseFloat(entries.filter(p=>p.date===ds).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0).toFixed(2)));
+  }
+  const dCtx = document.getElementById('demoWeekDayChart');
+  if (dCtx) {
+    if (charts.demoWeekDay) charts.demoWeekDay.destroy();
+    charts.demoWeekDay = new Chart(dCtx, {
+      type:'bar',
+      data:{labels:dayLabels, datasets:[{data:dayData, backgroundColor:dayData.map(v=>v>=0?'rgba(0,255,157,0.5)':'rgba(255,71,87,0.5)'), borderColor:dayData.map(v=>v>=0?'#00ff9d':'#ff4757'), borderWidth:1}]},
+      options: chartOpts(false)
+    });
+  }
 
   // Weekly chart
   const weeks = {}; const months = {};
