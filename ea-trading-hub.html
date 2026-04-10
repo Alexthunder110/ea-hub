@@ -405,15 +405,16 @@ select option { background:var(--bg4); }
     </div>
   </div>
 
-  <!-- Fehlende Einträge -->
-  <div id="missingEntriesBanner" style="margin-bottom:16px"></div>
-
   <!-- EA Kacheln -->
   <div class="sh" style="margin-bottom:12px">🤖 Aktive EAs (Live)</div>
   <div id="liveEaCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:22px"></div>
 
   <!-- Live Charts -->
-  <div class="grid-2" style="margin-bottom:22px">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:22px">
+    <div class="chart-wrap">
+      <div class="chart-title">Diese Woche nach Tag (Live)</div>
+      <canvas id="liveWeekDayChart"></canvas>
+    </div>
     <div class="chart-wrap">
       <div class="chart-title">Performance pro Woche (Live)</div>
       <canvas id="liveWeeklyChart"></canvas>
@@ -716,6 +717,7 @@ select option { background:var(--bg4); }
 
 <!-- ===== EINKOMMEN ===== -->
 <div class="view" id="view-forecast">
+  <div id="strategyContent" style="margin-bottom:22px"></div>
   <!-- Filter -->
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
     <span style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text3)">Filter:</span>
@@ -1202,7 +1204,7 @@ function showView(id, btn) {
   if (id === 'demo') { renderDemoTab(); setTimeout(renderDemoCharts, 50); }
   if (id === 'eas') { renderEAsTable(); }
   if (id === 'analytics') { renderAnalytics(); setTimeout(renderCharts, 50); }
-  if (id === 'forecast') { renderIncome(); }
+  if (id === 'forecast') { renderIncome(); renderStrategy(); }
 }
 
 // ============================================================
@@ -3870,7 +3872,13 @@ function renderLiveTab() {
       {label:'P&L Woche', val:fmt(weekPnl), sub:'laufende Woche', cls:cls(weekPnl)},
       {label:'P&L Monat', val:fmt(monthPnl), sub:new Date().toLocaleDateString('de-DE',{month:'long'}), cls:cls(monthPnl)},
       {label:'P&L Gesamt', val:fmt(totalPnl), sub:'alle Einträge (Live)', cls:cls(totalPnl)},
-      {label:'Entnahme/Woche', val:'$'+(DB.settings&&DB.settings.incomeGoals&&DB.settings.incomeGoals.withdrawal?DB.settings.incomeGoals.withdrawal.toFixed(2):'0.00'), sub:'Ziel', cls:''},
+      {label:'Entnahme/Woche', val:(function(){ 
+        const ws2 = (function(){ const w=new Date(); w.setDate(w.getDate()-w.getDay()+1); return w.getFullYear()+'-'+String(w.getMonth()+1).padStart(2,'0')+'-'+String(w.getDate()).padStart(2,'0'); })();
+        const liveIds = new Set(DB.accounts.filter(a=>a.type==='Live'&&isActive(a)).map(a=>a.id));
+        const wpnl = DB.pnl.filter(p=>p.entryType==='withdrawal'&&p.date&&p.date>=ws2&&p.date<=today&&liveIds.has(p.accountId));
+        const paid = Math.abs(wpnl.reduce((s,p)=>s+(parseFloat(p.pnl)||0),0));
+        return '$'+paid.toFixed(2);
+      })(), sub:'Diese Woche ausgezahlt', cls:''},
     ].map(c=>`<div class="sum-card ${c.cls}"><div class="sum-label">${c.label}</div><div class="sum-value ${c.cls}">${c.val}</div>${c.sub?`<div class="sum-sub">${c.sub}</div>`:''}</div>`).join('');
   }
 
@@ -3890,7 +3898,6 @@ function renderLiveTab() {
   setTimeout(renderLiveCharts, 50);
   // Today rows
   renderTodayRows();
-  renderMissingEntries();
 }
 
 function drawGauge(canvasId, value, goal, valId, subId, label) {
@@ -3932,8 +3939,22 @@ function drawGauge(canvasId, value, goal, valId, subId, label) {
     ctx.fill();
   }
 
-  // Nadel: 0% = ganz links (Math.PI), 100% = ganz rechts (2*Math.PI)
-  const needleAngle = startAngle + pct * Math.PI;
+  // Nadel: 0% = ganz links, 100% = ganz rechts
+  // startAngle=PI=links, endAngle=2*PI=rechts
+  // rotate: 0=oben, PI/2=rechts, PI=unten, 3PI/2=links in Canvas
+  // Daher: needleAngle = PI + pct*PI (0%=PI=zeigt nach unten-links, falsch)
+  // Korrekt: wir rotieren relativ zum Mittelpunkt unten
+  // Bei pct=0: Nadel zeigt nach links (angle = PI = 180deg im Canvas-System)
+  // Canvas rotate(a): 0=12Uhr, PI=6Uhr, also PI zeigt nach unten
+  // Für Tachometer: cx,cy ist unten-mitte. Nadel zeigt nach oben wenn angle=-PI/2
+  // pct=0: angle=PI (zeigt links), pct=1: angle=0 oder 2PI (zeigt rechts)  
+  // Formel: angle = PI - pct*PI => pct=0 -> PI(links), pct=1 -> 0(rechts=12Uhr?)
+  // Nein. Canvas: translate(cx,cy), rotate(a), lineTo(0,-r) = immer nach oben relativ zur Rotation
+  // rotate(PI) = gedreht 180deg, dann -r = nach rechts original -> links auf screen? Nein.
+  // rotate(0) -> lineTo(0,-r) = oben. rotate(PI/2) -> lineTo(0,-r) = rechts. rotate(-PI/2) = links
+  // Also: pct=0 (links) -> rotate(-PI/2), pct=1 (rechts) -> rotate(PI/2)  
+  // Bereich: -PI/2 bis PI/2, Formel: rotate(-PI/2 + pct*PI)
+  const needleAngle = -Math.PI/2 + pct * Math.PI;
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(needleAngle);
@@ -4129,6 +4150,30 @@ function renderLiveCharts() {
   });
   const wKeys = Object.keys(weeks).sort().slice(-10);
   const mKeys = Object.keys(months).sort().slice(-6);
+
+  // Diese Woche nach Tag
+  const today = localToday();
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+  const dayLabels = ['Mo','Di','Mi','Do','Fr'];
+  const dayData = [];
+  for (let i=0;i<5;i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate()+i);
+    const ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const sum = entries.filter(p=>p.date===ds).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+    dayData.push(parseFloat(sum.toFixed(2)));
+  }
+  const dCtx = document.getElementById('liveWeekDayChart');
+  if (dCtx) {
+    if (charts.liveWeekDay) charts.liveWeekDay.destroy();
+    charts.liveWeekDay = new Chart(dCtx, {
+      type:'bar',
+      data:{labels:dayLabels, datasets:[{data:dayData, backgroundColor:dayData.map(v=>v>=0?'rgba(0,255,157,0.5)':'rgba(255,71,87,0.5)'), borderColor:dayData.map(v=>v>=0?'#00ff9d':'#ff4757'), borderWidth:1}]},
+      options: chartOpts(false)
+    });
+  }
+
   const wCtx = document.getElementById('liveWeeklyChart');
   const mCtx = document.getElementById('liveMonthlyChart');
   if (wCtx) {
