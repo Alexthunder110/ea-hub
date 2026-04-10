@@ -689,9 +689,6 @@ select option { background:var(--bg4); }
     </div>
   </div>
 
-  <!-- EA Beitrag -->
-  <div id="eaBreakdownAnalytics" style="margin-bottom:22px"></div>
-
   <div class="grid-2">
     <div>
       <div class="sh">KPIs pro EA</div>
@@ -1960,31 +1957,7 @@ function renderAnalytics() {
   // Live / Demo tables removed - data now in KPI table
   renderAnalyticsCharts(entries);
 
-  // EA-Beitrag Tabelle
-  const eaBreakEl = document.getElementById('eaBreakdownAnalytics');
-  if (eaBreakEl && DB.eas.length) {
-    const eaRows = DB.eas.map(ea => {
-      const eaEntries = entries.filter(p => p.eaId == ea.id);
-      const eaDay   = eaEntries.filter(p => p.date === today).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
-      const eaWeek  = eaEntries.filter(p => p.date >= ws && p.date <= today).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
-      const eaMonth = eaEntries.filter(p => p.date && p.date.startsWith(month)).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
-      return { ea, eaDay, eaWeek, eaMonth };
-    }).filter(r => r.eaMonth !== 0 || r.eaWeek !== 0 || r.eaDay !== 0);
-    if (eaRows.length) {
-      const maxMonth = Math.max(...eaRows.map(r=>Math.abs(r.eaMonth)),1);
-      const cls = v => v>=0?'pos-val':'neg-val';
-      const fmt = v => (v>=0?'+$':'-$')+Math.abs(v).toFixed(2);
-      eaBreakEl.innerHTML = `<div class="sh">EA-Beitrag</div><div class="table-wrap"><table><thead><tr><th>EA</th><th>Heute</th><th>Woche</th><th>Monat</th><th>Anteil</th></tr></thead><tbody>${
-        eaRows.sort((a,b)=>b.eaMonth-a.eaMonth).map(r=>`<tr>
-          <td style="color:var(--accent);font-weight:500">${r.ea.name}</td>
-          <td class="${cls(r.eaDay)}">${fmt(r.eaDay)}</td>
-          <td class="${cls(r.eaWeek)}">${fmt(r.eaWeek)}</td>
-          <td class="${cls(r.eaMonth)}">${fmt(r.eaMonth)}</td>
-          <td style="width:120px"><div style="background:var(--bg4);border-radius:3px;height:6px;overflow:hidden"><div style="width:${(Math.abs(r.eaMonth)/maxMonth*100).toFixed(0)}%;height:100%;background:${r.eaMonth>=0?'var(--pos)':'var(--neg)'};border-radius:3px"></div></div></td>
-        </tr>`).join('')
-      }</tbody></table></div>`;
-    } else eaBreakEl.innerHTML = '';
-  }
+
   renderEaRating(entries);
   setTimeout(renderEaMonthChart, 50);
 }
@@ -3443,14 +3416,14 @@ function renderEaRating(entries) {
   if (!header || !body) return;
 
   const cols = [
-    { key:'name',     label:'EA',             tip:null,                                                                                   fmt: function(v){ return v; } },
-    { key:'winRate',  label:'Win-Rate',        tip:'Anteil positiver Handelstage. >80% = sehr gut.',                                       fmt: function(v){ return v===null?'–':v.toFixed(0)+'%'; } },
-    { key:'pddRatio', label:'P&L/DD Ratio',   tip:'Avg. Tagesgewinn ÷ Avg. Tages-DD. >1 = verdient mehr als riskiert. >2 = sehr gut.',   fmt: function(v){ return v===null?'–':v===Infinity?'∞':v.toFixed(2); } },
-    { key:'exp',      label:'Expectancy',      tip:'Erwarteter Gewinn pro Tag: (Win-Rate × Avg.Gewinn) − (Loss-Rate × Avg.Verlust).',      fmt: function(v){ return v===null?'–':(v>=0?'+$':'-$')+Math.abs(v).toFixed(2); } },
-    { key:'sharpe',   label:'Sharpe Ratio',    tip:'Avg. Tagesgewinn ÷ Standardabweichung. >1 = gut, >2 = sehr gut.',                    fmt: function(v){ return v===null?'–':v.toFixed(2); } },
-    { key:'recovery', label:'Recovery Factor', tip:'Gesamt P&L ÷ Max DD. Zeigt wie gut der EA seinen Drawdown aufholt. >3 = gut.',        fmt: function(v){ return v===null?'–':v===Infinity?'∞':v.toFixed(2); } },
-    { key:'maxDd',    label:'Max DD',          tip:'Größter Einzelverlust eines Tages.',                                                   fmt: function(v){ return v===null?'–':'-$'+Math.abs(v).toFixed(2); } },
-    { key:'score',    label:'Score',           tip:'Gewichteter Gesamtscore 0–10 aus allen Kennzahlen.',                                  fmt: function(v){ return v===null?'–':'⭐ '+v.toFixed(1); } },
+    { key:'name',          label:'EA',               tip:null,                                                                                          fmt: function(v){ return v; } },
+    { key:'n',             label:'Einträge',          tip:'Anzahl Einträge – je mehr, desto aussagekräftiger.',                                          fmt: function(v){ return v; } },
+    { key:'avgPnl',        label:'Ø Gewinn/Eintrag',  tip:'Durchschnittlicher Gewinn pro Eintrag. Zeigt die echte Performance.',                         fmt: function(v){ return v===null?'–':(v>=0?'+$':'-$')+Math.abs(v).toFixed(2); } },
+    { key:'pddRatio',      label:'P&L/DD Ratio',      tip:'Avg. Tagesgewinn ÷ Avg. Tages-DD. >1 = verdient mehr als riskiert. >2 = sehr gut.',          fmt: function(v){ return v===null?'–':v===Infinity?'∞':v.toFixed(2); } },
+    { key:'profitFactor',  label:'Profit Factor',     tip:'Summe Gewinne ÷ Summe Verluste. >1.5 = gut, >2 = sehr gut. Unabhängig von Reihenfolge.',     fmt: function(v){ return v===null?'–':v===Infinity?'∞':v.toFixed(2); } },
+    { key:'recovery',      label:'Recovery Factor',   tip:'Gesamt P&L ÷ Max DD. Zeigt wie gut der EA seinen Drawdown aufholt. >3 = gut.',               fmt: function(v){ return v===null?'–':v===Infinity?'∞':v.toFixed(2); } },
+    { key:'maxDd',         label:'Max DD',            tip:'Größter erfasster Drawdown.',                                                                  fmt: function(v){ return v===null?'–':'-$'+Math.abs(v).toFixed(2); } },
+    { key:'score',         label:'Score',             tip:'Gewichteter Gesamtscore 0–10. Wenige Einträge = niedrigerer Score.',                          fmt: function(v){ return v===null?'–':v.toFixed(1); } },
   ];
 
   header.innerHTML = cols.map(function(c) {
@@ -3474,39 +3447,32 @@ function renderEaRating(entries) {
 
     var wins   = pnls.filter(function(v){ return v > 0; });
     var losses = pnls.filter(function(v){ return v < 0; });
-    var winRate = (wins.length / n) * 100;
+
+    var totalPnl = pnls.reduce(function(s,v){ return s+v; }, 0);
+    var avgPnl   = totalPnl / n;
 
     var sumWin  = wins.reduce(function(s,v){ return s+v; }, 0);
     var sumLoss = Math.abs(losses.reduce(function(s,v){ return s+v; }, 0));
-    var avgWin  = wins.length  ? sumWin  / wins.length  : 0;
-    var avgLoss = losses.length ? sumLoss / losses.length : 0;
-    var exp = (winRate/100 * avgWin) - ((1 - winRate/100) * avgLoss);
+    var profitFactor = sumLoss === 0 ? Infinity : sumWin / sumLoss;
 
-    var avg = pnls.reduce(function(s,v){ return s+v; }, 0) / n;
-    var variance = pnls.reduce(function(s,v){ return s + Math.pow(v-avg, 2); }, 0) / n;
-    var stdDev = Math.sqrt(variance);
-    var sharpe = stdDev === 0 ? null : avg / stdDev;
-
-    var totalPnl = pnls.reduce(function(s,v){ return s+v; }, 0);
     var maxDdVal = dds.length ? Math.max.apply(null, dds) : 0;
-    var maxDd = -maxDdVal;
+    var maxDd    = -maxDdVal;
     var recovery = maxDdVal === 0 ? Infinity : totalPnl / maxDdVal;
 
     // P&L/DD Ratio
-    var avgPnl = totalPnl / n;
-    var avgDd  = dds.length ? dds.reduce(function(s,v){ return s+v; }, 0) / dds.length : 0;
+    var avgDd    = dds.length ? dds.reduce(function(s,v){ return s+v; }, 0) / dds.length : 0;
     var pddRatio = avgDd === 0 ? Infinity : avgPnl / avgDd;
 
-    var confidence = Math.min(1, n / 20);
-    var scoreWinRate  = Math.min(10, winRate / 10);
+    // Score: avgPnl, profitFactor, pddRatio, recovery – gewichtet, mit Konfidenz
+    var confidence    = Math.min(1, n / 20);
+    var scoreAvgPnl   = avgPnl <= 0 ? 0 : Math.min(10, avgPnl / 10);
     var scorePdd      = pddRatio === Infinity ? 10 : Math.min(10, Math.max(0, pddRatio * 5));
-    var scoreExp      = exp <= 0 ? 0 : Math.min(10, exp / 10);
-    var scoreSharpe   = sharpe === null ? 5 : Math.min(10, Math.max(0, sharpe * 3 + 5));
+    var scorePF       = profitFactor === Infinity ? 10 : Math.min(10, Math.max(0, (profitFactor - 1) * 5));
     var scoreRecovery = recovery === Infinity ? 10 : Math.min(10, Math.max(0, recovery));
-    var rawScore = (scoreWinRate*2 + scorePdd*2 + scoreExp*2 + scoreSharpe*2 + scoreRecovery*2) / 10;
+    var rawScore = (scoreAvgPnl*3 + scorePdd*2 + scorePF*3 + scoreRecovery*2) / 10;
     var score = rawScore * confidence + (rawScore * 0.5) * (1 - confidence);
 
-    return { name: ea.name, winRate: winRate, pddRatio: pddRatio, exp: exp, sharpe: sharpe, recovery: recovery, maxDd: maxDd, score: score, n: n };
+    return { name: ea.name, n: n, avgPnl: avgPnl, pddRatio: pddRatio, profitFactor: profitFactor, recovery: recovery, maxDd: maxDd, score: score };
   }).filter(Boolean);
 
   stats.sort(function(a,b) {
@@ -3517,20 +3483,20 @@ function renderEaRating(entries) {
     return (av - bv) * eaRatingSort.dir;
   });
 
-  var colorWinRate  = function(v){ return v >= 80 ? 'var(--pos)' : v >= 60 ? 'var(--warn)' : 'var(--neg)'; };
+  var colorN        = function(v){ return v >= 20 ? 'var(--pos)' : v >= 10 ? 'var(--warn)' : 'var(--text3)'; };
+  var colorAvgPnl   = function(v){ return v > 0 ? 'var(--pos)' : 'var(--neg)'; };
   var colorPdd      = function(v){ return v === Infinity || v >= 2 ? 'var(--pos)' : v >= 1 ? 'var(--warn)' : 'var(--neg)'; };
-  var colorExp      = function(v){ return v > 0 ? 'var(--pos)' : 'var(--neg)'; };
-  var colorSharpe   = function(v){ return v === null ? 'var(--text3)' : v >= 1 ? 'var(--pos)' : v >= 0 ? 'var(--warn)' : 'var(--neg)'; };
+  var colorPF       = function(v){ return v === Infinity || v >= 2 ? 'var(--pos)' : v >= 1.5 ? 'var(--warn)' : 'var(--neg)'; };
   var colorRecovery = function(v){ return v === Infinity || v >= 3 ? 'var(--pos)' : v >= 1 ? 'var(--warn)' : 'var(--neg)'; };
   var colorScore    = function(v){ return v >= 7 ? 'var(--pos)' : v >= 5 ? 'var(--warn)' : 'var(--neg)'; };
 
   body.innerHTML = stats.map(function(s) {
     return '<tr>' +
       '<td style="font-weight:600;color:var(--accent)">' + s.name + '</td>' +
-      '<td style="color:' + colorWinRate(s.winRate) + '">' + cols[1].fmt(s.winRate) + '</td>' +
-      '<td style="color:' + colorPdd(s.pddRatio) + '">' + cols[2].fmt(s.pddRatio) + '</td>' +
-      '<td style="color:' + colorExp(s.exp) + '">' + cols[3].fmt(s.exp) + '</td>' +
-      '<td style="color:' + colorSharpe(s.sharpe) + '">' + cols[4].fmt(s.sharpe) + '</td>' +
+      '<td style="color:' + colorN(s.n) + '">' + cols[1].fmt(s.n) + '</td>' +
+      '<td style="color:' + colorAvgPnl(s.avgPnl) + '">' + cols[2].fmt(s.avgPnl) + '</td>' +
+      '<td style="color:' + colorPdd(s.pddRatio) + '">' + cols[3].fmt(s.pddRatio) + '</td>' +
+      '<td style="color:' + colorPF(s.profitFactor) + '">' + cols[4].fmt(s.profitFactor) + '</td>' +
       '<td style="color:' + colorRecovery(s.recovery) + '">' + cols[5].fmt(s.recovery) + '</td>' +
       '<td style="color:var(--neg)">' + cols[6].fmt(s.maxDd) + '</td>' +
       '<td style="color:' + colorScore(s.score) + ';font-weight:700;font-size:13px">' + cols[7].fmt(s.score) + '</td>' +
