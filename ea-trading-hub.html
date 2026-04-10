@@ -361,75 +361,64 @@ select option { background:var(--bg4); }
 
 <!-- NAV -->
 <nav class="nav">
-  <button class="nav-tab active" onclick="showView('overview',this)">📊 Übersicht</button>
+  <button class="nav-tab active" onclick="showView('live',this)">📈 Live</button>
+  <button class="nav-tab" onclick="showView('demo',this)">🧪 Demo</button>
   <button class="nav-tab" onclick="showView('accounts',this)">🏦 Konten</button>
-  <button class="nav-tab" onclick="showView('eas',this)">🤖 EAs</button>
-  <button class="nav-tab" onclick="showView('strategy',this)">📋 Strategie</button>
-  <button class="nav-tab" onclick="showView('pnl',this)">📈 P&amp;L</button>
+  <button class="nav-tab" onclick="showView('pnl',this)">📊 P&amp;L</button>
   <button class="nav-tab" onclick="showView('analytics',this)">📉 Analyse</button>
-  <button class="nav-tab" onclick="showView('income',this)">💰 Einkommen</button>
-  <button class="nav-tab" onclick="showView('ealab',this)">🔬 EA Lab</button>
-  <button class="nav-tab" onclick="showView('diary',this)">📓 Tagebuch</button>
-  <button class="nav-tab" onclick="showView('todos',this)">✅ To Dos</button>
+  <button class="nav-tab" onclick="showView('forecast',this)">💰 Forecast</button>
 </nav>
 
 <div class="main">
 
 <!-- ===== ÜBERSICHT ===== -->
-<div class="view active" id="view-overview">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-    <span style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text3)">P&L Filter:</span>
-    <div style="display:flex;gap:6px">
-      <button class="pnl-filter-btn active" onclick="setPnlFilter('all',this)">Alle</button>
-      <button class="pnl-filter-btn" onclick="setPnlFilter('Live',this)">📈 Live</button>
-      <button class="pnl-filter-btn" onclick="setPnlFilter('Demo',this)">🧪 Demo</button>
-    </div>
-    <div style="margin-left:auto" id="missingEntriesBanner"></div>
-  </div>
-  <div class="sum-grid" id="sumCards"></div>
+<div class="view active" id="view-live">
+  <!-- KPI Leiste -->
+  <div class="sum-grid" id="liveKpiCards"></div>
 
-  <!-- Ziele Fortschritt -->
+  <!-- Ziele -->
   <div class="form-panel" style="margin-bottom:22px">
-    <div class="sh">Ziele <span style="font-size:9px;color:var(--text3);font-weight:400;margin-left:8px">→ Einstellungen im Einkommen-Tab</span></div>
-    <div id="goalProgressLive"></div>
+    <div class="sh">Ziele <span style="font-size:9px;color:var(--text3);font-weight:400;margin-left:8px">→ Einstellungen im Forecast-Tab</span></div>
+    <div id="liveGoalProgress"></div>
   </div>
 
-  <div class="grid-2">
-    <div class="chart-wrap">
-      <div class="chart-title">Balance Live-Konten</div>
-      <canvas id="balanceChart"></canvas>
+  <!-- 3 Tachometer -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:22px">
+    <div class="form-panel" style="margin:0;text-align:center">
+      <div class="sh" style="margin-bottom:12px;font-size:11px">⚡ Heute</div>
+      <canvas id="gaugeToday" width="220" height="130"></canvas>
+      <div id="gaugeTodayVal" style="font-size:18px;font-weight:700;margin-top:6px"></div>
+      <div id="gaugeTodaySub" style="font-size:10px;color:var(--text3)"></div>
     </div>
-    <div class="chart-wrap">
-      <div class="chart-title" id="pnlBarChartTitle">Kumulierter Gewinn + Tages P&L</div>
-      <canvas id="pnlBarChart"></canvas>
+    <div class="form-panel" style="margin:0;text-align:center">
+      <div class="sh" style="margin-bottom:12px;font-size:11px">📅 Woche</div>
+      <canvas id="gaugeWeek" width="220" height="130"></canvas>
+      <div id="gaugeWeekVal" style="font-size:18px;font-weight:700;margin-top:6px"></div>
+      <div id="gaugeWeekSub" style="font-size:10px;color:var(--text3)"></div>
+    </div>
+    <div class="form-panel" style="margin:0;text-align:center">
+      <div class="sh" style="margin-bottom:12px;font-size:11px">🗓 Monat</div>
+      <canvas id="gaugeMonth" width="220" height="130"></canvas>
+      <div id="gaugeMonthVal" style="font-size:18px;font-weight:700;margin-top:6px"></div>
+      <div id="gaugeMonthSub" style="font-size:10px;color:var(--text3)"></div>
     </div>
   </div>
 
+  <!-- Fehlende Einträge -->
+  <div id="missingEntriesBanner" style="margin-bottom:16px"></div>
+
+  <!-- EA Kacheln -->
+  <div class="sh" style="margin-bottom:12px">🤖 Aktive EAs (Live)</div>
+  <div id="liveEaCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:22px"></div>
+
+  <!-- Heutige Einträge -->
   <div class="sh">Heutige Einträge</div>
   <div class="table-wrap">
     <table><thead><tr><th>Konto</th><th>EA</th><th>Strategie</th><th>P&L</th><th>DD</th><th>Notiz</th></tr></thead>
     <tbody id="todayRows"></tbody></table>
   </div>
-
-  <!-- 3-Spalten Dashboard -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px">
-    <!-- Links: Offene To-Dos -->
-    <div class="form-panel" style="margin:0">
-      <div class="sh" style="margin-bottom:12px">✅ Offene To Dos</div>
-      <div id="todoSummary"></div>
-    </div>
-    <!-- Mitte: EA Lab Vorschau -->
-    <div class="form-panel" style="margin:0">
-      <div class="sh" style="margin-bottom:12px">🔬 EA Lab – Top Priority</div>
-      <div id="overviewEaLab"></div>
-    </div>
-    <!-- Rechts: Wochengewinn -->
-    <div class="form-panel" style="margin:0">
-      <div class="sh" style="margin-bottom:12px">📤 Wochengewinn je EA</div>
-      <div id="overviewWeeklyPnl"></div>
-    </div>
-  </div>
 </div>
+
 
 <!-- ===== KONTEN ===== -->
 <div class="view" id="view-accounts">
@@ -468,6 +457,105 @@ select option { background:var(--bg4); }
 </div>
 
 <!-- ===== EAS ===== -->
+
+<!-- ===== DEMO ===== -->
+<div class="view" id="view-demo">
+  <!-- Analyse Charts Demo -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+    <span style="font-size:12px;font-weight:600;color:var(--text2)">🧪 Demo-Konten – Analyse</span>
+  </div>
+  <div id="demoAnalyticsCards" class="sum-grid" style="margin-bottom:18px"></div>
+  <div class="grid-2" style="margin-bottom:22px">
+    <div class="chart-wrap">
+      <div class="chart-title">Performance pro Woche (Demo)</div>
+      <canvas id="demoWeeklyChart"></canvas>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Performance pro Monat (Demo)</div>
+      <canvas id="demoMonthlyChart"></canvas>
+    </div>
+  </div>
+
+  <!-- EA Lab Tabellen -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="pnl-filter-btn active" id="lab-btn-all"   onclick="setLabFilter('all',this)">Alle</button>
+      <button class="pnl-filter-btn"        id="lab-btn-live"  onclick="setLabFilter('live',this)">🟢 Live</button>
+      <button class="pnl-filter-btn"        id="lab-btn-test"  onclick="setLabFilter('testing',this)">🧪 Testing</button>
+      <button class="pnl-filter-btn"        id="lab-btn-watch" onclick="setLabFilter('watchlist',this)">👁 Watchlist</button>
+      <button class="pnl-filter-btn"        id="lab-btn-off"   onclick="setLabFilter('off',this)">⛔ Aussortiert</button>
+    </div>
+    <button onclick="addLabEntry()" class="btn btn-primary" style="font-size:11px;padding:6px 14px">+ EA hinzufügen</button>
+  </div>
+
+  <!-- Add/Edit Form -->
+  <div id="labForm" style="display:none" class="form-panel">
+    <div class="sh" id="labFormTitle">EA hinzufügen</div>
+    <input type="hidden" id="lab-edit-id">
+    <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+      <div class="form-group"><label>Name *</label><input id="lab-name" placeholder="EA Name"></div>
+      <div class="form-group"><label>Status</label>
+        <select id="lab-status">
+          <option value="watchlist">👁 Watchlist</option>
+          <option value="testing">🧪 Testing</option>
+          <option value="live">🟢 Live</option>
+          <option value="off">⛔ Aussortiert</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Priority</label>
+        <select id="lab-priority">
+          <option value="high">🔴 Hoch</option>
+          <option value="medium" selected>🟡 Mittel</option>
+          <option value="low">🟢 Niedrig</option>
+        </select>
+      </div>
+      <div class="form-group"><label>MT</label>
+        <select id="lab-mt">
+          <option value="MT4">MT4</option>
+          <option value="MT5">MT5</option>
+          <option value="beide">MT4 + MT5</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Timeframe</label><input id="lab-tf" placeholder="M1, H1..."></div>
+      <div class="form-group"><label>Preis</label><input id="lab-price" placeholder="z.B. $299 oder kostenlos"></div>
+      <div class="form-group"><label>Quelle</label><input id="lab-source" placeholder="mql5.com, Telegram..."></div>
+      <div class="form-group"><label>Meine Bewertung (0-10)</label><input id="lab-myrating" type="number" min="0" max="10" step="0.1" placeholder="8.5"></div>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr;margin-top:10px">
+      <div class="form-group"><label>Kauflink (URL)</label><input id="lab-buyurl" placeholder="https://..."></div>
+      <div class="form-group"><label>Tracking-Link</label><input id="lab-trackurl" placeholder="https://myfxbook.com/..."></div>
+      <div class="form-group"><label>Telegram</label><input id="lab-telegram" placeholder="@kanal oder Link"></div>
+      <div class="form-group"><label>Screenshot-URL</label><input id="lab-screenshot" placeholder="https://..."></div>
+    </div>
+    <div class="form-group" style="margin-top:10px"><label>Settings</label><textarea id="lab-settings" rows="2" placeholder="Lot, TP, SL, Magic..."></textarea></div>
+    <div class="form-group"><label>Notizen</label><textarea id="lab-notes" rows="2" placeholder="Beobachtungen, Gedanken..."></textarea></div>
+    <div class="form-group"><label>KI-Bewertung</label><textarea id="lab-airating" rows="3" placeholder="KI-Einschätzung..."></textarea></div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn btn-primary" onclick="saveLabEntry()">💾 Speichern</button>
+      <button class="btn" onclick="cancelLabEntry()">Abbrechen</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table id="labTable" style="table-layout:fixed;width:100%">
+      <thead><tr>
+        <th style="width:160px">EA</th>
+        <th style="width:90px">Status</th>
+        <th style="width:80px">Priority</th>
+        <th style="width:55px">MT</th>
+        <th style="width:45px">TF</th>
+        <th style="width:90px">Preis</th>
+        <th style="width:90px">Quelle</th>
+        <th style="width:65px;text-align:center">Meine ⭐</th>
+        <th style="width:55px;text-align:center">KI ⭐</th>
+        <th style="width:70px;text-align:center">Links</th>
+        <th style="width:50px"></th>
+      </tr></thead>
+      <tbody id="labBody"></tbody>
+    </table>
+  </div>
+</div>
+
 <div class="view" id="view-eas">
   <div class="form-panel">
     <div class="sh" id="eaFormTitle">EA hinzufügen</div>
@@ -614,7 +702,7 @@ select option { background:var(--bg4); }
 </div>
 
 <!-- ===== EINKOMMEN ===== -->
-<div class="view" id="view-income">
+<div class="view" id="view-forecast">
   <!-- Filter -->
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
     <span style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text3)">Filter:</span>
@@ -1077,25 +1165,16 @@ function checkOnline() {
 // RENDER ALL
 // ============================================================
 function renderAll() {
-  renderSumCards();
   renderAccountsTable();
   renderEAsTable();
   renderPnlTable();
-  renderDiary();
-  renderAnalytics();
-  renderTodos();
-  renderTodoSummary();
   updateSelects();
+  renderLiveTab();
+  renderDemoTab();
   setTimeout(function() {
-    renderOverviewDepositPlan();
-    renderOverviewWeeklyPnl();
+    renderDemoCharts();
     renderLabTable();
-    renderOverviewEaLab();
-  }, 0);
-  renderCharts();
-  renderTodayRows();
-  renderGoalProgress();
-  renderIncome();
+  }, 50);
 }
 
 // ============================================================
@@ -1106,10 +1185,10 @@ function showView(id, btn) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('view-'+id).classList.add('active');
   btn.classList.add('active');
-  if (id === 'overview' || id === 'analytics') { setTimeout(renderCharts, 50); }
-  if (id === 'analytics') renderAnalytics();
-  if (id === 'ealab') renderLabTable();
-  if (id === 'strategy') renderStrategy();
+  if (id === 'live') { renderLiveTab(); }
+  if (id === 'demo') { renderDemoTab(); setTimeout(renderDemoCharts, 50); }
+  if (id === 'analytics') { renderAnalytics(); setTimeout(renderCharts, 50); }
+  if (id === 'forecast') { renderIncome(); }
 }
 
 // ============================================================
@@ -3744,6 +3823,287 @@ function renderOverviewEaLab() {
       '<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:'+pc+'22;color:'+pc+';font-weight:500;white-space:nowrap">' + (prioLabel[e.priority]||e.priority) + '</span>' +
     '</div>';
   }).join('');
+}
+
+
+// ============================================================
+// LIVE TAB
+// ============================================================
+function renderLiveTab() {
+  const today = localToday();
+  const month = today.substring(0,7);
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+  const ws = weekStart.getFullYear()+'-'+String(weekStart.getMonth()+1).padStart(2,'0')+'-'+String(weekStart.getDate()).padStart(2,'0');
+
+  const liveAccIds = new Set(DB.accounts.filter(a => a.type==='Live').map(a => a.id));
+  const livePnl = DB.pnl.filter(p => (!p.entryType || p.entryType==='trade') && liveAccIds.has(p.accountId));
+
+  const todayPnl  = livePnl.filter(p => p.date===today).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+  const weekPnl   = livePnl.filter(p => p.date>=ws && p.date<=today).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+  const monthPnl  = livePnl.filter(p => p.date&&p.date.startsWith(month)).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+  const totalPnl  = livePnl.reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+  const liveBal   = DB.accounts.filter(a=>a.type==='Live'&&isActive(a)).reduce((s,a)=>s+getAccountBalance(a),0);
+
+  // KPI Cards
+  const kpiEl = document.getElementById('liveKpiCards');
+  if (kpiEl) {
+    const fmt = v => (v>=0?'+$':'-$')+Math.abs(v).toFixed(2);
+    const cls = v => v>=0?'pos':'neg';
+    kpiEl.innerHTML = [
+      {label:'Guthaben (Live)', val:'$'+liveBal.toFixed(2), sub:DB.accounts.filter(a=>a.type==='Live'&&isActive(a)).length+' Live Konten', cls:''},
+      {label:'P&L Heute', val:fmt(todayPnl), sub:'Live', cls:cls(todayPnl)},
+      {label:'P&L Woche', val:fmt(weekPnl), sub:'laufende Woche', cls:cls(weekPnl)},
+      {label:'P&L Monat', val:fmt(monthPnl), sub:new Date().toLocaleDateString('de-DE',{month:'long'}), cls:cls(monthPnl)},
+      {label:'P&L Gesamt', val:fmt(totalPnl), sub:'alle Einträge (Live)', cls:cls(totalPnl)},
+    ].map(c=>`<div class="sum-card ${c.cls}"><div class="sum-label">${c.label}</div><div class="sum-value ${c.cls}">${c.val}</div>${c.sub?`<div class="sum-sub">${c.sub}</div>`:''}</div>`).join('');
+  }
+
+  // Ziele
+  renderGoalProgressLive('liveGoalProgress');
+
+  // Tachometer
+  const goals = DB.settings && DB.settings.incomeGoals || {};
+  drawGauge('gaugeToday', todayPnl, goals.day||0, 'gaugeTodayVal', 'gaugeTodaySub', 'Tagesziel');
+  drawGauge('gaugeWeek',  weekPnl,  goals.week||0, 'gaugeWeekVal',  'gaugeWeekSub',  'Wochenziel');
+  drawGauge('gaugeMonth', monthPnl, goals.month||0, 'gaugeMonthVal', 'gaugeMonthSub', 'Monatsziel');
+
+  // EA Kacheln
+  renderLiveEaCards(livePnl, today, ws, month);
+
+  // Today rows
+  renderTodayRows();
+  renderMissingEntries();
+}
+
+function drawGauge(canvasId, value, goal, valId, subId, label) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  const cx = W/2, cy = H-10;
+  const r = Math.min(W,H*1.8)/2 - 14;
+  const startAngle = Math.PI;
+  const endAngle   = 2*Math.PI;
+
+  // Segments: red, orange, yellow, green, teal
+  const segments = [
+    {pct:0.2, color:'#3d1a1a'},
+    {pct:0.2, color:'#3d2a0a'},
+    {pct:0.2, color:'#2a2a0a'},
+    {pct:0.2, color:'#0a3d1a'},
+    {pct:0.2, color:'#0a3d3d'},
+  ];
+  let ang = startAngle;
+  segments.forEach(seg => {
+    const sweep = seg.pct * Math.PI;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, ang, ang+sweep);
+    ctx.arc(cx, cy, r*0.55, ang+sweep, ang, true);
+    ctx.fillStyle = seg.color;
+    ctx.fill();
+    ang += sweep;
+  });
+
+  // Active fill
+  const pct = goal > 0 ? Math.min(1, Math.max(0, value/goal)) : 0;
+  const activeColors = ['#ff3333','#ff8800','#ffdd00','#00cc55','#00cccc'];
+  ang = startAngle;
+  segments.forEach((seg, i) => {
+    const sweep = seg.pct * Math.PI;
+    const fillPct = Math.min(1, Math.max(0, (pct - i*0.2)/0.2));
+    if (fillPct > 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, ang, ang+sweep*fillPct);
+      ctx.arc(cx, cy, r*0.55, ang+sweep*fillPct, ang, true);
+      ctx.fillStyle = activeColors[i];
+      ctx.fill();
+    }
+    ang += sweep;
+  });
+
+  // Needle
+  const needleAngle = startAngle + pct * Math.PI;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(needleAngle);
+  ctx.beginPath();
+  ctx.moveTo(-3, 0);
+  ctx.lineTo(0, -r*0.85);
+  ctx.lineTo(3, 0);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.restore();
+
+  // Center dot
+  ctx.beginPath();
+  ctx.arc(cx, cy, 7, 0, 2*Math.PI);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+
+  // Values
+  const valEl = document.getElementById(valId);
+  const subEl = document.getElementById(subId);
+  if (valEl) {
+    const cls = value >= 0 ? '#00ff9d' : '#ff4757';
+    valEl.innerHTML = `<span style="color:${cls}">${value>=0?'+$':'-$'}${Math.abs(value).toFixed(2)}</span>`;
+  }
+  if (subEl) {
+    subEl.textContent = goal > 0 ? `${(pct*100).toFixed(0)}% von $${goal.toFixed(0)} ${label}` : `Kein ${label} gesetzt`;
+  }
+}
+
+function renderGoalProgressLive(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const today = localToday();
+  const month = today.substring(0,7);
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+  const ws = weekStart.getFullYear()+'-'+String(weekStart.getMonth()+1).padStart(2,'0')+'-'+String(weekStart.getDate()).padStart(2,'0');
+  const goals = DB.settings && DB.settings.incomeGoals || {};
+  const gDay = goals.day||0, gWeek = goals.week||0, gMonth = goals.month||0;
+  if (!gDay && !gWeek && !gMonth) {
+    el.innerHTML = '<span style="color:var(--text3);font-size:10px">Keine Ziele gesetzt – im <b>Forecast</b>-Tab eintragen.</span>';
+    return;
+  }
+  const liveAccIds = new Set(DB.accounts.filter(a=>a.type==='Live').map(a=>a.id));
+  const liveTrades = DB.pnl.filter(p=>(!p.entryType||p.entryType==='trade')&&liveAccIds.has(p.accountId));
+  const dayPnl   = liveTrades.filter(p=>p.date===today).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+  const weekPnl  = liveTrades.filter(p=>p.date>=ws&&p.date<=today).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+  const monthPnl = liveTrades.filter(p=>p.date&&p.date.startsWith(month)).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+  const bars = [{label:'Heute (Live)',pnl:dayPnl,goal:gDay},{label:'Woche (Live)',pnl:weekPnl,goal:gWeek},{label:'Monat (Live)',pnl:monthPnl,goal:gMonth}].filter(b=>b.goal>0);
+  el.innerHTML = `<div style="display:grid;gap:10px">`+bars.map(b=>{
+    const pct=Math.min(100,Math.max(0,(b.pnl/b.goal)*100));
+    const done=b.pnl>=b.goal;
+    const cls=b.pnl>=0?'pos-val':'neg-val';
+    return `<div><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:5px"><span>${b.label}: <span class="${cls}">${b.pnl>=0?'+':''}$${b.pnl.toFixed(2)}</span>${done?' 🎯 Ziel erreicht!':''}</span><span>Ziel: $${b.goal.toFixed(2)}</span></div><div class="goal-bar-bg" style="height:6px"><div class="goal-bar-fill ${done?'done':''}" style="width:${pct}%"></div></div><div style="font-size:9px;color:var(--text3);margin-top:3px">${pct.toFixed(0)}%</div></div>`;
+  }).join('')+`</div>`;
+}
+
+function renderLiveEaCards(livePnl, today, ws, month) {
+  const el = document.getElementById('liveEaCards');
+  if (!el) return;
+
+  // Finde EAs mit Live-Einträgen diesen Monat
+  const activeEaIds = new Set(livePnl.filter(p=>p.date&&p.date.startsWith(month)).map(p=>p.eaId));
+  if (!activeEaIds.size) {
+    el.innerHTML = '<span style="color:var(--text3);font-size:11px">Keine aktiven EAs diesen Monat.</span>';
+    return;
+  }
+
+  // Gruppiere nach EA-Name
+  const byName = {};
+  DB.eas.forEach(ea => {
+    if (!activeEaIds.has(ea.id)) return;
+    const eaP = livePnl.filter(p=>p.eaId==ea.id);
+    const todayV  = eaP.filter(p=>p.date===today).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+    const weekV   = eaP.filter(p=>p.date>=ws&&p.date<=today).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+    const monthV  = eaP.filter(p=>p.date&&p.date.startsWith(month)).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+    const totalV  = eaP.reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+    if (!byName[ea.name]) byName[ea.name] = {today:0,week:0,month:0,total:0};
+    byName[ea.name].today += todayV;
+    byName[ea.name].week  += weekV;
+    byName[ea.name].month += monthV;
+    byName[ea.name].total += totalV;
+  });
+
+  const fmt = v => (v>=0?'+$':'-$')+Math.abs(v).toFixed(2);
+  const col = v => v>=0?'var(--pos)':'var(--neg)';
+
+  el.innerHTML = Object.keys(byName).map(name => {
+    const d = byName[name];
+    return `<div class="form-panel" style="margin:0;padding:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px">${name}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Heute</div><div style="font-size:15px;font-weight:700;color:${col(d.today)}">${fmt(d.today)}</div></div>
+        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Woche</div><div style="font-size:15px;font-weight:700;color:${col(d.week)}">${fmt(d.week)}</div></div>
+        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Monat</div><div style="font-size:15px;font-weight:700;color:${col(d.month)}">${fmt(d.month)}</div></div>
+        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Gesamt</div><div style="font-size:15px;font-weight:700;color:${col(d.total)}">${fmt(d.total)}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// DEMO TAB
+// ============================================================
+function renderDemoTab() {
+  const today = localToday();
+  const month = today.substring(0,7);
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+  const ws = weekStart.getFullYear()+'-'+String(weekStart.getMonth()+1).padStart(2,'0')+'-'+String(weekStart.getDate()).padStart(2,'0');
+
+  const demoAccIds = new Set(DB.accounts.filter(a=>a.type==='Demo').map(a=>a.id));
+  const demoPnl = DB.pnl.filter(p=>(!p.entryType||p.entryType==='trade')&&demoAccIds.has(p.accountId));
+
+  const todayPnl = demoPnl.filter(p=>p.date===today).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+  const weekPnl  = demoPnl.filter(p=>p.date>=ws&&p.date<=today).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+  const monthPnl = demoPnl.filter(p=>p.date&&p.date.startsWith(month)).reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+  const totalPnl = demoPnl.reduce((s,p)=>s+(parseFloat(p.pnl)||0),0);
+
+  const cardsEl = document.getElementById('demoAnalyticsCards');
+  if (cardsEl) {
+    const fmt = v=>(v>=0?'+$':'-$')+Math.abs(v).toFixed(2);
+    const cls = v=>v>=0?'pos':'neg';
+    cardsEl.innerHTML = [
+      {label:'P&L Heute (Demo)', val:fmt(todayPnl), cls:cls(todayPnl)},
+      {label:'P&L Woche (Demo)', val:fmt(weekPnl),  cls:cls(weekPnl)},
+      {label:'P&L Monat (Demo)', val:fmt(monthPnl), cls:cls(monthPnl)},
+      {label:'P&L Gesamt (Demo)',val:fmt(totalPnl), cls:cls(totalPnl)},
+    ].map(c=>`<div class="sum-card ${c.cls}"><div class="sum-label">${c.label}</div><div class="sum-value ${c.cls}">${c.val}</div></div>`).join('');
+  }
+  renderLabTable();
+}
+
+function renderDemoCharts() {
+  const demoAccIds = new Set(DB.accounts.filter(a=>a.type==='Demo').map(a=>a.id));
+  const entries = DB.pnl.filter(p=>(!p.entryType||p.entryType==='trade')&&demoAccIds.has(p.accountId));
+
+  // Weekly chart
+  const weeks = {}; const months = {};
+  entries.forEach(p => {
+    if (!p.date) return;
+    const d = new Date(p.date);
+    const wk = p.date.substring(0,4)+'-W'+String(getISOWeek(d)).padStart(2,'0');
+    const mo = p.date.substring(0,7);
+    weeks[wk]  = (weeks[wk]||0)+(parseFloat(p.pnl)||0);
+    months[mo] = (months[mo]||0)+(parseFloat(p.pnl)||0);
+  });
+
+  const wKeys = Object.keys(weeks).sort().slice(-10);
+  const mKeys = Object.keys(months).sort().slice(-6);
+
+  const wCtx = document.getElementById('demoWeeklyChart');
+  const mCtx = document.getElementById('demoMonthlyChart');
+
+  if (wCtx) {
+    if (charts.demoWeekly) charts.demoWeekly.destroy();
+    charts.demoWeekly = new Chart(wCtx, {
+      type:'bar',
+      data:{ labels:wKeys, datasets:[{data:wKeys.map(k=>parseFloat(weeks[k].toFixed(2))), backgroundColor:wKeys.map(k=>weeks[k]>=0?'rgba(0,255,157,0.5)':'rgba(255,71,87,0.5)'), borderColor:wKeys.map(k=>weeks[k]>=0?'#00ff9d':'#ff4757'), borderWidth:1}]},
+      options: chartOpts(false)
+    });
+  }
+  if (mCtx) {
+    if (charts.demoMonthly) charts.demoMonthly.destroy();
+    charts.demoMonthly = new Chart(mCtx, {
+      type:'bar',
+      data:{ labels:mKeys, datasets:[{data:mKeys.map(k=>parseFloat(months[k].toFixed(2))), backgroundColor:mKeys.map(k=>months[k]>=0?'rgba(0,255,157,0.5)':'rgba(255,71,87,0.5)'), borderColor:mKeys.map(k=>months[k]>=0?'#00ff9d':'#ff4757'), borderWidth:1}]},
+      options: chartOpts(false)
+    });
+  }
+}
+
+function getISOWeek(d) {
+  const date = new Date(d.getTime());
+  date.setHours(0,0,0,0);
+  date.setDate(date.getDate()+3-(date.getDay()+6)%7);
+  const week1 = new Date(date.getFullYear(),0,4);
+  return 1+Math.round(((date.getTime()-week1.getTime())/86400000-3+(week1.getDay()+6)%7)/7);
 }
 
 </script>
