@@ -368,6 +368,7 @@ select option { background:var(--bg4); }
   <button class="nav-tab" onclick="showView('pnl',this)">📊 P&amp;L</button>
   <button class="nav-tab" onclick="showView('analytics',this)">📉 Analyse</button>
   <button class="nav-tab" onclick="showView('forecast',this)">💰 Forecast</button>
+  <button class="nav-tab" onclick="showView('report',this)">📡 Report</button>
 </nav>
 
 <div class="main">
@@ -933,6 +934,63 @@ select option { background:var(--bg4); }
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+<!-- ===== REPORT ===== -->
+<div class="view" id="view-report">
+  <div style="margin-bottom:18px">
+    <div class="sh" style="margin-bottom:6px">📡 FX Blue Report – Demo Konten</div>
+    <span style="font-size:10px;color:var(--text3)">Live-Daten direkt von FX Blue. Konten werden automatisch aktualisiert.</span>
+  </div>
+
+  <!-- Konto-Kacheln -->
+  <div id="reportAccounts" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:28px"></div>
+
+  <!-- Charts für ausgewähltes Konto -->
+  <div id="reportCharts" style="display:none">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div class="sh" style="margin:0" id="reportChartsTitle">Charts</div>
+      <button onclick="document.getElementById('reportCharts').style.display='none'" 
+              style="background:none;border:1px solid var(--border);border-radius:5px;color:var(--text3);font-size:10px;padding:3px 10px;cursor:pointer">✕ Schließen</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="chart-wrap" style="padding:0;overflow:hidden;border-radius:8px">
+        <iframe id="rss_daily" src="" frameborder="0" width="100%" height="220" style="display:block"></iframe>
+      </div>
+      <div class="chart-wrap" style="padding:0;overflow:hidden;border-radius:8px">
+        <iframe id="rss_weekly" src="" frameborder="0" width="100%" height="220" style="display:block"></iframe>
+      </div>
+      <div class="chart-wrap" style="padding:0;overflow:hidden;border-radius:8px">
+        <iframe id="rss_monthly" src="" frameborder="0" width="100%" height="220" style="display:block"></iframe>
+      </div>
+      <div class="chart-wrap" style="padding:0;overflow:hidden;border-radius:8px">
+        <iframe id="rss_cumulative" src="" frameborder="0" width="100%" height="220" style="display:block"></iframe>
+      </div>
+    </div>
+    <div class="chart-wrap" style="padding:0;overflow:hidden;border-radius:8px;margin-bottom:16px">
+      <iframe id="rss_magic" src="" frameborder="0" width="100%" height="260" style="display:block"></iframe>
+    </div>
+  </div>
+
+  <!-- Neue Konto hinzufügen -->
+  <div class="form-panel" style="margin-top:8px">
+    <div class="sh" style="margin-bottom:12px">+ FX Blue Konto hinzufügen</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <div class="form-group">
+        <label>FX Blue Username</label>
+        <input type="text" id="report-username" placeholder="z.B. kpscalper" style="width:180px">
+      </div>
+      <div class="form-group">
+        <label>Bezeichnung</label>
+        <input type="text" id="report-label" placeholder="z.B. KP Scalper Demo" style="width:180px">
+      </div>
+      <div class="form-group">
+        <label>Magic Number(s)</label>
+        <input type="text" id="report-magic" placeholder="z.B. 20260406" style="width:160px">
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="addReportAccount()">+ Hinzufügen</button>
+    </div>
+  </div>
+</div>
+
 
 <script>
 function localToday() {
@@ -1209,6 +1267,7 @@ function showView(id, btn) {
   if (id === 'eas') { renderEAsTable(); }
   if (id === 'analytics') { renderAnalytics(); setTimeout(renderCharts, 50); }
   if (id === 'forecast') { renderIncome(); renderStrategy(); }
+  if (id === 'report') { renderReportTab(); }
 }
 
 // ============================================================
@@ -4218,6 +4277,83 @@ function renderLiveCharts() {
       options: chartOpts(false)
     });
   }
+}
+
+
+// ============================================================
+// REPORT TAB – FX Blue Integration
+// ============================================================
+
+// Gespeicherte FX Blue Konten
+function getReportAccounts() {
+  try {
+    const saved = localStorage.getItem('ea_hub_report_accounts');
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return [{ username: 'kpscalper', label: 'KP Scalper Demo', magic: '20260406' }];
+}
+
+function saveReportAccounts(accounts) {
+  localStorage.setItem('ea_hub_report_accounts', JSON.stringify(accounts));
+}
+
+function addReportAccount() {
+  const username = document.getElementById('report-username').value.trim().toLowerCase();
+  const label    = document.getElementById('report-label').value.trim();
+  const magic    = document.getElementById('report-magic').value.trim();
+  if (!username) { toast('⚠ Username ist Pflicht', 'err'); return; }
+  const accounts = getReportAccounts();
+  if (accounts.find(a => a.username === username)) { toast('⚠ Bereits vorhanden', 'err'); return; }
+  accounts.push({ username, label: label || username, magic });
+  saveReportAccounts(accounts);
+  document.getElementById('report-username').value = '';
+  document.getElementById('report-label').value    = '';
+  document.getElementById('report-magic').value    = '';
+  renderReportTab();
+  toast('✅ Konto hinzugefügt');
+}
+
+function removeReportAccount(username) {
+  const accounts = getReportAccounts().filter(a => a.username !== username);
+  saveReportAccounts(accounts);
+  renderReportTab();
+}
+
+function showReportCharts(username, label) {
+  const base = '//www.fxblue.com/fxbluechart.aspx';
+  document.getElementById('rss_daily').src      = base + '?c=ch_dailyprofit&id='      + username + '&col=00d4ff&bg=0d1318';
+  document.getElementById('rss_weekly').src     = base + '?c=ch_weeklyprofit&id='     + username + '&col=00d4ff&bg=0d1318';
+  document.getElementById('rss_monthly').src    = base + '?c=ch_monthlyprofit&id='    + username + '&col=00d4ff&bg=0d1318';
+  document.getElementById('rss_cumulative').src = base + '?c=ch_cumulativeprofit&id=' + username + '&col=00d4ff&bg=0d1318';
+  document.getElementById('rss_magic').src      = base + '?c=ch_magicnetprofit&id='   + username + '&col=00d4ff&bg=0d1318';
+  document.getElementById('reportChartsTitle').textContent = '📊 Charts – ' + label;
+  document.getElementById('reportCharts').style.display = 'block';
+  document.getElementById('reportCharts').scrollIntoView({ behavior: 'smooth' });
+}
+
+function renderReportTab() {
+  const accounts = getReportAccounts();
+  const el = document.getElementById('reportAccounts');
+  if (!el) return;
+
+  el.innerHTML = accounts.map(function(acc) {
+    const fxUrl = 'https://www.fxblue.com/users/' + acc.username;
+    const bannerUrl = '//www.fxblue.com/banner.aspx?id=' + acc.username + '&t=300';
+    return '<div class="form-panel" style="margin:0;padding:16px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">' +
+        '<div>' +
+          '<div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:2px">' + acc.label + '</div>' +
+          '<div style="font-size:10px;color:var(--text3)">' +
+            '<a href="' + fxUrl + '" target="_blank" style="color:var(--accent2);text-decoration:none">' + acc.username + ' ↗</a>' +
+            (acc.magic ? ' · Magic: ' + acc.magic : '') +
+          '</div>' +
+        '</div>' +
+        '<button onclick="removeReportAccount(&quot;' + acc.username + '&quot;)" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px">✕</button>' +
+      '</div>' +
+      '<img src="' + bannerUrl + '" style="width:100%;border-radius:4px;margin-bottom:12px" onerror="this.style.display=&apos;none&apos;">' +
+      '<button onclick="showReportCharts(&quot;' + acc.username + '&quot;,&quot;' + acc.label + '&quot;)" class="btn btn-primary btn-sm" style="width:100%">📊 Charts anzeigen</button>' +
+    '</div>';
+  }).join('');
 }
 
 </script>
