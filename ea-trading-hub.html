@@ -4321,11 +4321,11 @@ function removeReportAccount(username) {
 
 function showReportCharts(username, label) {
   const base = '//www.fxblue.com/fxbluechart.aspx';
-  document.getElementById('rss_daily').src      = base + '?c=ch_balance&id='          + username;
-  document.getElementById('rss_weekly').src     = base + '?c=ch_equity&id='           + username;
-  document.getElementById('rss_monthly').src    = base + '?c=ch_profitfactor&id='     + username;
+  document.getElementById('rss_daily').src      = base + '?c=ch_daily&id='           + username;
+  document.getElementById('rss_weekly').src     = base + '?c=ch_weekly&id='          + username;
+  document.getElementById('rss_monthly').src    = base + '?c=ch_balance&id='         + username;
   document.getElementById('rss_cumulative').src = base + '?c=ch_cumulativeprofit&id=' + username;
-  document.getElementById('rss_magic').src      = base + '?c=ch_tradewinpct&id='      + username;
+  document.getElementById('rss_magic').src      = base + '?c=ch_floatingpl&id='      + username;
   document.getElementById('reportChartsTitle').textContent = '📊 Charts – ' + label;
   document.getElementById('reportCharts').style.display = 'block';
   document.getElementById('reportCharts').scrollIntoView({ behavior: 'smooth' });
@@ -4338,7 +4338,7 @@ function renderReportTab() {
 
   el.innerHTML = accounts.map(function(acc) {
     const fxUrl = 'https://www.fxblue.com/users/' + acc.username;
-    const bannerUrl = '//www.fxblue.com/banner.aspx?id=' + acc.username + '&t=300';
+    const bannerUrl = '//www.fxblue.com/banner.aspx?id=' + acc.username + '&t=11';
     return '<div class="form-panel" style="margin:0;padding:16px">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">' +
         '<div>' +
