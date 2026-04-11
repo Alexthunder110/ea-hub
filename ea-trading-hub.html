@@ -4321,11 +4321,11 @@ function removeReportAccount(username) {
 
 function showReportCharts(username, label) {
   const base = '//www.fxblue.com/fxbluechart.aspx';
-  document.getElementById('rss_daily').src      = base + '?c=ch_dailyprofit&id='      + username;
-  document.getElementById('rss_weekly').src     = base + '?c=ch_weeklyprofit&id='     + username;
-  document.getElementById('rss_monthly').src    = base + '?c=ch_monthlyprofit&id='    + username;
+  document.getElementById('rss_daily').src      = base + '?c=ch_balance&id='          + username;
+  document.getElementById('rss_weekly').src     = base + '?c=ch_equity&id='           + username;
+  document.getElementById('rss_monthly').src    = base + '?c=ch_profitfactor&id='     + username;
   document.getElementById('rss_cumulative').src = base + '?c=ch_cumulativeprofit&id=' + username;
-  document.getElementById('rss_magic').src      = base + '?c=ch_magicnetprofit&id='   + username;
+  document.getElementById('rss_magic').src      = base + '?c=ch_tradewinpct&id='      + username;
   document.getElementById('reportChartsTitle').textContent = '📊 Charts – ' + label;
   document.getElementById('reportCharts').style.display = 'block';
   document.getElementById('reportCharts').scrollIntoView({ behavior: 'smooth' });
