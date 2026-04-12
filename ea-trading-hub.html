@@ -4713,8 +4713,8 @@ async function pushRatingFromJson() {
   if (data.scores) {
     if (data.scores.rrr !== undefined && data.scores.portfolio_fit === undefined) {
       data.scores.portfolio_fit = data.scores.rrr;
-      delete data.scores.rrr;
     }
+    delete data.scores.rrr;  // always remove - rrr does not belong in scores
   }
   // Ensure all required score fields exist
   if (!data.scores) data.scores = {};
