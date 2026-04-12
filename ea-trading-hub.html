@@ -678,11 +678,8 @@ select option { background:var(--bg4); }
 
   <!-- EA Detail Analyse -->
   <div style="margin-bottom:22px">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-      <div class="sh" style="margin:0">🔍 EA Detail</div>
-      <select id="an-ea-detail" onchange="renderEaDetail()" style="background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:4px 8px">
-        <option value="">— EA auswählen —</option>
-      </select>
+    <div style="margin-bottom:14px">
+      <div class="sh" style="margin:0">🔍 EA Detail <span style="font-size:10px;color:var(--text3);font-weight:400;margin-left:8px">→ EA oben auswählen</span></div>
     </div>
     <div id="eaDetailEmpty" style="display:flex;align-items:center;justify-content:center;height:120px;color:var(--text3);font-size:13px">EA oben auswählen um Details zu sehen</div>
     <div id="eaDetailContent" style="display:none;grid-template-columns:1fr 1.6fr;gap:14px">
@@ -2024,7 +2021,6 @@ function renderAnalytics() {
 
   // Live / Demo tables removed - data now in KPI table
   renderAnalyticsCharts(entries);
-  updateEaDetailDropdown();
   renderEaDetail();
 
 
@@ -4383,7 +4379,7 @@ function updateEaDetailDropdown() {
 }
 
 function renderEaDetail() {
-  var eaId = document.getElementById('an-ea-detail') ? document.getElementById('an-ea-detail').value : '';
+  var eaId = document.getElementById('an-ea') ? document.getElementById('an-ea').value : '';
   var empty = document.getElementById('eaDetailEmpty');
   var content = document.getElementById('eaDetailContent');
   if (!eaId || !empty || !content) { if(empty) empty.style.display='flex'; if(content) content.style.display='none'; return; }
