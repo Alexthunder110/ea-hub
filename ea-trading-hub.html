@@ -881,6 +881,7 @@ select option { background:var(--bg4); }
           <th style="width:72px">Portfolio</th>
           <th style="width:52px">Score</th>
           <th style="width:90px">Empfehlung</th>
+          <th style="width:30px"></th>
         </tr>
       </thead>
       <tbody id="ar-tbody"></tbody>
@@ -939,6 +940,7 @@ select option { background:var(--bg4); }
           <th style="width:72px">Portfolio</th>
           <th style="width:52px">Score</th>
           <th style="width:90px">Empfehlung</th>
+          <th style="width:30px"></th>
         </tr>
       </thead>
       <tbody id="ar-tbody"></tbody>
@@ -4579,7 +4581,7 @@ function _renderArTable(filter) {
   if (empty) empty.style.display = 'none';
 
   tbody.innerHTML = rows.map(r => {
-    const id = r.id;
+    const id = String(r.id);
     const isOpen = arOpenId === id;
     const type = r.ea_type || 'unknown';
     const emp = r.empfehlung || '';
@@ -4614,6 +4616,7 @@ function _renderArTable(filter) {
       + '<td>' + bar(r.score_portfolio_fit, false) + '</td>'
       + '<td style="font-size:14px;font-weight:500;color:var(--text1)">' + (r.score_gesamt || '–') + '</td>'
       + '<td><span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:500;background:' + (AR_EMP_BG[emp]||'var(--bg2)') + ';color:' + (AR_EMP_COLOR[emp]||'var(--text3)') + '">' + (AR_EMP_LABEL[emp]||'–') + '</span></td>'
+      + '<td><button data-del="' + id + '" onclick="deleteRating(this.dataset.del)" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:4px 8px">✕</button></td>'
       + '</tr>';
 
     if (!isOpen) return mainRow;
@@ -4653,7 +4656,7 @@ function _renderArTable(filter) {
     const staerken = (r.staerken || '').split(' | ').filter(Boolean);
     const risiken  = (r.risiken  || '').split(' | ').filter(Boolean);
 
-    const detailRow = '<tr><td colspan="11" style="padding:0;border-bottom:1px solid var(--border)">'
+    const detailRow = '<tr><td colspan="12" style="padding:0;border-bottom:1px solid var(--border)">'
       + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:16px;background:var(--bg2)">'
 
       // Col 1: Code checks
@@ -4724,6 +4727,19 @@ async function pushRatingFromJson() {
     status.style.color = '#E24B4A';
     status.textContent = 'Fehler: ' + e.message;
   }
+}
+
+async function deleteRating(id) {
+  if (!confirm('Bewertung löschen?')) return;
+  try {
+    const payload = encodeURIComponent(JSON.stringify({action:'delete', sheet:'ai_rating', id: id}));
+    const res = await fetch(WEBAPP_URL + '?payload=' + payload);
+    const json = await res.json();
+    if (json.ok) {
+      arData = arData.filter(r => String(r.id) !== String(id));
+      _renderArTable(document.getElementById('ar-filter-emp')?.value || '');
+    }
+  } catch(e) { alert('Fehler: ' + e.message); }
 }
 
 function arToggle(id) {
