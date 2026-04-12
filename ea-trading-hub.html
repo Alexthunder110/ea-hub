@@ -4599,7 +4599,7 @@ function _renderArTable(filter) {
     const warn = r.data_warning === 'true' || r.data_warning === true
       ? '<span title="Geringe Datenbasis" style="color:#854F0B;font-size:10px;margin-left:4px">⚠</span>' : '';
 
-    const mainRow = '<tr class="ar-row" style="cursor:pointer" onclick="arToggle(\'' + id + '\')">'  
+    const mainRow = '<tr class="ar-row" data-arid="' + id + '" style="cursor:pointer" onclick="arToggle(this.dataset.arid)">'
       + '<td style="font-weight:500;font-size:13px">'
       + '<span style="display:inline-block;width:10px;font-size:9px;color:var(--text3);transition:transform .2s;transform:rotate(' + (isOpen?'90':'0') + 'deg)" id="ar-chev-' + id + '">▶</span> '
       + r.ea_name + warn + '</td>'
