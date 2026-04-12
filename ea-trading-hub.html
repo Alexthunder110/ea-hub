@@ -888,7 +888,16 @@ select option { background:var(--bg4); }
   </div>
 
   <div id="ar-empty" style="display:none;text-align:center;padding:40px;color:var(--text3);font-size:12px">
-    Noch keine Bewertungen vorhanden. EA im Claude AI Analyst Project bewerten und pushen.
+    Noch keine Bewertungen vorhanden. EA im Claude AI Analyst Project bewerten und JSON unten einfügen.
+  </div>
+
+  <div style="margin-top:28px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+    <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">⬆ Bewertung pushen</div>
+    <textarea id="ar-json-input" placeholder='JSON aus Claude hier einfügen...' style="width:100%;height:80px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text2);font-family:var(--font-mono);font-size:11px;padding:8px;resize:vertical"></textarea>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+      <button class="btn btn-primary btn-sm" onclick="pushRatingFromJson()">⬆ In Sheet pushen</button>
+      <span id="ar-push-status" style="font-size:12px;color:var(--text3)"></span>
+    </div>
   </div>
 
 </div>
@@ -937,7 +946,16 @@ select option { background:var(--bg4); }
   </div>
 
   <div id="ar-empty" style="display:none;text-align:center;padding:40px;color:var(--text3);font-size:12px">
-    Noch keine Bewertungen vorhanden. EA im Claude AI Analyst Project bewerten und pushen.
+    Noch keine Bewertungen vorhanden. EA im Claude AI Analyst Project bewerten und JSON unten einfügen.
+  </div>
+
+  <div style="margin-top:28px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+    <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">⬆ Bewertung pushen</div>
+    <textarea id="ar-json-input" placeholder='JSON aus Claude hier einfügen...' style="width:100%;height:80px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text2);font-family:var(--font-mono);font-size:11px;padding:8px;resize:vertical"></textarea>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+      <button class="btn btn-primary btn-sm" onclick="pushRatingFromJson()">⬆ In Sheet pushen</button>
+      <span id="ar-push-status" style="font-size:12px;color:var(--text3)"></span>
+    </div>
   </div>
 
 </div>
@@ -4672,6 +4690,39 @@ function _renderArTable(filter) {
 
     return mainRow + detailRow;
   }).join('');
+}
+
+async function pushRatingFromJson() {
+  const input = document.getElementById('ar-json-input');
+  const status = document.getElementById('ar-push-status');
+  const raw = input.value.trim();
+  if (!raw) { status.textContent = 'Kein JSON eingefügt.'; return; }
+
+  let data;
+  try { data = JSON.parse(raw); }
+  catch(e) { status.textContent = 'Ungültiges JSON: ' + e.message; return; }
+
+  status.textContent = '⏳ Wird gesendet...';
+
+  try {
+    const payload = encodeURIComponent(JSON.stringify({ action: 'pushRating', data: data }));
+    const url = WEBAPP_URL + '?payload=' + payload;
+    const res = await fetch(url);
+    const json = await res.json();
+    if (json.ok && !json.result?.error) {
+      status.style.color = '#1D9E75';
+      status.textContent = '✓ ' + (data.ea_name || 'EA') + ' gespeichert.';
+      input.value = '';
+      await loadAiRating();
+      arData = [];
+      renderAiRating();
+    } else {
+      throw new Error(json.result?.error || 'Fehler');
+    }
+  } catch(e) {
+    status.style.color = '#E24B4A';
+    status.textContent = 'Fehler: ' + e.message;
+  }
 }
 
 function arToggle(id) {
