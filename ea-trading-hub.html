@@ -872,6 +872,7 @@ select option { background:var(--bg4); }
         <tr>
           <th style="width:160px">Name</th>
           <th style="width:110px">Typ</th>
+          <th style="width:48px;text-align:center">MT</th>
           <th style="width:44px;text-align:center">Code</th>
           <th style="width:44px;text-align:center">Daten</th>
           <th style="width:44px;text-align:center">Link</th>
@@ -4607,6 +4608,7 @@ function _renderArTable(filter) {
       + '<span style="display:inline-block;width:10px;font-size:9px;color:var(--text3);transition:transform .2s;transform:rotate(' + (isOpen?'90':'0') + 'deg)" id="ar-chev-' + id + '">▶</span> '
       + r.ea_name + warn + '</td>'
       + '<td><span style="display:inline-block;padding:2px 7px;border-radius:5px;font-size:11px;font-weight:500;background:' + (AR_TYPE_BG[type]||'#eee') + ';color:' + (AR_TYPE_COLORS[type]||'#333') + '">' + (AR_TYPE_LABELS[type]||type) + '</span></td>'
+      + '<td style="font-size:11px;color:var(--text3);text-align:center">' + (r.mt_platform||'–') + '</td>'
       + '<td style="text-align:center">' + icon(r.has_code) + '</td>'
       + '<td style="text-align:center">' + icon(r.has_demo) + '</td>'
       + '<td style="text-align:center">' + (r.has_link === 'true' ? '<span style="font-size:13px">🔗</span>' : '<span style="color:#A32D2D;font-size:13px">✗</span>') + '</td>'
@@ -4656,7 +4658,7 @@ function _renderArTable(filter) {
     const staerken = (r.staerken || '').split(' | ').filter(Boolean);
     const risiken  = (r.risiken  || '').split(' | ').filter(Boolean);
 
-    const detailRow = '<tr><td colspan="12" style="padding:0;border-bottom:1px solid var(--border)">'
+    const detailRow = '<tr><td colspan="13" style="padding:0;border-bottom:1px solid var(--border)">'
       + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:16px;background:var(--bg2)">'
 
       // Col 1: Code checks
@@ -4705,6 +4707,26 @@ async function pushRatingFromJson() {
   let data;
   try { data = JSON.parse(raw); }
   catch(e) { status.textContent = 'Ungültiges JSON: ' + e.message; return; }
+
+  if (!data.mt_platform) data.mt_platform = null;
+  // Normalize scores object - agent sometimes uses wrong field names
+  if (data.scores) {
+    if (data.scores.rrr !== undefined && data.scores.portfolio_fit === undefined) {
+      data.scores.portfolio_fit = data.scores.rrr;
+      delete data.scores.rrr;
+    }
+  }
+  // Ensure all required score fields exist
+  if (!data.scores) data.scores = {};
+  ['rendite','risiko','datenreife','portfolio_fit','gesamt'].forEach(k => {
+    if (data.scores[k] === undefined) data.scores[k] = null;
+  });
+  // Ensure metrics exists
+  if (!data.metrics) data.metrics = {};
+  ['profit_factor','max_dd_pct','win_rate','rrr','total_trades','days_tested',
+   'trades_per_day','net_profit','avg_win','avg_loss'].forEach(k => {
+    if (data.metrics[k] === undefined) data.metrics[k] = null;
+  });
 
   status.textContent = '⏳ Wird gesendet...';
 
