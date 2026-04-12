@@ -4550,7 +4550,8 @@ async function renderAiRating() {
 
 async function loadAiRating() {
   try {
-    const url = WEBAPP_URL + '?action=getAll&sheet=ai_rating';
+    const payload = encodeURIComponent(JSON.stringify({action:'getAll',sheet:'ai_rating'}));
+    const url = WEBAPP_URL + '?payload=' + payload;
     const res = await fetch(url);
     const json = await res.json();
     arData = json.ok ? (json.result || []) : [];
@@ -4600,7 +4601,7 @@ function _renderArTable(filter) {
       ? '<span title="Geringe Datenbasis" style="color:#854F0B;font-size:10px;margin-left:4px">⚠</span>' : '';
 
     const mainRow = '<tr class="ar-row" data-arid="' + id + '" style="cursor:pointer" onclick="arToggle(this.dataset.arid)">'
-      + '<td style="font-weight:500;font-size:13px">'
+      + '<td style="font-weight:500;font-size:13px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
       + '<span style="display:inline-block;width:10px;font-size:9px;color:var(--text3);transition:transform .2s;transform:rotate(' + (isOpen?'90':'0') + 'deg)" id="ar-chev-' + id + '">▶</span> '
       + r.ea_name + warn + '</td>'
       + '<td><span style="display:inline-block;padding:2px 7px;border-radius:5px;font-size:11px;font-weight:500;background:' + (AR_TYPE_BG[type]||'#eee') + ';color:' + (AR_TYPE_COLORS[type]||'#333') + '">' + (AR_TYPE_LABELS[type]||type) + '</span></td>'
@@ -4726,6 +4727,7 @@ async function pushRatingFromJson() {
 }
 
 function arToggle(id) {
+  id = String(id);
   arOpenId = arOpenId === id ? null : id;
   _renderArTable(document.getElementById('ar-filter-emp')?.value || '');
 }
