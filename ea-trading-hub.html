@@ -3765,7 +3765,7 @@ function renderLabTable() {
     const sc = statusColor[e.status]||'#888';
     const sl = statusLabel[e.status]||e.status;
     const mc = mtColor[e.mt]||'#888';
-    const rating = e.myRating ? parseFloat(e.myRating).toFixed(1) : '–';
+    const rating = (e.myRating||e.myrating) ? parseFloat(e.myRating||e.myrating).toFixed(1) : '–';
     const links = (e.buyUrl ? '<a href="'+e.buyUrl+'" target="_blank" class="todo-link" title="Kaufen" style="font-size:13px">🛒</a>' : '') +
                   (e.trackUrl ? '<a href="'+e.trackUrl+'" target="_blank" class="todo-link track" title="Tracking" style="font-size:13px">📊</a>' : '');
     return '<tr style="cursor:pointer" onclick="toggleLabRow(\'' + e.id + '\')">' +
@@ -3777,7 +3777,7 @@ function renderLabTable() {
       '<td style="color:var(--text2)">'+(e.price||'–')+'</td>' +
       '<td style="color:var(--text2)">'+(e.source||'–')+'</td>' +
       '<td style="text-align:center;color:#BA7517">'+rating+'</td>' +
-      '<td style="text-align:center;color:var(--text3)">–</td>' +
+      '<td style="text-align:center;color:var(--accent)">'+(e.aiRating||'–')+'</td>' +
       '<td style="text-align:center">'+links+'</td>' +
       '<td style="white-space:nowrap">' +
         '<button class="icon-btn edit" onclick="event.stopPropagation();editLabEntry(\'' + e.id + '\')" title="Bearbeiten">✎</button>' +
@@ -4727,7 +4727,7 @@ function renderLabTable() {
     const sc = statusColor[e.status]||'#888';
     const sl = statusLabel[e.status]||e.status;
     const mc = mtColor[e.mt]||'#888';
-    const rating = e.myRating ? parseFloat(e.myRating).toFixed(1) : '–';
+    const rating = (e.myRating||e.myrating) ? parseFloat(e.myRating||e.myrating).toFixed(1) : '–';
     const links = (e.buyUrl ? '<a href="'+e.buyUrl+'" target="_blank" class="todo-link" title="Kaufen" style="font-size:13px">🛒</a>' : '') +
                   (e.trackUrl ? '<a href="'+e.trackUrl+'" target="_blank" class="todo-link track" title="Tracking" style="font-size:13px">📊</a>' : '');
     return '<tr style="cursor:pointer" onclick="toggleLabRow(\'' + e.id + '\')">' +
@@ -4739,7 +4739,7 @@ function renderLabTable() {
       '<td style="color:var(--text2)">'+(e.price||'–')+'</td>' +
       '<td style="color:var(--text2)">'+(e.source||'–')+'</td>' +
       '<td style="text-align:center;color:#BA7517">'+rating+'</td>' +
-      '<td style="text-align:center;color:var(--text3)">–</td>' +
+      '<td style="text-align:center;color:var(--accent)">'+(e.aiRating||'–')+'</td>' +
       '<td style="text-align:center">'+links+'</td>' +
       '<td style="white-space:nowrap">' +
         '<button class="icon-btn edit" onclick="event.stopPropagation();editLabEntry(\'' + e.id + '\')" title="Bearbeiten">✎</button>' +
