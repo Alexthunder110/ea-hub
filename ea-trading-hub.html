@@ -872,7 +872,6 @@ select option { background:var(--bg4); }
         <tr>
           <th style="width:160px">Name</th>
           <th style="width:110px">Typ</th>
-          <th style="width:48px;text-align:center">MT</th>
           <th style="width:44px;text-align:center">Code</th>
           <th style="width:44px;text-align:center">Daten</th>
           <th style="width:44px;text-align:center">Link</th>
@@ -4608,7 +4607,6 @@ function _renderArTable(filter) {
       + '<span style="display:inline-block;width:10px;font-size:9px;color:var(--text3);transition:transform .2s;transform:rotate(' + (isOpen?'90':'0') + 'deg)" id="ar-chev-' + id + '">▶</span> '
       + r.ea_name + warn + '</td>'
       + '<td><span style="display:inline-block;padding:2px 7px;border-radius:5px;font-size:11px;font-weight:500;background:' + (AR_TYPE_BG[type]||'#eee') + ';color:' + (AR_TYPE_COLORS[type]||'#333') + '">' + (AR_TYPE_LABELS[type]||type) + '</span></td>'
-      + '<td style="font-size:11px;color:var(--text3);text-align:center">' + (r.mt_platform||'–') + '</td>'
       + '<td style="text-align:center">' + icon(r.has_code) + '</td>'
       + '<td style="text-align:center">' + icon(r.has_demo) + '</td>'
       + '<td style="text-align:center">' + (r.has_link === 'true' ? '<span style="font-size:13px">🔗</span>' : '<span style="color:#A32D2D;font-size:13px">✗</span>') + '</td>'
@@ -4658,7 +4656,7 @@ function _renderArTable(filter) {
     const staerken = (r.staerken || '').split(' | ').filter(Boolean);
     const risiken  = (r.risiken  || '').split(' | ').filter(Boolean);
 
-    const detailRow = '<tr><td colspan="13" style="padding:0;border-bottom:1px solid var(--border)">'
+    const detailRow = '<tr><td colspan="12" style="padding:0;border-bottom:1px solid var(--border)">'
       + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:16px;background:var(--bg2)">'
 
       // Col 1: Code checks
@@ -4731,18 +4729,15 @@ async function pushRatingFromJson() {
   status.textContent = '⏳ Wird gesendet...';
 
   try {
-    const res = await fetch(WEBAPP_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'pushRating', data: data })
-    });
-    // no-cors = opaque response, assume success
-    await new Promise(r => setTimeout(r, 1500));
+    const jsonStr = JSON.stringify({ action: 'pushRating', data: data });
+    const payload = encodeURIComponent(jsonStr.replace(/[\u0080-\uffff]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4,'0')));
+    const res = await fetch(WEBAPP_URL + '?payload=' + payload);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Fehler');
       status.style.color = '#1D9E75';
       status.textContent = '✓ ' + (data.ea_name || 'EA') + ' gespeichert.';
       input.value = '';
-    arData = []; await loadAiRating();
+      await loadAiRating();
       arData = [];
       renderAiRating();
   } catch(e) {
