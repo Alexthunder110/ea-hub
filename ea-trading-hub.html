@@ -4731,7 +4731,7 @@ async function pushRatingFromJson() {
   status.textContent = '⏳ Wird gesendet...';
 
   try {
-    const payload = encodeURIComponent(JSON.stringify({ action: 'pushRating', data: data }));
+    const payload = encodeURIComponent(unescape(encodeURIComponent(JSON.stringify({ action: 'pushRating', data: data }))));
     const res = await fetch(WEBAPP_URL + '?payload=' + payload);
     const json = await res.json();
     if (!json.ok) throw new Error(json.error || 'Fehler');
