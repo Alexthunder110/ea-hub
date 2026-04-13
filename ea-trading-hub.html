@@ -362,17 +362,18 @@ select option { background:var(--bg4); }
 <!-- NAV -->
 <nav class="nav">
   <button class="nav-tab active" onclick="showView('live',this)">📈 Live</button>
-  <button class="nav-tab" onclick="showView('demo',this)">🧪 Demo</button>
   <button class="nav-tab" onclick="showView('accounts',this)">🏦 Konten</button>
   <button class="nav-tab" onclick="showView('eas',this)">🤖 EAs</button>
   <button class="nav-tab" onclick="showView('pnl',this)">📊 P&amp;L</button>
   <button class="nav-tab" onclick="showView('analytics',this)">📉 Analyse</button>
   <button class="nav-tab" onclick="showView('forecast',this)">💰 Forecast</button>
+  <button class="nav-tab" onclick="showView('airating',this)">⭐ AI Rating</button>
 </nav>
 
 <div class="main">
 
 <!-- ===== ÜBERSICHT ===== -->
+
 <div class="view active" id="view-live">
   <!-- KPI Leiste -->
   <div class="sum-grid" id="liveKpiCards"></div>
@@ -433,8 +434,6 @@ select option { background:var(--bg4); }
   </div>
 </div>
 
-
-<!-- ===== KONTEN ===== -->
 <div class="view" id="view-accounts">
   <div class="form-panel">
     <div class="sh" id="accFormTitle">Konto hinzufügen</div>
@@ -470,31 +469,27 @@ select option { background:var(--bg4); }
   </div>
 </div>
 
-<!-- ===== EAS ===== -->
-
-<!-- ===== DEMO ===== -->
-<div class="view" id="view-demo">
-  <!-- Analyse Charts Demo -->
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
-    <span style="font-size:12px;font-weight:600;color:var(--text2)">🧪 Demo-Konten – Analyse</span>
-  </div>
-  <div id="demoAnalyticsCards" class="sum-grid" style="margin-bottom:18px"></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:22px">
-    <div class="chart-wrap">
-      <div class="chart-title">Diese Woche nach Tag (Demo)</div>
-      <canvas id="demoWeekDayChart"></canvas>
+<div class="view" id="view-eas">
+  <div class="form-panel">
+    <div class="sh" id="eaFormTitle">EA hinzufügen</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Name *</label><input type="text" id="ea-name" placeholder="Milion299k"></div>
+      <div class="form-group"><label>Strategie</label><input type="text" id="ea-strategy" placeholder="M1 Grid, M5 Scalp..."></div>
+      <div class="form-group fg-2"><label>Beschreibung</label><input type="text" id="ea-desc" placeholder="optional"></div>
     </div>
-    <div class="chart-wrap">
-      <div class="chart-title">Performance pro Woche (Demo)</div>
-      <canvas id="demoWeeklyChart"></canvas>
-    </div>
-    <div class="chart-wrap">
-      <div class="chart-title">Performance pro Monat (Demo)</div>
-      <canvas id="demoMonthlyChart"></canvas>
+    <input type="hidden" id="ea-edit-id">
+    <div class="action-row">
+      <button class="btn btn-primary" onclick="saveEA()">💾 Speichern</button>
+      <button class="btn btn-secondary" onclick="resetEAForm()">Abbrechen</button>
     </div>
   </div>
 
-  <!-- EA Lab Tabellen -->
+  <div class="sh">Meine EAs</div>
+  <div class="table-wrap">
+    <table><thead><tr><th>#</th><th>Name</th><th>Strategie</th><th>Beschreibung</th><th>Trades</th><th>Win Rate</th><th></th></tr></thead>
+    <tbody id="easTable"></tbody></table>
+  </div>
+
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="pnl-filter-btn active" id="lab-btn-all"   onclick="setLabFilter('all',this)">Alle</button>
@@ -554,6 +549,7 @@ select option { background:var(--bg4); }
     </div>
   </div>
 
+  <!-- Table -->
   <div class="table-wrap">
     <table id="labTable" style="table-layout:fixed;width:100%">
       <thead><tr>
@@ -574,32 +570,66 @@ select option { background:var(--bg4); }
   </div>
 </div>
 
-<div class="view" id="view-eas">
-  <div class="form-panel">
-    <div class="sh" id="eaFormTitle">EA hinzufügen</div>
-    <div class="form-grid">
-      <div class="form-group"><label>Name *</label><input type="text" id="ea-name" placeholder="Milion299k"></div>
-      <div class="form-group"><label>Strategie</label><input type="text" id="ea-strategy" placeholder="M1 Grid, M5 Scalp..."></div>
-      <div class="form-group fg-2"><label>Beschreibung</label><input type="text" id="ea-desc" placeholder="optional"></div>
+
+
+<div class="view" id="view-airating">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div>
+      <div class="sh" style="margin-bottom:4px">⭐ AI Rating</div>
+      <span style="font-size:10px;color:var(--text3)">Automatische EA-Bewertung durch Claude AI</span>
     </div>
-    <input type="hidden" id="ea-edit-id">
-    <div class="action-row">
-      <button class="btn btn-primary" onclick="saveEA()">💾 Speichern</button>
-      <button class="btn btn-secondary" onclick="resetEAForm()">Abbrechen</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="ar-filter-emp" onchange="renderAiRating()" style="font-size:11px;padding:4px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;color:var(--text2)">
+        <option value="">Alle</option>
+        <option value="live">Live</option>
+        <option value="cent">Cent</option>
+        <option value="test">Testen</option>
+        <option value="rejected">Abgelehnt</option>
+      </select>
+      <span id="ar-count" style="font-size:11px;color:var(--text3)"></span>
     </div>
   </div>
 
-  <div class="sh">Meine EAs</div>
   <div class="table-wrap">
-    <table><thead><tr><th>#</th><th>Name</th><th>Strategie</th><th>Beschreibung</th><th>Trades</th><th>Win Rate</th><th></th></tr></thead>
-    <tbody id="easTable"></tbody></table>
-  </div>
-</div>
+    <table id="ar-table" style="table-layout:fixed;width:100%;min-width:900px">
+      <thead>
+        <tr>
+          <th style="width:160px">Name</th>
+          <th style="width:110px">Typ</th>
 
-<!-- ===== P&L ===== -->
-<div class="view" id="view-strategy-old" style="display:none">
-  <div id="strategyContentOld"></div>
+          <th style="width:44px;text-align:center">Code</th>
+          <th style="width:44px;text-align:center">Daten</th>
+          <th style="width:44px;text-align:center">Link</th>
+          <th style="width:72px">Rendite</th>
+          <th style="width:72px">Risiko</th>
+          <th style="width:72px">Reife</th>
+          <th style="width:72px">Portfolio</th>
+          <th style="width:52px">Score</th>
+          <th style="width:90px">Empfehlung</th>
+          <th style="width:30px"></th>
+        </tr>
+      </thead>
+      <tbody id="ar-tbody"></tbody>
+    </table>
+  </div>
+
+  <div id="ar-empty" style="display:none;text-align:center;padding:40px;color:var(--text3);font-size:12px">
+    Noch keine Bewertungen vorhanden. EA im Claude AI Analyst Project bewerten und JSON unten einfügen.
+  </div>
+
+  <div style="margin-top:28px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+    <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">⬆ Bewertung pushen</div>
+    <textarea id="ar-json-input" placeholder='JSON aus Claude hier einfügen...' style="width:100%;height:80px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text2);font-family:var(--font-mono);font-size:11px;padding:8px;resize:vertical"></textarea>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+      <button class="btn btn-primary btn-sm" onclick="pushRatingFromJson()">⬆ In Sheet pushen</button>
+      <span id="ar-push-status" style="font-size:12px;color:var(--text3)"></span>
+    </div>
+  </div>
+
 </div>
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
 
 <div class="view" id="view-pnl">
   <!-- Quick Entry -->
@@ -651,7 +681,7 @@ select option { background:var(--bg4); }
   </div>
 </div>
 
-<!-- ===== ANALYSE ===== -->
+
 <div class="view" id="view-analytics">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap">
     <button class="pnl-filter-btn active" id="an-btn-all"  onclick="setAnalyticsType('',this)">Alle</button>
@@ -675,17 +705,23 @@ select option { background:var(--bg4); }
     </div>
   </div>
 
-  <!-- EA Monatsvergleich Chart -->
+  <!-- EA Detail Analyse -->
   <div style="margin-bottom:22px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
-      <div class="sh" style="margin:0">📊 P&L Monat vs. Max DD</div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block"></span>P&L Monat</span>
-        <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:#E24B4A;display:inline-block"></span>Max DD</span>
-      </div>
+    <div style="margin-bottom:14px">
+      <div class="sh" style="margin:0">🔍 EA Detail <span style="font-size:10px;color:var(--text3);font-weight:400;margin-left:8px">→ EA oben auswählen</span></div>
     </div>
-    <div style="position:relative;width:100%;height:280px">
-      <canvas id="eaMonthChart"></canvas>
+    <div id="eaDetailEmpty" style="display:flex;align-items:center;justify-content:center;height:120px;color:var(--text3);font-size:13px">EA oben auswählen um Details zu sehen</div>
+    <div id="eaDetailContent" style="display:none;grid-template-columns:1fr 1.6fr;gap:14px">
+      <!-- Links: Bewertung -->
+      <div class="form-panel" style="margin:0;padding:16px">
+        <div id="eaDetailScore" style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)"></div>
+        <div id="eaDetailMetrics" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
+      </div>
+      <!-- Rechts: Chart -->
+      <div class="form-panel" style="margin:0;padding:16px">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:10px;letter-spacing:0.5px;text-transform:uppercase">Performance letzte 14 Tage</div>
+        <canvas id="eaDetailChart" height="220"></canvas>
+      </div>
     </div>
   </div>
 
@@ -719,7 +755,7 @@ select option { background:var(--bg4); }
   </div>
 </div>
 
-<!-- ===== EINKOMMEN ===== -->
+
 <div class="view" id="view-forecast">
   <!-- EA Kaufkosten + Kapitalplan -->
   <div id="strategyContent" style="margin-bottom:22px"></div>
@@ -768,7 +804,7 @@ select option { background:var(--bg4); }
   <div id="incomeWithdrawalChart"></div>
 </div>
 
-<!-- ===== EA LAB ===== -->
+
 <div class="view" id="view-ealab">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
     <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -850,7 +886,7 @@ select option { background:var(--bg4); }
   </div>
 </div>
 
-<!-- ===== TAGEBUCH ===== -->
+
 <div class="view" id="view-diary">
   <div class="form-panel">
     <div class="sh">Neuer Eintrag</div>
@@ -882,7 +918,6 @@ select option { background:var(--bg4); }
 </div>
 
 
-<!-- ===== TO DOS ===== -->
 <div class="view" id="view-todos">
   <div class="form-panel">
     <div class="sh" id="todoFormTitle">To Do hinzufügen</div>
@@ -929,10 +964,9 @@ select option { background:var(--bg4); }
   <div id="todoList"></div>
 </div>
 
-</div><!-- /main -->
 
-<!-- TOAST -->
-<div class="toast" id="toast"></div>
+<!-- ===== AI RATING ===== -->
+
 
 <script>
 function localToday() {
@@ -1189,9 +1223,7 @@ function renderAll() {
   renderPnlTable();
   updateSelects();
   renderLiveTab();
-  renderDemoTab();
   setTimeout(function() {
-    renderDemoCharts();
     renderLabTable();
   }, 50);
 }
@@ -1205,10 +1237,10 @@ function showView(id, btn) {
   document.getElementById('view-'+id).classList.add('active');
   btn.classList.add('active');
   if (id === 'live') { renderLiveTab(); }
-  if (id === 'demo') { renderDemoTab(); setTimeout(renderDemoCharts, 50); }
-  if (id === 'eas') { renderEAsTable(); }
+  if (id === 'eas') { renderEAsTable(); renderLabTable(); }
   if (id === 'analytics') { renderAnalytics(); setTimeout(renderCharts, 50); }
   if (id === 'forecast') { renderIncome(); renderStrategy(); }
+  if (id === 'airating') { renderAiRating(); }
 }
 
 // ============================================================
@@ -1351,31 +1383,7 @@ function resetEAForm() {
   document.getElementById('eaFormTitle').textContent='EA hinzufügen';
 }
 
-function renderEAsTable() {
-  const tbody = document.getElementById('easTable');
-  if (!DB.eas.length) { tbody.innerHTML='<tr><td colspan="7" class="empty">Noch keine EAs.</td></tr>'; return; }
-  tbody.innerHTML = DB.eas.map((ea,i) => {
-    const trades = DB.pnl.filter(p => p.eaId == ea.id);
-    const wins = trades.filter(p => parseFloat(p.pnl) > 0).length;
-    const wr = trades.length ? ((wins/trades.length)*100).toFixed(0)+'%' : '–';
-    return `<tr>
-      <td>${i+1}</td>
-      <td style="color:var(--accent);font-weight:500">${ea.name}</td>
-      <td style="color:var(--text2)">${ea.strategy||'–'}</td>
-      <td style="color:var(--text2);font-size:10px">${ea.description||'–'}</td>
-      <td>${trades.length}</td>
-      <td class="${wins/trades.length>=0.5?'pos-val':'neg-val'}">${wr}</td>
-      <td style="display:flex;gap:4px">
-        <button class="icon-btn edit" onclick="editEA('${ea.id}')" title="Bearbeiten">✎</button>
-        <button class="icon-btn" onclick="deleteEA('${ea.id}')" title="Löschen">✕</button>
-      </td>
-    </tr>`;
-  }).join('');
-}
 
-// ============================================================
-// P&L
-// ============================================================
 function fillEAStrategy() {
   const eaId = document.getElementById('pnl-ea').value;
   const ea = DB.eas.find(e => e.id == eaId);
@@ -1956,6 +1964,7 @@ function renderAnalytics() {
 
   // Live / Demo tables removed - data now in KPI table
   renderAnalyticsCharts(entries);
+  renderEaDetail();
 
 
   renderEaRating(entries);
@@ -3613,6 +3622,7 @@ function setAnalyticsType(type, btn) {
   document.querySelectorAll('#an-btn-all,#an-btn-live,#an-btn-demo').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderAnalytics();
+  renderEaDetail();
 }
 
 
@@ -3732,14 +3742,6 @@ function deleteLabEntry(id) {
   renderLabTable();
 }
 
-function toggleLabRow(id) {
-  const el = document.getElementById('lab-detail-'+id);
-  if (!el) return;
-  const open = el.style.display !== 'none';
-  el.style.display = open ? 'none' : 'table-row';
-  const arrow = document.getElementById('lab-arrow-'+id);
-  if (arrow) arrow.textContent = open ? '▶' : '▼';
-}
 
 function renderLabTable() {
   const tbody = document.getElementById('labBody');
@@ -4218,6 +4220,663 @@ function renderLiveCharts() {
       options: chartOpts(false)
     });
   }
+}
+
+
+// ============================================================
+// REPORT TAB – FX Blue Integration
+// ============================================================
+
+// Gespeicherte FX Blue Konten
+function getReportAccounts() {
+  try {
+    const saved = localStorage.getItem('ea_hub_report_accounts');
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return [{ username: 'kpscalper', label: 'KP Scalper Demo', magic: '20260406' }];
+}
+
+function saveReportAccounts(accounts) {
+  localStorage.setItem('ea_hub_report_accounts', JSON.stringify(accounts));
+}
+
+function addReportAccount() {
+  const username = document.getElementById('report-username').value.trim().toLowerCase();
+  const label    = document.getElementById('report-label').value.trim();
+  const magic    = document.getElementById('report-magic').value.trim();
+  if (!username) { toast('⚠ Username ist Pflicht', 'err'); return; }
+  const accounts = getReportAccounts();
+  if (accounts.find(a => a.username === username)) { toast('⚠ Bereits vorhanden', 'err'); return; }
+  accounts.push({ username, label: label || username, magic });
+  saveReportAccounts(accounts);
+  if (!document.getElementById('report-username')) return;
+  document.getElementById('report-username').value = '';
+  document.getElementById('report-label').value    = '';
+  document.getElementById('report-magic').value    = '';
+  renderReportTab();
+  toast('✅ Konto hinzugefügt');
+}
+
+function removeReportAccount(username) {
+  const accounts = getReportAccounts().filter(a => a.username !== username);
+  saveReportAccounts(accounts);
+  renderReportTab();
+}
+
+function showReportCharts(username, label) {
+  const base = '//www.fxblue.com/fxbluechart.aspx';
+  if (!document.getElementById('rss_daily')) return;
+  document.getElementById('rss_daily').src      = base + '?c=ch_daily&id='           + username;
+  document.getElementById('rss_weekly').src     = base + '?c=ch_weekly&id='          + username;
+  document.getElementById('rss_monthly').src    = base + '?c=ch_balance&id='         + username;
+  document.getElementById('rss_cumulative').src = base + '?c=ch_cumulativeprofit&id=' + username;
+  document.getElementById('rss_magic').src      = base + '?c=ch_floatingpl&id='      + username;
+  document.getElementById('reportChartsTitle').textContent = '📊 Charts – ' + label;
+  document.getElementById('reportCharts').style.display = 'block';
+  document.getElementById('reportCharts').scrollIntoView({ behavior: 'smooth' });
+}
+
+function renderReportTab() {
+  return; // Report tab removed
+  const accounts = getReportAccounts();
+  const el = document.getElementById('reportAccounts');
+  if (!el) return;
+
+  el.innerHTML = accounts.map(function(acc) {
+    const fxUrl = 'https://www.fxblue.com/users/' + acc.username;
+    const bannerUrl = '//www.fxblue.com/banner.aspx?id=' + acc.username + '&t=11';
+    return '<div class="form-panel" style="margin:0;padding:16px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">' +
+        '<div>' +
+          '<div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:2px">' + acc.label + '</div>' +
+          '<div style="font-size:10px;color:var(--text3)">' +
+            '<a href="' + fxUrl + '" target="_blank" style="color:var(--accent2);text-decoration:none">' + acc.username + ' ↗</a>' +
+            (acc.magic ? ' · Magic: ' + acc.magic : '') +
+          '</div>' +
+        '</div>' +
+        '<button onclick="removeReportAccount(&quot;' + acc.username + '&quot;)" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px">✕</button>' +
+      '</div>' +
+      '<img src="' + bannerUrl + '" style="width:100%;border-radius:4px;margin-bottom:12px" onerror="this.style.display=&apos;none&apos;">' +
+      '<button onclick="showReportCharts(&quot;' + acc.username + '&quot;,&quot;' + acc.label + '&quot;)" class="btn btn-primary btn-sm" style="width:100%">📊 Charts anzeigen</button>' +
+    '</div>';
+  }).join('');
+}
+
+
+// ============================================================
+// EA DETAIL ANALYSE
+// ============================================================
+var eaDetailChartInstance = null;
+
+function updateEaDetailDropdown() {
+  var sel = document.getElementById('an-ea-detail');
+  if (!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">— EA auswählen —</option>' +
+    DB.eas.map(function(ea){ return '<option value="'+ea.id+'"'+(ea.id==cur?' selected':'')+'>'+ea.name+'</option>'; }).join('');
+}
+
+function renderEaDetail() {
+  var eaId = document.getElementById('an-ea') ? document.getElementById('an-ea').value : '';
+  var empty = document.getElementById('eaDetailEmpty');
+  var content = document.getElementById('eaDetailContent');
+  if (!eaId || !empty || !content) { if(empty) empty.style.display='flex'; if(content) content.style.display='none'; return; }
+
+  var ea = DB.eas.find(function(e){ return e.id == eaId; });
+  if (!ea) return;
+  empty.style.display = 'none';
+  content.style.display = 'grid';
+
+  // Filter entries by type + EA
+  var fType = document.getElementById('an-type') ? document.getElementById('an-type').value : '';
+  var entries = DB.pnl.filter(function(p){
+    if (!p.eaId || p.eaId != eaId) return false;
+    if (p.entryType && p.entryType !== 'trade') return false;
+    if (fType) {
+      var acc = DB.accounts.find(function(a){ return a.id == p.accountId; });
+      return acc && acc.type === fType;
+    }
+    return true;
+  });
+
+  // Calculate metrics
+  var pnls = entries.map(function(p){ return parseFloat(p.pnl)||0; }).filter(function(v){ return v!==0; });
+  var dds  = entries.map(function(p){ return Math.abs(parseFloat(p.dd)||0); }).filter(function(v){ return v>0; });
+  var n = pnls.length;
+  var totalPnl = pnls.reduce(function(s,v){ return s+v; }, 0);
+  var avgPnl   = n ? totalPnl/n : 0;
+  var wins     = pnls.filter(function(v){ return v>0; });
+  var losses   = pnls.filter(function(v){ return v<0; });
+  var sumWin   = wins.reduce(function(s,v){ return s+v; }, 0);
+  var sumLoss  = Math.abs(losses.reduce(function(s,v){ return s+v; }, 0));
+  var profitFactor = sumLoss===0 ? Infinity : sumWin/sumLoss;
+  var maxDdVal = dds.length ? Math.max.apply(null,dds) : 0;
+  var recovery = maxDdVal===0 ? Infinity : totalPnl/maxDdVal;
+  var avgDd    = dds.length ? dds.reduce(function(s,v){ return s+v; },0)/dds.length : 0;
+  var pddRatio = avgDd===0 ? Infinity : avgPnl/avgDd;
+  var confidence = Math.min(1, n/20);
+  var scoreAvgPnl   = avgPnl<=0?0:Math.min(10,avgPnl/10);
+  var scorePdd      = pddRatio===Infinity?10:Math.min(10,Math.max(0,pddRatio*5));
+  var scorePF       = profitFactor===Infinity?10:Math.min(10,Math.max(0,(profitFactor-1)*5));
+  var scoreRecovery = recovery===Infinity?10:Math.min(10,Math.max(0,recovery));
+  var rawScore = (scoreAvgPnl*3+scorePdd*2+scorePF*3+scoreRecovery*2)/10;
+  var score = (rawScore*confidence+(rawScore*0.5)*(1-confidence));
+  var scoreR = parseFloat(score.toFixed(1));
+
+  // Score color
+  var sc = scoreR>=7?'rgba(0,255,157,0.15)':scoreR>=5?'rgba(255,184,48,0.15)':'rgba(255,71,87,0.15)';
+  var scb= scoreR>=7?'#00ff9d':scoreR>=5?'#ffb830':'#ff4757';
+
+  // Score Kachel
+  document.getElementById('eaDetailScore').innerHTML =
+    '<div style="width:68px;height:68px;border-radius:50%;background:'+sc+';border:2px solid '+scb+';display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">' +
+      '<span style="font-size:24px;font-weight:700;color:'+scb+'">'+scoreR+'</span>' +
+      '<span style="font-size:9px;color:var(--text3);letter-spacing:0.5px">SCORE</span>' +
+    '</div>' +
+    '<div>' +
+      '<div style="font-size:14px;font-weight:700;color:var(--accent)">'+ea.name+'</div>' +
+      '<div style="font-size:11px;color:var(--text3);margin-top:3px">'+(ea.strategy||'–')+' · '+n+' Einträge</div>' +
+    '</div>';
+
+  // Metriken
+  var fmt = function(v,isDD){ if(v===Infinity) return '∞'; if(isDD) return v?'-$'+Math.abs(v).toFixed(2):'–'; return (v>=0?'+$':'-$')+Math.abs(v).toFixed(2); };
+  var fmtN = function(v){ return v===Infinity?'∞':v.toFixed(2); };
+  var col = function(v,inv){ var g=(inv?v<0:v>0); return g?'var(--pos)':'var(--neg)'; };
+  var metrics = [
+    {lbl:'Einträge', val:String(n), c:'var(--text)'},
+    {lbl:'Ø Gewinn/Eintrag', val:fmt(avgPnl), c:col(avgPnl,false)},
+    {lbl:'P&L / DD Ratio', val:fmtN(pddRatio), c:pddRatio>=1?'var(--pos)':pddRatio>=0.5?'var(--warn)':'var(--neg)'},
+    {lbl:'Profit Factor', val:fmtN(profitFactor), c:profitFactor>=2?'var(--pos)':profitFactor>=1.5?'var(--warn)':'var(--neg)'},
+    {lbl:'Recovery Factor', val:fmtN(recovery), c:recovery>=3?'var(--pos)':recovery>=1?'var(--warn)':'var(--neg)'},
+    {lbl:'Max DD', val:fmt(maxDdVal,true), c:'var(--neg)'},
+  ];
+  document.getElementById('eaDetailMetrics').innerHTML = metrics.map(function(m){
+    return '<div style="background:var(--bg3);border-radius:6px;padding:10px 12px">' +
+      '<div style="font-size:10px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px">'+m.lbl+'</div>' +
+      '<div style="font-size:17px;font-weight:700;color:'+m.c+'">'+m.val+'</div>' +
+    '</div>';
+  }).join('');
+
+  // Chart: letzte 14 Tage
+  var today = localToday();
+  var days14 = [], labels14 = [], pnl14 = [], dd14 = [], bal14 = [];
+  var runBal = 0;
+  // Berechne starting balance
+  entries.forEach(function(p){ runBal += parseFloat(p.pnl)||0; });
+  var startBal = 0; // relativ zu 0
+
+  for (var i=13;i>=0;i--) {
+    var d = new Date(today);
+    d.setDate(d.getDate()-i);
+    var ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    labels14.push(d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}));
+    var dayEntries = entries.filter(function(p){ return p.date===ds; });
+    var dayPnl = dayEntries.reduce(function(s,p){ return s+(parseFloat(p.pnl)||0); },0);
+    var dayDd  = dayEntries.reduce(function(s,p){ return Math.max(s,Math.abs(parseFloat(p.dd)||0)); },0);
+    pnl14.push(parseFloat(dayPnl.toFixed(2)));
+    dd14.push(dayDd>0?-parseFloat(dayDd.toFixed(2)):null);
+    days14.push(ds);
+  }
+  // Kumulative Balance
+  var cum=0;
+  bal14 = pnl14.map(function(v){ cum+=v; return parseFloat(cum.toFixed(2)); });
+
+  if(eaDetailChartInstance){ eaDetailChartInstance.destroy(); eaDetailChartInstance=null; }
+  var ctx = document.getElementById('eaDetailChart');
+  if(!ctx) return;
+  eaDetailChartInstance = new Chart(ctx, {
+    data:{
+      labels: labels14,
+      datasets:[
+        {type:'line',label:'Balance',data:bal14,borderColor:'#00ff9d',backgroundColor:'rgba(0,255,157,0.06)',fill:true,tension:0.3,pointRadius:2,borderWidth:2,yAxisID:'y'},
+        {type:'line',label:'Max DD',data:dd14,borderColor:'#ff4757',backgroundColor:'transparent',tension:0.3,pointRadius:2,borderWidth:1.5,yAxisID:'y',spanGaps:false},
+        {type:'bar',label:'P&L Tag',data:pnl14,backgroundColor:pnl14.map(function(v){ return v>=0?'rgba(0,255,157,0.45)':'rgba(255,71,87,0.45)'; }),borderRadius:2,yAxisID:'y2'},
+      ]
+    },
+    options:{
+      responsive:true,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:10,padding:10,color:'#7f8c9a'}}},
+      scales:{
+        y:{position:'left',grid:{color:'rgba(255,255,255,0.05)'},ticks:{font:{size:10},color:'#7f8c9a'}},
+        y2:{position:'right',grid:{display:false},ticks:{font:{size:10},color:'#7f8c9a'}},
+        x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{font:{size:10},color:'#7f8c9a',maxRotation:45}}
+      }
+    }
+  });
+}
+
+
+// ============================================================
+// AI RATING
+// ============================================================
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyKdzUAK_1Y1yKzuWmfEBV0uN0xgUjUWq_yDzECpN9ur3ZQ19-YkA3uukKLBrh3vfPOHw/exec';
+
+const AR_TYPE_LABELS = {
+  grid:'Grid', martingale:'Martingale', grid_martingale:'Grid+Mart',
+  scalper:'Scalper', oneshot:'OneShot', hedge:'Hedge',
+  trend:'Trend', meanrev:'MeanRev', hybrid:'Hybrid', unknown:'?'
+};
+const AR_TYPE_COLORS = {
+  grid:'#0C447C', martingale:'#72243E', grid_martingale:'#72243E',
+  scalper:'#085041', oneshot:'#3C3489', hedge:'#633806',
+  trend:'#27500A', meanrev:'#633806', hybrid:'#854F0B', unknown:'#444'
+};
+const AR_TYPE_BG = {
+  grid:'#E6F1FB', martingale:'#FBEAF0', grid_martingale:'#FBEAF0',
+  scalper:'#E1F5EE', oneshot:'#EEEDFE', hedge:'#FAEEDA',
+  trend:'#EAF3DE', meanrev:'#FAEEDA', hybrid:'#FAEEDA', unknown:'#eee'
+};
+const AR_EMP_LABEL = { live:'Live', cent:'Cent', test:'Testen', rejected:'Abgelehnt', '':'–' };
+const AR_EMP_BG    = { live:'#EAF3DE', cent:'#FAEEDA', test:'#E6F1FB', rejected:'#FCEBEB', '':'var(--bg2)' };
+const AR_EMP_COLOR = { live:'#27500A', cent:'#633806', test:'#0C447C', rejected:'#791F1F', '':'var(--text3)' };
+
+let arData = [];
+let arOpenId = null;
+
+async function renderAiRating() {
+  const filter = document.getElementById('ar-filter-emp')?.value || '';
+  if (!arData.length) await loadAiRating();
+  _renderArTable(filter);
+}
+
+async function loadAiRating() {
+  try {
+    const payload = encodeURIComponent(JSON.stringify({action:'getAll',sheet:'ai_rating'}));
+    const url = WEBAPP_URL + '?payload=' + payload;
+    const res = await fetch(url);
+    const json = await res.json();
+    arData = json.ok ? (json.result || []) : [];
+  } catch(e) {
+    arData = [];
+  }
+}
+
+function _renderArTable(filter) {
+  const tbody = document.getElementById('ar-tbody');
+  const empty = document.getElementById('ar-empty');
+  if (!tbody) return;
+
+  let rows = arData.filter(r => r.ea_name);
+  if (filter) rows = rows.filter(r => r.empfehlung === filter);
+
+  const count = document.getElementById('ar-count');
+  if (count) count.textContent = rows.length + ' EAs';
+
+  if (!rows.length) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  tbody.innerHTML = rows.map(r => {
+    const id = String(r.id);
+    const isOpen = arOpenId === id;
+    const type = r.ea_type || 'unknown';
+    const emp = r.empfehlung || '';
+
+    const bar = (val, invert) => {
+      const v = parseFloat(val);
+      if (isNaN(v)) return '<span style="color:var(--text3);font-size:11px">–</span>';
+      let color;
+      if (invert) { color = v >= 70 ? '#E24B4A' : v >= 40 ? '#EF9F27' : '#639922'; }
+      else        { color = v >= 70 ? '#639922' : v >= 40 ? '#EF9F27' : '#E24B4A'; }
+      return '<div style="background:var(--bg3);border-radius:3px;height:6px;width:56px;display:inline-block;vertical-align:middle"><div style="height:6px;border-radius:3px;width:' + Math.min(v,100) + '%;background:' + color + '"></div></div>';
+    };
+
+    const icon = v => v === 'true' || v === true
+      ? '<span style="color:#3B6D11;font-size:13px">✓</span>'
+      : '<span style="color:#A32D2D;font-size:13px">✗</span>';
+
+    const warn = r.data_warning === 'true' || r.data_warning === true
+      ? '<span title="Geringe Datenbasis" style="color:#854F0B;font-size:10px;margin-left:4px">⚠</span>' : '';
+
+    const mainRow = '<tr class="ar-row" data-arid="' + id + '" style="cursor:pointer" onclick="arToggle(this.dataset.arid)">'
+      + '<td style="font-weight:500;font-size:13px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+      + '<span style="display:inline-block;width:10px;font-size:9px;color:var(--text3);transition:transform .2s;transform:rotate(' + (isOpen?'90':'0') + 'deg)" id="ar-chev-' + id + '">▶</span> '
+      + r.ea_name + warn + '</td>'
+      + '<td><span style="display:inline-block;padding:2px 7px;border-radius:5px;font-size:11px;font-weight:500;background:' + (AR_TYPE_BG[type]||'#eee') + ';color:' + (AR_TYPE_COLORS[type]||'#333') + '">' + (AR_TYPE_LABELS[type]||type) + '</span></td>'
+
+      + '<td style="text-align:center">' + icon(r.has_code) + '</td>'
+      + '<td style="text-align:center">' + icon(r.has_demo) + '</td>'
+      + '<td style="text-align:center">' + (r.has_link === 'true' ? '<span style="font-size:13px">🔗</span>' : '<span style="color:#A32D2D;font-size:13px">✗</span>') + '</td>'
+      + '<td>' + bar(r.score_rendite, false) + '</td>'
+      + '<td>' + bar(r.score_risiko, true) + '</td>'
+      + '<td>' + bar(r.score_datenreife, false) + '</td>'
+      + '<td>' + bar(r.score_portfolio_fit, false) + '</td>'
+      + '<td style="font-size:14px;font-weight:500;color:var(--text1)">' + (r.score_gesamt || '–') + '</td>'
+      + '<td><span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:500;background:' + (AR_EMP_BG[emp]||'var(--bg2)') + ';color:' + (AR_EMP_COLOR[emp]||'var(--text3)') + '">' + (AR_EMP_LABEL[emp]||'–') + '</span></td>'
+      + '<td><button data-del="' + id + '" onclick="deleteRating(this.dataset.del)" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:4px 8px">✕</button></td>'
+      + '</tr>';
+
+    if (!isOpen) return mainRow;
+
+    const checkIcon = v => v === 'ok' ? '<span style="color:#3B6D11">✓</span>'
+      : v === 'warn' ? '<span style="color:#854F0B">~</span>'
+      : v === 'missing' ? '<span style="color:#A32D2D">✗</span>'
+      : '<span style="color:var(--text3)">?</span>';
+
+    const checks = [
+      ['Stop Loss', r.check_stop_loss, r.check_stop_loss_detail],
+      ['Take Profit', r.check_take_profit, r.check_take_profit_detail],
+      ['Disconnect', r.check_disconnect, r.check_disconnect_detail],
+      ['Grid-Limit', r.check_grid_limit, r.check_grid_limit_detail],
+      ['DD-Schutz', r.check_dd_protection, r.check_dd_protection_detail],
+      ['News-Filter', r.check_news_filter, r.check_news_filter_detail],
+      ['Lot-Logik', r.check_lot_logic, r.check_lot_logic_detail],
+      ['Magic Nr.', r.check_magic_number, r.check_magic_number_detail],
+      ['Session', r.check_session_filter, r.check_session_filter_detail],
+      ['Code-Qualität', r.check_code_quality, r.check_code_quality_detail],
+    ].map(([label, val, detail]) =>
+      '<tr style="border-bottom:1px solid var(--border)">'
+      + '<td style="padding:5px 8px;font-size:11px;color:var(--text3);width:90px">' + label + '</td>'
+      + '<td style="padding:5px 4px;font-size:13px;width:20px">' + checkIcon(val) + '</td>'
+      + '<td style="padding:5px 8px;font-size:11px;color:var(--text2)">' + (detail||'–') + '</td>'
+      + '</tr>'
+    ).join('');
+
+    const kpi = (label, val, unit) =>
+      '<div style="background:var(--bg3);border-radius:5px;padding:8px 10px">'
+      + '<div style="font-size:10px;color:var(--text3);margin-bottom:2px">' + label + '</div>'
+      + '<div style="font-size:14px;font-weight:500;color:var(--text1)">' + (val != null && val !== '' ? val + (unit||'') : '–') + '</div>'
+      + '</div>';
+
+    const dot = color => '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + color + ';margin-right:6px;flex-shrink:0;margin-top:5px"></span>';
+
+    const staerken = (r.staerken || '').split(' | ').filter(Boolean);
+    const risiken  = (r.risiken  || '').split(' | ').filter(Boolean);
+
+    const detailRow = '<tr><td colspan="12" style="padding:0;border-bottom:1px solid var(--border)">'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:16px;background:var(--bg2)">'
+
+      // Col 1: Code checks
+      + '<div style="background:var(--bg1);border:1px solid var(--border);border-radius:var(--radius);padding:12px">'
+      + '<div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Code-Checks</div>'
+      + '<table style="width:100%">' + checks + '</table>'
+      + '</div>'
+
+      // Col 2: KPIs
+      + '<div style="background:var(--bg1);border:1px solid var(--border);border-radius:var(--radius);padding:12px">'
+      + '<div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Demo-Kennzahlen</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
+      + kpi('Profit Factor', r.profit_factor)
+      + kpi('Max DD', r.max_dd_pct, '%')
+      + kpi('Win Rate', r.win_rate, '%')
+      + kpi('RRR', r.rrr)
+      + kpi('Trades', r.total_trades)
+      + kpi('Tage', r.days_tested)
+      + '</div>'
+      + '</div>'
+
+      // Col 3: Stärken / Risiken / Nächster Schritt
+      + '<div style="background:var(--bg1);border:1px solid var(--border);border-radius:var(--radius);padding:12px">'
+      + '<div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Bewertung</div>'
+      + '<div style="font-size:11px;color:var(--text2);margin-bottom:10px;font-style:italic">' + (r.kurzfazit||'') + '</div>'
+      + staerken.map(s => '<div style="display:flex;align-items:flex-start;margin-bottom:4px;font-size:12px;color:var(--text2)">' + dot('#639922') + s + '</div>').join('')
+      + risiken.map(s  => '<div style="display:flex;align-items:flex-start;margin-bottom:4px;font-size:12px;color:var(--text2)">' + dot('#E24B4A') + s + '</div>').join('')
+      + '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">'
+      + '<div style="font-size:10px;color:var(--text3);margin-bottom:3px">Nächster Schritt</div>'
+      + '<div style="font-size:12px;color:var(--text2)">' + (r.naechster_schritt||'–') + '</div>'
+      + '</div>'
+      + '</div>'
+
+      + '</div></td></tr>';
+
+    return mainRow + detailRow;
+  }).join('');
+}
+
+async function pushRatingFromJson() {
+  const input = document.getElementById('ar-json-input');
+  const status = document.getElementById('ar-push-status');
+  const raw = input.value.trim();
+  if (!raw) { status.textContent = 'Kein JSON eingefügt.'; return; }
+
+  let data;
+  try { data = JSON.parse(raw); }
+  catch(e) { status.textContent = 'Ungültiges JSON: ' + e.message; return; }
+
+  if (!data.mt_platform) data.mt_platform = null;
+  // Normalize scores object - agent sometimes uses wrong field names
+  if (data.scores) {
+    if (data.scores.rrr !== undefined && data.scores.portfolio_fit === undefined) {
+      data.scores.portfolio_fit = data.scores.rrr;
+    }
+    delete data.scores.rrr;  // always remove - rrr does not belong in scores
+  }
+  // Ensure all required score fields exist
+  if (!data.scores) data.scores = {};
+  ['rendite','risiko','datenreife','portfolio_fit','gesamt'].forEach(k => {
+    if (data.scores[k] === undefined) data.scores[k] = null;
+  });
+  // Ensure metrics exists
+  if (!data.metrics) data.metrics = {};
+  ['profit_factor','max_dd_pct','win_rate','rrr','total_trades','days_tested',
+   'trades_per_day','net_profit','avg_win','avg_loss'].forEach(k => {
+    if (data.metrics[k] === undefined) data.metrics[k] = null;
+  });
+
+  status.textContent = '⏳ Wird gesendet...';
+
+  try {
+    const res = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'pushRating', data: data })
+    });
+    // no-cors = opaque response, assume success
+    await new Promise(r => setTimeout(r, 1500));
+      status.style.color = '#1D9E75';
+      status.textContent = '✓ ' + (data.ea_name || 'EA') + ' gespeichert.';
+      input.value = '';
+    arData = []; await loadAiRating();
+      arData = [];
+      renderAiRating();
+  } catch(e) {
+    status.style.color = '#E24B4A';
+    status.textContent = 'Fehler: ' + e.message;
+  }
+}
+
+async function deleteRating(id) {
+  if (!confirm('Bewertung löschen?')) return;
+  try {
+    const payload = encodeURIComponent(JSON.stringify({action:'delete', sheet:'ai_rating', id: id}));
+    const res = await fetch(WEBAPP_URL + '?payload=' + payload);
+    const json = await res.json();
+    if (json.ok) {
+      arData = arData.filter(r => String(r.id) !== String(id));
+      _renderArTable(document.getElementById('ar-filter-emp')?.value || '');
+    }
+  } catch(e) { alert('Fehler: ' + e.message); }
+}
+
+function arToggle(id) {
+  id = String(id);
+  arOpenId = arOpenId === id ? null : id;
+  _renderArTable(document.getElementById('ar-filter-emp')?.value || '');
+}
+
+
+
+// ============================================================
+// EA LAB (from original)
+// ============================================================
+
+function renderLabTable() {
+  const tbody = document.getElementById('labBody');
+  if (!tbody) return;
+  const data = getLabData();
+  const filtered = labFilter === 'all' ? data : data.filter(function(e){ return e.status === labFilter; });
+
+  const statusLabel = { live:'🟢 Live', testing:'🧪 Testing', watchlist:'👁 Watchlist', off:'⛔ Aussortiert' };
+  const statusColor = { live:'#1D9E75', testing:'#BA7517', watchlist:'#185FA5', off:'#5F5E5A' };
+  const prioLabel   = { high:'🔴 Hoch', medium:'🟡 Mittel', low:'🟢 Niedrig' };
+  const prioColor   = { high:'rgba(226,75,74,0.15)', medium:'rgba(186,117,23,0.15)', low:'rgba(136,135,128,0.15)' };
+  const prioText    = { high:'#A32D2D', medium:'#BA7517', low:'#5F5E5A' };
+  const mtColor     = { MT4:'#534AB7', MT5:'#993556', 'MT4 + MT5':'#185FA5' };
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="11" class="empty">Keine Einträge.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(function(e) {
+    const sc = statusColor[e.status]||'#888';
+    const sl = statusLabel[e.status]||e.status;
+    const mc = mtColor[e.mt]||'#888';
+    const rating = e.myRating ? parseFloat(e.myRating).toFixed(1) : '–';
+    const links = (e.buyUrl ? '<a href="'+e.buyUrl+'" target="_blank" class="todo-link" title="Kaufen" style="font-size:13px">🛒</a>' : '') +
+                  (e.trackUrl ? '<a href="'+e.trackUrl+'" target="_blank" class="todo-link track" title="Tracking" style="font-size:13px">📊</a>' : '');
+    return '<tr style="cursor:pointer" onclick="toggleLabRow(\'' + e.id + '\')">' +
+      '<td style="font-weight:600;color:var(--accent)"><span id="lab-arrow-'+e.id+'" style="font-size:9px;color:var(--text3);margin-right:4px">▶</span>'+escHtml(e.name)+'</td>' +
+      '<td><span style="font-size:10px;padding:2px 8px;border-radius:4px;background:'+sc+'22;color:'+sc+';font-weight:500">'+sl+'</span></td>' +
+      '<td><span style="font-size:10px;padding:2px 8px;border-radius:4px;background:'+(prioColor[e.priority]||'#eee')+';color:'+(prioText[e.priority]||'#888')+';font-weight:500">'+(prioLabel[e.priority]||e.priority)+'</span></td>' +
+      '<td><span style="font-size:10px;padding:2px 8px;border-radius:4px;background:'+mc+'22;color:'+mc+';font-weight:500">'+(e.mt||'–')+'</span></td>' +
+      '<td style="color:var(--text2)">'+(e.tf||'–')+'</td>' +
+      '<td style="color:var(--text2)">'+(e.price||'–')+'</td>' +
+      '<td style="color:var(--text2)">'+(e.source||'–')+'</td>' +
+      '<td style="text-align:center;color:#BA7517">'+rating+'</td>' +
+      '<td style="text-align:center;color:var(--text3)">–</td>' +
+      '<td style="text-align:center">'+links+'</td>' +
+      '<td style="white-space:nowrap">' +
+        '<button class="icon-btn edit" onclick="event.stopPropagation();editLabEntry(\'' + e.id + '\')" title="Bearbeiten">✎</button>' +
+        '<button class="icon-btn" onclick="event.stopPropagation();deleteLabEntry(\'' + e.id + '\')" title="Löschen">✕</button>' +
+      '</td>' +
+    '</tr>' +
+    '<tr id="lab-detail-'+e.id+'" style="display:none">' +
+      '<td colspan="11" style="padding:0">' +
+        '<div style="background:var(--bg4);padding:14px 16px;border-top:1px solid var(--border)">' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:12px">' +
+            '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Telegram</div><div style="font-size:12px;color:var(--text2)">'+(e.telegram||'–')+'</div></div>' +
+            '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Settings</div><div style="font-size:12px;color:var(--text2)">'+(e.settings||'–')+'</div></div>' +
+            '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Screenshot</div><div style="font-size:12px">'+(e.screenshot?'<a href="'+e.screenshot+'" target="_blank" class="todo-link">🔗 öffnen</a>':'–')+'</div></div>' +
+          '</div>' +
+          '<div style="margin-bottom:10px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Notizen</div><div style="font-size:12px;color:var(--text2)">'+(e.notes||'–')+'</div></div>' +
+          (e.aiRating ? '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.6"><span style="font-size:10px;color:var(--accent);font-weight:600;margin-right:6px">KI-BEWERTUNG</span>'+escHtml(e.aiRating)+'</div>' : '') +
+        '</div>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+
+
+function toggleLabRow(id) {
+  window._labOpenId = window._labOpenId === id ? null : id;
+  renderLabTable();
+}
+
+
+function setLabFilter(f, btn) {
+  labFilter = f;
+  document.querySelectorAll('[id^="lab-btn-"]').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderLabTable();
+}
+
+
+function getLabData() {
+  const saved = localStorage.getItem('ea_hub_lab');
+  if (saved) { try { return JSON.parse(saved); } catch(e) {} }
+  return [];
+}
+
+function saveLabEntry() {
+  const name = document.getElementById('lab-name').value.trim();
+  if (!name) { alert('Name ist Pflicht'); return; }
+  const data = getLabData();
+  const editId = document.getElementById('lab-edit-id').value;
+  const entry = {
+    id: editId || Date.now().toString(),
+    name,
+    status:     document.getElementById('lab-status').value,
+    priority:   document.getElementById('lab-priority').value,
+    mt:         document.getElementById('lab-mt').value,
+    tf:         document.getElementById('lab-tf').value.trim(),
+    price:      document.getElementById('lab-price').value.trim(),
+    source:     document.getElementById('lab-source').value.trim(),
+    myRating:   document.getElementById('lab-myrating').value,
+    buyUrl:     document.getElementById('lab-buyurl').value.trim(),
+    trackUrl:   document.getElementById('lab-trackurl').value.trim(),
+    telegram:   document.getElementById('lab-telegram').value.trim(),
+    screenshot: document.getElementById('lab-screenshot').value.trim(),
+    settings:   document.getElementById('lab-settings').value.trim(),
+    notes:      document.getElementById('lab-notes').value.trim(),
+    aiRating:   document.getElementById('lab-airating').value.trim(),
+  };
+  if (editId) {
+    const idx = data.findIndex(function(e){ return e.id === editId; });
+    if (idx >= 0) data[idx] = entry; else data.push(entry);
+  } else { data.push(entry); }
+  saveLabData(data);
+  document.getElementById('labForm').style.display = 'none';
+  renderLabTable();
+}
+
+
+function editLabEntry(id) {
+  const data = getLabData();
+  const e = data.find(function(x){ return x.id === id; });
+  if (!e) return;
+  document.getElementById('labFormTitle').textContent = 'EA bearbeiten';
+  document.getElementById('lab-edit-id').value = e.id;
+  document.getElementById('lab-name').value = e.name||'';
+  document.getElementById('lab-status').value = e.status||'watchlist';
+  document.getElementById('lab-priority').value = e.priority||'medium';
+  document.getElementById('lab-mt').value = e.mt||'MT4';
+  document.getElementById('lab-tf').value = e.tf||'';
+  document.getElementById('lab-price').value = e.price||'';
+  document.getElementById('lab-source').value = e.source||'';
+  document.getElementById('lab-myrating').value = e.myRating||'';
+  document.getElementById('lab-buyurl').value = e.buyUrl||'';
+  document.getElementById('lab-trackurl').value = e.trackUrl||'';
+  document.getElementById('lab-telegram').value = e.telegram||'';
+  document.getElementById('lab-screenshot').value = e.screenshot||'';
+  document.getElementById('lab-settings').value = e.settings||'';
+  document.getElementById('lab-notes').value = e.notes||'';
+  document.getElementById('lab-airating').value = e.aiRating||'';
+  document.getElementById('labForm').style.display = 'block';
+  document.getElementById('labForm').scrollIntoView({behavior:'smooth'});
+}
+
+
+function deleteLabEntry(id) {
+  if (!confirm('EA-Lab Eintrag löschen?')) return;
+  const data = getLabData().filter(function(e){ return e.id !== id; });
+  saveLabData(data);
+  renderLabTable();
+}
+
+
+function cancelLabEntry() { document.getElementById('labForm').style.display = 'none'; }
+
+
+function escHtml(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderEAsTable() {
+  const tbody = document.getElementById('easTable');
+  if (!DB.eas.length) { tbody.innerHTML='<tr><td colspan="7" class="empty">Noch keine EAs.</td></tr>'; return; }
+  tbody.innerHTML = DB.eas.map((ea,i) => {
+    const trades = DB.pnl.filter(p => p.eaId == ea.id);
+    const wins = trades.filter(p => parseFloat(p.pnl) > 0).length;
+    const wr = trades.length ? ((wins/trades.length)*100).toFixed(0)+'%' : '–';
+    return `<tr>
+      <td>${i+1}</td>
+      <td style="color:var(--accent);font-weight:500">${ea.name}</td>
+      <td style="color:var(--text2)">${ea.strategy||'–'}</td>
+      <td style="color:var(--text2);font-size:10px">${ea.description||'–'}</td>
+      <td>${trades.length}</td>
+      <td class="${wins/trades.length>=0.5?'pos-val':'neg-val'}">${wr}</td>
+      <td style="display:flex;gap:4px">
+        <button class="icon-btn edit" onclick="editEA('${ea.id}')" title="Bearbeiten">✎</button>
+        <button class="icon-btn" onclick="deleteEA('${ea.id}')" title="Löschen">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+  renderLabTable();
 }
 
 </script>
