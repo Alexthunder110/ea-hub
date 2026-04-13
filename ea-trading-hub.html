@@ -4732,16 +4732,15 @@ async function pushRatingFromJson() {
 
   try {
     const payload = encodeURIComponent(JSON.stringify({ action: 'pushRating', data: data }));
-    await fetch(WEBAPP_URL + '?payload=' + payload, { mode: 'no-cors' });
-    // no-cors: opaque response, assume success if no exception
-    {
+    const res = await fetch(WEBAPP_URL + '?payload=' + payload);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Fehler');
       status.style.color = '#1D9E75';
       status.textContent = '✓ ' + (data.ea_name || 'EA') + ' gespeichert.';
       input.value = '';
       await loadAiRating();
       arData = [];
       renderAiRating();
-    }
   } catch(e) {
     status.style.color = '#E24B4A';
     status.textContent = 'Fehler: ' + e.message;
