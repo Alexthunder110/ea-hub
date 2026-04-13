@@ -4705,7 +4705,7 @@ async function pushRatingFromJson() {
   if (!raw) { status.textContent = 'Kein JSON eingefügt.'; return; }
 
   let data;
-  try { data = JSON.parse(raw); }
+  try { data = JSON.parse(raw.replace(/[\u00ad\u200b-\u200f\u2028\u2029\ufeff]/g, '')); }
   catch(e) { status.textContent = 'Ungültiges JSON: ' + e.message; return; }
 
   if (!data.mt_platform) data.mt_platform = null;
