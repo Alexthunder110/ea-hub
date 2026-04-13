@@ -497,8 +497,27 @@ select option { background:var(--bg4); }
     <button class="pnl-filter-btn"        id="lab-btn-testing"  onclick="setLabFilter('testing',this)">🧪 Testing</button>
     <button class="pnl-filter-btn"        id="lab-btn-watchlist" onclick="setLabFilter('watchlist',this)">👁 Watchlist</button>
     <button class="pnl-filter-btn"        id="lab-btn-off"      onclick="setLabFilter('off',this)">⛔ Aussortiert</button>
-    <button class="btn btn-primary btn-sm" onclick="showLabForm()" style="margin-left:auto">+ EA hinzufügen</button>
+    <button class="btn btn-primary btn-sm" onclick="showLabForm2()" style="margin-left:auto">+ EA hinzufügen</button>
   </div>
+  <div id="labForm2" style="display:none;margin-bottom:16px" class="form-panel">
+    <div class="sh" id="labForm2Title">EA hinzufügen</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Name *</label><input type="text" id="lab2-name" placeholder="EA Name"></div>
+      <div class="form-group"><label>Status</label><select id="lab2-status"><option value="watchlist">Watchlist</option><option value="testing">Testing</option><option value="live">Live</option><option value="off">Aussortiert</option></select></div>
+      <div class="form-group"><label>Priority</label><select id="lab2-priority"><option value="medium">Mittel</option><option value="high">Hoch</option><option value="low">Niedrig</option></select></div>
+      <div class="form-group"><label>MT</label><input type="text" id="lab2-mt" placeholder="MT4 / MT5"></div>
+      <div class="form-group"><label>TF</label><input type="text" id="lab2-tf" placeholder="M1, H1..."></div>
+      <div class="form-group"><label>Preis</label><input type="text" id="lab2-price" placeholder="0"></div>
+      <div class="form-group"><label>Quelle</label><input type="text" id="lab2-source" placeholder="Telegram, Youtube..."></div>
+      <div class="form-group"><label>Meine Bewertung</label><input type="number" id="lab2-myrating" placeholder="0-10" min="0" max="10" step="0.1"></div>
+    </div>
+    <input type="hidden" id="lab2-edit-id">
+    <div class="action-row">
+      <button class="btn btn-primary" onclick="saveLabEntry2()">💾 Speichern</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('labForm2').style.display='none'">Abbrechen</button>
+    </div>
+  </div>
+
   <div class="table-wrap">
     <table id="labTable2" style="table-layout:fixed;width:100%">
       <thead><tr>
@@ -1391,10 +1410,31 @@ function renderLabTable2() {
     tbody.innerHTML = '<tr><td colspan="11" class="empty">Keine Einträge.</td></tr>';
     return;
   }
+  let labOpenId = window._labOpenId || null;
   tbody.innerHTML = filtered.map(e => {
     const sc = parseFloat(e.myrating) > 0 ? e.myrating : '–';
     const ki = parseFloat(e.airating) > 0 ? e.airating : '–';
-    return '<tr>'
+    const isOpen = labOpenId === e.id;
+    const detailHtml = isOpen ? (
+      '<tr><td colspan="11" style="padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border)">'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+      + '<div><div style="font-size:10px;color:var(--text3);margin-bottom:6px">DETAILS</div>'
+      + '<table style="width:100%;font-size:12px">'
+      + '<tr><td style="color:var(--text3);padding:3px 0">MT</td><td>' + (e.mt||'–') + '</td></tr>'
+      + '<tr><td style="color:var(--text3);padding:3px 0">TF</td><td>' + (e.tf||'–') + '</td></tr>'
+      + '<tr><td style="color:var(--text3);padding:3px 0">Preis</td><td>' + (e.price||'–') + '</td></tr>'
+      + '<tr><td style="color:var(--text3);padding:3px 0">Quelle</td><td>' + (e.source||'–') + '</td></tr>'
+      + '</table></div>'
+      + '<div><div style="font-size:10px;color:var(--text3);margin-bottom:6px">LINKS & NOTIZEN</div>'
+      + (e.buyUrl ? '<a href="' + e.buyUrl + '" target="_blank" style="color:var(--accent);font-size:12px;display:block">🛒 Kaufen</a>' : '')
+      + (e.trackUrl ? '<a href="' + e.trackUrl + '" target="_blank" style="color:var(--accent);font-size:12px;display:block">📊 Tracking</a>' : '')
+      + (e.notes ? '<div style="font-size:12px;color:var(--text2);margin-top:8px">' + e.notes + '</div>' : '')
+      + '<div style="margin-top:10px;display:flex;gap:8px">'
+      + '<button class="btn btn-secondary btn-sm" data-eid="' + e.id + '" onclick="editLabEntry2(this.dataset.eid)">✎ Bearbeiten</button>'
+      + '</div></div>'
+      + '</div></td></tr>'
+    ) : '';
+    return '<tr data-labid="' + e.id + '" style="cursor:pointer" onclick="toggleLabRow(this.dataset.labid)">'
       + '<td style="font-weight:500;color:var(--accent)">' + (e.name||'–') + '</td>'
       + '<td><span style="color:' + (statusColor[e.status]||'var(--text3)') + ';font-size:11px">' + (statusLabel[e.status]||e.status||'–') + '</span></td>'
       + '<td style="font-size:11px">' + (prioLabel[e.priority]||e.priority||'–') + '</td>'
@@ -1410,7 +1450,72 @@ function renderLabTable2() {
       + '</td>'
       + '<td><button data-lid="' + e.id + '" onclick="deleteLabEntry(this.dataset.lid)" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px">✕</button></td>'
       + '</tr>';
-  }).join('');
+  }).map((row, idx) => row).join('');
+}
+
+function toggleLabRow(id) {
+  window._labOpenId = window._labOpenId === id ? null : id;
+  renderLabTable2();
+}
+
+function showLabForm2() {
+  document.getElementById('lab2-edit-id').value = '';
+  document.getElementById('lab2-name').value = '';
+  document.getElementById('lab2-status').value = 'watchlist';
+  document.getElementById('lab2-priority').value = 'medium';
+  document.getElementById('lab2-mt').value = '';
+  document.getElementById('lab2-tf').value = '';
+  document.getElementById('lab2-price').value = '';
+  document.getElementById('lab2-source').value = '';
+  document.getElementById('lab2-myrating').value = '';
+  document.getElementById('labForm2Title').textContent = 'EA hinzufügen';
+  document.getElementById('labForm2').style.display = 'block';
+  document.getElementById('labForm2').scrollIntoView({behavior:'smooth'});
+}
+
+function editLabEntry2(id) {
+  const data = getLabData();
+  const e = data.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('lab2-edit-id').value = e.id;
+  document.getElementById('lab2-name').value = e.name||'';
+  document.getElementById('lab2-status').value = e.status||'watchlist';
+  document.getElementById('lab2-priority').value = e.priority||'medium';
+  document.getElementById('lab2-mt').value = e.mt||'';
+  document.getElementById('lab2-tf').value = e.tf||'';
+  document.getElementById('lab2-price').value = e.price||'';
+  document.getElementById('lab2-source').value = e.source||'';
+  document.getElementById('lab2-myrating').value = e.myrating||'';
+  document.getElementById('labForm2Title').textContent = 'EA bearbeiten';
+  document.getElementById('labForm2').style.display = 'block';
+  document.getElementById('labForm2').scrollIntoView({behavior:'smooth'});
+}
+
+function saveLabEntry2() {
+  const id = document.getElementById('lab2-edit-id').value;
+  const name = document.getElementById('lab2-name').value.trim();
+  if (!name) { alert('Name erforderlich'); return; }
+  const entry = {
+    id: id || Date.now().toString(),
+    name,
+    status: document.getElementById('lab2-status').value,
+    priority: document.getElementById('lab2-priority').value,
+    mt: document.getElementById('lab2-mt').value,
+    tf: document.getElementById('lab2-tf').value,
+    price: document.getElementById('lab2-price').value,
+    source: document.getElementById('lab2-source').value,
+    myrating: document.getElementById('lab2-myrating').value,
+    created: id ? undefined : new Date().toISOString(),
+    updated: new Date().toISOString()
+  };
+  const data = getLabData();
+  const idx = data.findIndex(x => x.id === id);
+  if (idx >= 0) data[idx] = {...data[idx], ...entry};
+  else data.push(entry);
+  localStorage.setItem('ea_hub_lab', JSON.stringify(data));
+  document.getElementById('labForm2').style.display = 'none';
+  renderLabTable2();
+  toast('✅ EA gespeichert');
 }
 
 function setLabFilter(f, btn) {
@@ -4708,6 +4813,7 @@ async function pushRatingFromJson() {
   try { data = JSON.parse(raw); }
   catch(e) { status.textContent = 'Ungültiges JSON: ' + e.message; return; }
 
+  if (!data.mt_platform) data.mt_platform = null;
   // Normalize scores object - agent sometimes uses wrong field names
   if (data.scores) {
     if (data.scores.rrr !== undefined && data.scores.portfolio_fit === undefined) {
