@@ -1416,7 +1416,7 @@ function renderLabTable2() {
   tbody.innerHTML = filtered.map(e => {
     const sc = parseFloat(e.myrating) > 0 ? e.myrating : '–';
     const ki = parseFloat(e.airating) > 0 ? e.airating : '–';
-    const isOpen = labOpenId === e.id;
+    const isOpen = String(labOpenId) === String(e.id);
     const detailHtml = isOpen ? (
       '<tr><td colspan="11" style="padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border)">'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
@@ -1438,7 +1438,7 @@ function renderLabTable2() {
     ) : '';
     return '<tr data-labid="' + e.id + '" style="cursor:pointer" onclick="toggleLabRow(this.dataset.labid)">'
       + '<td style="font-weight:500;color:var(--accent)">' + (e.name||'–') + '</td>'
-      + '<td><span style="color:' + (statusColor[e.status]||'var(--text3)') + ';font-size:11px">' + (statusLabel[e.status]||e.status||'–') + '</span></td>'
+      + '<td style="font-weight:500;color:var(--accent)"><span style="display:inline-block;width:10px;font-size:9px;color:var(--text3);margin-right:4px;transition:transform .2s;transform:rotate(' + (isOpen?'90':'0') + 'deg)">►</span>' + (e.name||'–') + '</td>'
       + '<td style="font-size:11px">' + (prioLabel[e.priority]||e.priority||'–') + '</td>'
       + '<td style="font-size:11px">' + (e.mt||'–') + '</td>'
       + '<td style="font-size:11px">' + (e.tf||'–') + '</td>'
