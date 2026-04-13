@@ -4708,7 +4708,6 @@ async function pushRatingFromJson() {
   try { data = JSON.parse(raw); }
   catch(e) { status.textContent = 'Ungültiges JSON: ' + e.message; return; }
 
-  if (!data.mt_platform) data.mt_platform = null;
   // Normalize scores object - agent sometimes uses wrong field names
   if (data.scores) {
     if (data.scores.rrr !== undefined && data.scores.portfolio_fit === undefined) {
