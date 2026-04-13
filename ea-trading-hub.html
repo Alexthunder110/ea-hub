@@ -4765,8 +4765,12 @@ function renderLabTable() {
 
 
 function toggleLabRow(id) {
-  window._labOpenId = window._labOpenId === id ? null : id;
-  renderLabTable();
+  const el = document.getElementById('lab-detail-'+id);
+  if (!el) return;
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'table-row';
+  const arrow = document.getElementById('lab-arrow-'+id);
+  if (arrow) arrow.textContent = open ? '►' : '▼';
 }
 
 
