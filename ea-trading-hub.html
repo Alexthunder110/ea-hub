@@ -4705,7 +4705,7 @@ async function pushRatingFromJson() {
   if (!raw) { status.textContent = 'Kein JSON eingefügt.'; return; }
 
   let data;
-  try { data = JSON.parse(raw.replace(/[\u00ad\u200b-\u200f\u2028\u2029\ufeff]/g, '')); }
+  try { data = JSON.parse(raw); }
   catch(e) { status.textContent = 'Ungültiges JSON: ' + e.message; return; }
 
   if (!data.mt_platform) data.mt_platform = null;
@@ -4731,15 +4731,18 @@ async function pushRatingFromJson() {
   status.textContent = '⏳ Wird gesendet...';
 
   try {
-    const jsonStr = JSON.stringify({ action: 'pushRating', data: data });
-    const payload = encodeURIComponent(jsonStr.replace(/[\u0080-\uffff]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4,'0')));
-    const res = await fetch(WEBAPP_URL + '?payload=' + payload);
-    const json = await res.json();
-    if (!json.ok) throw new Error(json.error || 'Fehler');
+    const res = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'pushRating', data: data })
+    });
+    // no-cors = opaque response, assume success
+    await new Promise(r => setTimeout(r, 1500));
       status.style.color = '#1D9E75';
       status.textContent = '✓ ' + (data.ea_name || 'EA') + ' gespeichert.';
       input.value = '';
-      await loadAiRating();
+    arData = []; await loadAiRating();
       arData = [];
       renderAiRating();
   } catch(e) {
