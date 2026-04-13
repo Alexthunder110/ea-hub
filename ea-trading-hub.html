@@ -510,6 +510,8 @@ select option { background:var(--bg4); }
       <div class="form-group"><label>Preis</label><input type="text" id="lab2-price" placeholder="0"></div>
       <div class="form-group"><label>Quelle</label><input type="text" id="lab2-source" placeholder="Telegram, Youtube..."></div>
       <div class="form-group"><label>Meine Bewertung</label><input type="number" id="lab2-myrating" placeholder="0-10" min="0" max="10" step="0.1"></div>
+      <div class="form-group"><label>Kauf-Link</label><input type="text" id="lab2-buyurl" placeholder="https://..."></div>
+      <div class="form-group"><label>Tracking-Link</label><input type="text" id="lab2-trackurl" placeholder="https://..."></div>
     </div>
     <input type="hidden" id="lab2-edit-id">
     <div class="action-row">
@@ -1449,7 +1451,8 @@ function renderLabTable2() {
         + (e.trackUrl ? '<a href="' + e.trackUrl + '" target="_blank" style="color:var(--accent)">📊</a>' : '')
       + '</td>'
       + '<td><button data-lid="' + e.id + '" onclick="deleteLabEntry(this.dataset.lid)" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px">✕</button></td>'
-      + '</tr>';
+      + '</tr>'
+      + detailHtml;
   }).map((row, idx) => row).join('');
 }
 
@@ -1486,6 +1489,8 @@ function editLabEntry2(id) {
   document.getElementById('lab2-price').value = e.price||'';
   document.getElementById('lab2-source').value = e.source||'';
   document.getElementById('lab2-myrating').value = e.myrating||'';
+  document.getElementById('lab2-buyurl').value = e.buyUrl||'';
+  document.getElementById('lab2-trackurl').value = e.trackUrl||'';
   document.getElementById('labForm2Title').textContent = 'EA bearbeiten';
   document.getElementById('labForm2').style.display = 'block';
   document.getElementById('labForm2').scrollIntoView({behavior:'smooth'});
@@ -1505,6 +1510,8 @@ function saveLabEntry2() {
     price: document.getElementById('lab2-price').value,
     source: document.getElementById('lab2-source').value,
     myrating: document.getElementById('lab2-myrating').value,
+    buyUrl: document.getElementById('lab2-buyurl').value,
+    trackUrl: document.getElementById('lab2-trackurl').value,
     created: id ? undefined : new Date().toISOString(),
     updated: new Date().toISOString()
   };
