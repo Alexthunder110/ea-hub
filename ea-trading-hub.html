@@ -2066,8 +2066,9 @@ function renderTodayRows() {
 function updateSelects() {
   const accOpts = '<option value="">– kein Konto –</option>' +
     DB.accounts.map(a => `<option value="${a.id}">${a.number} – ${a.broker} [${a.type}]</option>`).join('');
+  const activeEas = DB.eas.filter(function(e){ return e.status==='live' || e.status==='testing'; });
   const eaOpts = '<option value="">– kein EA –</option>' +
-    DB.eas.map(e => `<option value="${e.id}">${e.name}${e.strategy?' ('+e.strategy+')':''}</option>`).join('');
+    activeEas.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
 
   ['pnl-account','q-account'].forEach(id => { const el=document.getElementById(id); if(el) el.innerHTML=accOpts; });
   ['pnl-ea','q-ea'].forEach(id => { const el=document.getElementById(id); if(el) el.innerHTML=eaOpts; });
