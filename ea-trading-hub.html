@@ -936,6 +936,7 @@ var eaRatingSort = { col: 'score', dir: -1 };
     saveLocal();
   }
   API_URL = localStorage.getItem('eaHub_apiUrl') || '';
+  mergeEaMeta(); // neue EA-Felder aus lokalem Speicher laden
 
   if (API_URL) {
     document.getElementById('setupOverlay').style.display = 'none';
@@ -1047,7 +1048,10 @@ async function syncAll() {
     ]);
     // Only overwrite local data if remote actually has content
     if (accounts && accounts.length > 0) DB.accounts = accounts;
-    if (eas && eas.length > 0) DB.eas = eas;
+    if (eas && eas.length > 0) {
+      DB.eas = eas;
+      mergeEaMeta(); // lokale Status/Priority/etc. wieder einmergen
+    }
     if (pnl && pnl.length > 0) DB.pnl = pnl.map(r => ({ ...r, date: normalizeDate(r.date) }));
     if (diary && diary.length > 0) DB.diary = diary.map(r => ({ ...r, date: normalizeDate(r.date) }));
     if (todos && todos.length > 0) DB.todos = todos;
@@ -4517,6 +4521,7 @@ async function saveEaEntry() {
   var idx = DB.eas.findIndex(function(e){ return e.id == obj.id; });
   if (idx >= 0) DB.eas[idx] = obj; else DB.eas.push(obj);
   saveLocal();
+  saveEaMeta();
   renderEaTable();
   renderAll();
   closeEaForm();
@@ -4549,6 +4554,7 @@ async function deleteEaEntry(id) {
   if (!confirm('EA löschen? Alle P&L-Einträge bleiben erhalten.')) return;
   DB.eas = DB.eas.filter(function(e){ return e.id != id; });
   saveLocal();
+  saveEaMeta();
   renderEaTable();
   renderAll();
   await api('delete','EAs',null,id);
@@ -4646,6 +4652,55 @@ function renderEaTable() {
       if (row)     { toggleEaRow(row.dataset.eaid); }
     };
   }
+}
+
+
+// ============================================================
+// EA META – lokale Persistenz für neue EA-Felder
+// (Status, Priority, MT, TF, Preis, Quelle, Bewertung etc.)
+// Überlebt Google Sheets Sync ohne Apps Script Änderung
+// ============================================================
+function saveEaMeta() {
+  var meta = {};
+  DB.eas.forEach(function(ea) {
+    meta[ea.id] = {
+      status:   ea.status   || 'watchlist',
+      priority: ea.priority || 'medium',
+      mt:       ea.mt       || 'MT4',
+      tf:       ea.tf       || '',
+      price:    ea.price    || '',
+      source:   ea.source   || '',
+      myRating: ea.myRating || '',
+      aiRating: ea.aiRating || '',
+      buyUrl:   ea.buyUrl   || '',
+      trackUrl: ea.trackUrl || '',
+      notes:    ea.notes    || '',
+    };
+  });
+  localStorage.setItem('eaHub_eaMeta', JSON.stringify(meta));
+}
+
+function mergeEaMeta() {
+  var raw = localStorage.getItem('eaHub_eaMeta');
+  if (!raw) return;
+  try {
+    var meta = JSON.parse(raw);
+    DB.eas.forEach(function(ea) {
+      var m = meta[ea.id];
+      if (!m) return;
+      ea.status   = m.status   || ea.status   || 'watchlist';
+      ea.priority = m.priority || ea.priority || 'medium';
+      ea.mt       = m.mt       || ea.mt       || 'MT4';
+      ea.tf       = m.tf       || ea.tf       || '';
+      ea.price    = m.price    || ea.price    || '';
+      ea.source   = m.source   || ea.source   || '';
+      ea.myRating = m.myRating || ea.myRating || '';
+      ea.aiRating = m.aiRating || ea.aiRating || '';
+      ea.buyUrl   = m.buyUrl   || ea.buyUrl   || '';
+      ea.trackUrl = m.trackUrl || ea.trackUrl || '';
+      ea.notes    = m.notes    || ea.notes    || '';
+    });
+  } catch(e) { console.warn('[EaMeta] Merge Fehler:', e); }
 }
 
 </script>
