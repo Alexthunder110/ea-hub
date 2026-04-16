@@ -470,45 +470,27 @@ select option { background:var(--bg4); }
 </div>
 
 <div class="view" id="view-eas">
-  <div class="form-panel">
-    <div class="sh" id="eaFormTitle">EA hinzufügen</div>
-    <div class="form-grid">
-      <div class="form-group"><label>Name *</label><input type="text" id="ea-name" placeholder="Milion299k"></div>
-      <div class="form-group"><label>Strategie</label><input type="text" id="ea-strategy" placeholder="M1 Grid, M5 Scalp..."></div>
-      <div class="form-group fg-2"><label>Beschreibung</label><input type="text" id="ea-desc" placeholder="optional"></div>
-    </div>
-    <input type="hidden" id="ea-edit-id">
-    <div class="action-row">
-      <button class="btn btn-primary" onclick="saveEA()">💾 Speichern</button>
-      <button class="btn btn-secondary" onclick="resetEAForm()">Abbrechen</button>
-    </div>
-  </div>
 
-  <div class="sh">Meine EAs</div>
-  <div class="table-wrap">
-    <table><thead><tr><th>#</th><th>Name</th><th>Strategie</th><th>Beschreibung</th><th>Trades</th><th>Win Rate</th><th></th></tr></thead>
-    <tbody id="easTable"></tbody></table>
-  </div>
-
+  <!-- Filter & Add Button -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <button class="pnl-filter-btn active" id="lab-btn-all"   onclick="setLabFilter('all',this)">Alle</button>
-      <button class="pnl-filter-btn"        id="lab-btn-live"  onclick="setLabFilter('live',this)">🟢 Live</button>
-      <button class="pnl-filter-btn"        id="lab-btn-test"  onclick="setLabFilter('testing',this)">🧪 Testing</button>
-      <button class="pnl-filter-btn"        id="lab-btn-watch" onclick="setLabFilter('watchlist',this)">👁 Watchlist</button>
-      <button class="pnl-filter-btn"        id="lab-btn-off"   onclick="setLabFilter('off',this)">⛔ Aussortiert</button>
+      <button class="pnl-filter-btn active" id="ea-btn-all"   onclick="setEaFilter('all',this)">Alle</button>
+      <button class="pnl-filter-btn"        id="ea-btn-live"  onclick="setEaFilter('live',this)">🟢 Live</button>
+      <button class="pnl-filter-btn"        id="ea-btn-test"  onclick="setEaFilter('testing',this)">🧪 Testing</button>
+      <button class="pnl-filter-btn"        id="ea-btn-watch" onclick="setEaFilter('watchlist',this)">👁 Watchlist</button>
+      <button class="pnl-filter-btn"        id="ea-btn-off"   onclick="setEaFilter('off',this)">⛔ Aussortiert</button>
     </div>
-    <button onclick="addLabEntry()" class="btn btn-primary" style="font-size:11px;padding:6px 14px">+ EA hinzufügen</button>
+    <button onclick="openEaForm()" class="btn btn-primary" style="font-size:11px;padding:6px 14px">+ EA hinzufügen</button>
   </div>
 
-  <!-- Add/Edit Form -->
-  <div id="labForm" style="display:none" class="form-panel">
-    <div class="sh" id="labFormTitle">EA hinzufügen</div>
-    <input type="hidden" id="lab-edit-id">
+  <!-- Formular -->
+  <div id="eaFormPanel" style="display:none" class="form-panel">
+    <div class="sh" id="eaFormTitle">EA hinzufügen</div>
+    <input type="hidden" id="ea-edit-id">
     <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
-      <div class="form-group"><label>Name *</label><input id="lab-name" placeholder="EA Name"></div>
+      <div class="form-group"><label>Name *</label><input id="ea-name" placeholder="EA Name"></div>
       <div class="form-group"><label>Status</label>
-        <select id="lab-status">
+        <select id="ea-status">
           <option value="watchlist">👁 Watchlist</option>
           <option value="testing">🧪 Testing</option>
           <option value="live">🟢 Live</option>
@@ -516,60 +498,66 @@ select option { background:var(--bg4); }
         </select>
       </div>
       <div class="form-group"><label>Priority</label>
-        <select id="lab-priority">
+        <select id="ea-priority">
           <option value="high">🔴 Hoch</option>
           <option value="medium" selected>🟡 Mittel</option>
           <option value="low">🟢 Niedrig</option>
         </select>
       </div>
       <div class="form-group"><label>MT</label>
-        <select id="lab-mt">
+        <select id="ea-mt">
           <option value="MT4">MT4</option>
           <option value="MT5">MT5</option>
           <option value="beide">MT4 + MT5</option>
         </select>
       </div>
-      <div class="form-group"><label>Timeframe</label><input id="lab-tf" placeholder="M1, H1..."></div>
-      <div class="form-group"><label>Preis</label><input id="lab-price" placeholder="z.B. $299 oder kostenlos"></div>
-      <div class="form-group"><label>Quelle</label><input id="lab-source" placeholder="mql5.com, Telegram..."></div>
-      <div class="form-group"><label>Meine Bewertung (0-10)</label><input id="lab-myrating" type="number" min="0" max="10" step="0.1" placeholder="8.5"></div>
+      <div class="form-group"><label>Timeframe</label><input id="ea-tf" placeholder="M1, H1..."></div>
+      <div class="form-group"><label>Preis</label><input id="ea-price" placeholder="z.B. $299 oder kostenlos"></div>
+      <div class="form-group"><label>Quelle</label><input id="ea-source" placeholder="mql5.com, Telegram..."></div>
+      <div class="form-group"><label>Meine Bewertung (0–10)</label><input id="ea-myrating" type="number" min="0" max="10" step="0.1" placeholder="8.5"></div>
+      <div class="form-group"><label>KI-Empfehlung</label>
+        <select id="ea-airating">
+          <option value="">–</option>
+          <option value="Cent">Cent</option>
+          <option value="Demo">Demo</option>
+          <option value="Live">Live</option>
+          <option value="Aussortiert">Aussortiert</option>
+        </select>
+      </div>
     </div>
     <div class="form-grid" style="grid-template-columns:1fr 1fr;margin-top:10px">
-      <div class="form-group"><label>Kauflink (URL)</label><input id="lab-buyurl" placeholder="https://..."></div>
-      <div class="form-group"><label>Tracking-Link</label><input id="lab-trackurl" placeholder="https://myfxbook.com/..."></div>
-      <div class="form-group"><label>Telegram</label><input id="lab-telegram" placeholder="@kanal oder Link"></div>
-      <div class="form-group"><label>Screenshot-URL</label><input id="lab-screenshot" placeholder="https://..."></div>
+      <div class="form-group"><label>Kauflink</label><input id="ea-buyurl" placeholder="https://..."></div>
+      <div class="form-group"><label>Tracking-Link</label><input id="ea-trackurl" placeholder="https://myfxbook.com/..."></div>
     </div>
-    <div class="form-group" style="margin-top:10px"><label>Settings</label><textarea id="lab-settings" rows="2" placeholder="Lot, TP, SL, Magic..."></textarea></div>
-    <div class="form-group"><label>Notizen</label><textarea id="lab-notes" rows="2" placeholder="Beobachtungen, Gedanken..."></textarea></div>
-    <div class="form-group"><label>KI-Bewertung</label><textarea id="lab-airating" rows="3" placeholder="KI-Einschätzung..."></textarea></div>
+    <div class="form-group" style="margin-top:10px">
+      <label>Notizen</label>
+      <textarea id="ea-notes" rows="2" placeholder="Beobachtungen, Gedanken..."></textarea>
+    </div>
     <div style="display:flex;gap:10px;margin-top:14px">
-      <button class="btn btn-primary" onclick="saveLabEntry()">💾 Speichern</button>
-      <button class="btn" onclick="cancelLabEntry()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveEaEntry()">💾 Speichern</button>
+      <button class="btn btn-secondary" onclick="closeEaForm()">Abbrechen</button>
     </div>
   </div>
 
-  <!-- Table -->
+  <!-- Tabelle -->
   <div class="table-wrap">
-    <table id="labTable" style="table-layout:fixed;width:100%">
+    <table id="eaTable" style="table-layout:fixed;width:100%">
       <thead><tr>
-        <th style="width:160px">EA</th>
-        <th style="width:90px">Status</th>
+        <th style="width:170px">EA</th>
+        <th style="width:100px">Status</th>
         <th style="width:80px">Priority</th>
-        <th style="width:55px">MT</th>
-        <th style="width:45px">TF</th>
-        <th style="width:90px">Preis</th>
-        <th style="width:90px">Quelle</th>
-        <th style="width:65px;text-align:center">Meine ⭐</th>
-        <th style="width:55px;text-align:center">KI ⭐</th>
-        <th style="width:70px;text-align:center">Links</th>
-        <th style="width:50px"></th>
+        <th style="width:50px">MT</th>
+        <th style="width:40px">TF</th>
+        <th style="width:65px;text-align:center">Einträge</th>
+        <th style="width:70px;text-align:center">Bewertung</th>
+        <th style="width:75px;text-align:center">KI-Empf.</th>
+        <th style="width:65px;text-align:center">Links</th>
+        <th style="width:48px"></th>
       </tr></thead>
-      <tbody id="labBody"></tbody>
+      <tbody id="eaTableBody"></tbody>
     </table>
   </div>
 </div>
-
 
 
 <div class="view" id="view-airating">
@@ -802,88 +790,6 @@ select option { background:var(--bg4); }
 
   <!-- Auszahlungsplaner + Balance Chart -->
   <div id="incomeWithdrawalChart"></div>
-</div>
-
-
-<div class="view" id="view-ealab">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <button class="pnl-filter-btn active" id="lab-btn-all"   onclick="setLabFilter('all',this)">Alle</button>
-      <button class="pnl-filter-btn"        id="lab-btn-live"  onclick="setLabFilter('live',this)">🟢 Live</button>
-      <button class="pnl-filter-btn"        id="lab-btn-test"  onclick="setLabFilter('testing',this)">🧪 Testing</button>
-      <button class="pnl-filter-btn"        id="lab-btn-watch" onclick="setLabFilter('watchlist',this)">👁 Watchlist</button>
-      <button class="pnl-filter-btn"        id="lab-btn-off"   onclick="setLabFilter('off',this)">⛔ Aussortiert</button>
-    </div>
-    <button onclick="addLabEntry()" class="btn btn-primary" style="font-size:11px;padding:6px 14px">+ EA hinzufügen</button>
-  </div>
-
-  <!-- Add/Edit Form -->
-  <div id="labForm" style="display:none" class="form-panel">
-    <div class="sh" id="labFormTitle">EA hinzufügen</div>
-    <input type="hidden" id="lab-edit-id">
-    <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
-      <div class="form-group"><label>Name *</label><input id="lab-name" placeholder="EA Name"></div>
-      <div class="form-group"><label>Status</label>
-        <select id="lab-status">
-          <option value="watchlist">👁 Watchlist</option>
-          <option value="testing">🧪 Testing</option>
-          <option value="live">🟢 Live</option>
-          <option value="off">⛔ Aussortiert</option>
-        </select>
-      </div>
-      <div class="form-group"><label>Priority</label>
-        <select id="lab-priority">
-          <option value="high">🔴 Hoch</option>
-          <option value="medium" selected>🟡 Mittel</option>
-          <option value="low">🟢 Niedrig</option>
-        </select>
-      </div>
-      <div class="form-group"><label>MT</label>
-        <select id="lab-mt">
-          <option value="MT4">MT4</option>
-          <option value="MT5">MT5</option>
-          <option value="beide">MT4 + MT5</option>
-        </select>
-      </div>
-      <div class="form-group"><label>Timeframe</label><input id="lab-tf" placeholder="M1, H1..."></div>
-      <div class="form-group"><label>Preis</label><input id="lab-price" placeholder="z.B. $299 oder kostenlos"></div>
-      <div class="form-group"><label>Quelle</label><input id="lab-source" placeholder="mql5.com, Telegram..."></div>
-      <div class="form-group"><label>Meine Bewertung (0-10)</label><input id="lab-myrating" type="number" min="0" max="10" step="0.1" placeholder="8.5"></div>
-    </div>
-    <div class="form-grid" style="grid-template-columns:1fr 1fr;margin-top:10px">
-      <div class="form-group"><label>Kauflink (URL)</label><input id="lab-buyurl" placeholder="https://..."></div>
-      <div class="form-group"><label>Tracking-Link</label><input id="lab-trackurl" placeholder="https://myfxbook.com/..."></div>
-      <div class="form-group"><label>Telegram</label><input id="lab-telegram" placeholder="@kanal oder Link"></div>
-      <div class="form-group"><label>Screenshot-URL</label><input id="lab-screenshot" placeholder="https://..."></div>
-    </div>
-    <div class="form-group" style="margin-top:10px"><label>Settings</label><textarea id="lab-settings" rows="2" placeholder="Lot, TP, SL, Magic..."></textarea></div>
-    <div class="form-group"><label>Notizen</label><textarea id="lab-notes" rows="2" placeholder="Beobachtungen, Gedanken..."></textarea></div>
-    <div class="form-group"><label>KI-Bewertung</label><textarea id="lab-airating" rows="3" placeholder="KI-Einschätzung..."></textarea></div>
-    <div style="display:flex;gap:10px;margin-top:14px">
-      <button class="btn btn-primary" onclick="saveLabEntry()">💾 Speichern</button>
-      <button class="btn" onclick="cancelLabEntry()">Abbrechen</button>
-    </div>
-  </div>
-
-  <!-- Table -->
-  <div class="table-wrap">
-    <table id="labTable" style="table-layout:fixed;width:100%">
-      <thead><tr>
-        <th style="width:160px">EA</th>
-        <th style="width:90px">Status</th>
-        <th style="width:80px">Priority</th>
-        <th style="width:55px">MT</th>
-        <th style="width:45px">TF</th>
-        <th style="width:90px">Preis</th>
-        <th style="width:90px">Quelle</th>
-        <th style="width:65px;text-align:center">Meine ⭐</th>
-        <th style="width:55px;text-align:center">KI ⭐</th>
-        <th style="width:70px;text-align:center">Links</th>
-        <th style="width:50px"></th>
-      </tr></thead>
-      <tbody id="labBody"></tbody>
-    </table>
-  </div>
 </div>
 
 
@@ -1219,12 +1125,12 @@ function checkOnline() {
 // ============================================================
 function renderAll() {
   renderAccountsTable();
-  renderEAsTable();
+  renderEaTable();
   renderPnlTable();
   updateSelects();
   renderLiveTab();
   setTimeout(function() {
-    renderLabTable();
+    
   }, 50);
 }
 
@@ -1237,7 +1143,7 @@ function showView(id, btn) {
   document.getElementById('view-'+id).classList.add('active');
   btn.classList.add('active');
   if (id === 'live') { renderLiveTab(); }
-  if (id === 'eas') { renderEAsTable(); renderLabTable(); }
+  if (id === 'eas') { migrateLabToEas(); renderEaTable(); }
   if (id === 'analytics') { renderAnalytics(); setTimeout(renderCharts, 50); }
   if (id === 'forecast') { renderIncome(); renderStrategy(); }
   if (id === 'airating') { renderAiRating(); }
@@ -1340,51 +1246,7 @@ function renderAccountsTable() {
 // ============================================================
 // EAs
 // ============================================================
-async function saveEA() {
-  const editId = document.getElementById('ea-edit-id').value;
-  const name = document.getElementById('ea-name').value.trim();
-  if (!name) { toast('⚠ Name ist Pflicht','err'); return; }
-  const obj = {
-    id: editId || Date.now().toString(),
-    name,
-    strategy: document.getElementById('ea-strategy').value.trim(),
-    description: document.getElementById('ea-desc').value.trim(),
-  };
-  const existing = DB.eas.findIndex(e => e.id == obj.id);
-  if (existing >= 0) DB.eas[existing] = obj;
-  else DB.eas.push(obj);
-  saveLocal(); renderAll();
-  await api('upsert','EAs',obj);
-  toast('✅ EA gespeichert');
-  resetEAForm();
-}
-
-function editEA(id) {
-  const ea = DB.eas.find(x => x.id == id);
-  if (!ea) return;
-  document.getElementById('ea-edit-id').value = ea.id;
-  document.getElementById('ea-name').value = ea.name||'';
-  document.getElementById('ea-strategy').value = ea.strategy||'';
-  document.getElementById('ea-desc').value = ea.description||'';
-  document.getElementById('eaFormTitle').textContent = 'EA bearbeiten';
-}
-
-async function deleteEA(id) {
-  if (!confirm('EA löschen?')) return;
-  DB.eas = DB.eas.filter(e => e.id != id);
-  saveLocal(); renderAll();
-  await api('delete','EAs',null,id);
-  toast('🗑 EA gelöscht');
-}
-
-function resetEAForm() {
-  ['ea-name','ea-strategy','ea-desc'].forEach(id => document.getElementById(id).value='');
-  document.getElementById('ea-edit-id').value='';
-  document.getElementById('eaFormTitle').textContent='EA hinzufügen';
-}
-
-
-function fillEAStrategy() {
+async function fillEAStrategy() {
   const eaId = document.getElementById('pnl-ea').value;
   const ea = DB.eas.find(e => e.id == eaId);
   if (ea) document.getElementById('pnl-strategy').value = ea.strategy||'';
@@ -3640,167 +3502,6 @@ function toggleForecastEa(eaId) {
 // ============================================================
 var labFilter = 'all';
 
-function getLabData() {
-  const saved = localStorage.getItem('ea_hub_lab');
-  if (saved) { try { return JSON.parse(saved); } catch(e) {} }
-  return [];
-}
-function saveLabData(data) {
-  localStorage.setItem('ea_hub_lab', JSON.stringify(data));
-  api('pushAll', 'Settings', [
-    { key: 'settings', value: JSON.stringify(DB.settings) },
-    { key: 'strategy', value: localStorage.getItem('ea_hub_strategy') || '{}' },
-    { key: 'ealab', value: JSON.stringify(data) },
-  ]).catch(function(){});
-}
-
-function setLabFilter(f, btn) {
-  labFilter = f;
-  document.querySelectorAll('[id^="lab-btn-"]').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderLabTable();
-}
-
-function addLabEntry() {
-  document.getElementById('labFormTitle').textContent = 'EA hinzufügen';
-  document.getElementById('lab-edit-id').value = '';
-  ['lab-name','lab-tf','lab-price','lab-source','lab-buyurl','lab-trackurl',
-   'lab-telegram','lab-screenshot','lab-settings','lab-notes','lab-airating'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
-  document.getElementById('lab-status').value = 'watchlist';
-  document.getElementById('lab-priority').value = 'medium';
-  document.getElementById('lab-mt').value = 'MT4';
-  document.getElementById('lab-myrating').value = '';
-  document.getElementById('labForm').style.display = 'block';
-  document.getElementById('labForm').scrollIntoView({behavior:'smooth'});
-}
-
-function cancelLabEntry() { document.getElementById('labForm').style.display = 'none'; }
-
-function saveLabEntry() {
-  const name = document.getElementById('lab-name').value.trim();
-  if (!name) { alert('Name ist Pflicht'); return; }
-  const data = getLabData();
-  const editId = document.getElementById('lab-edit-id').value;
-  const entry = {
-    id: editId || Date.now().toString(),
-    name,
-    status:     document.getElementById('lab-status').value,
-    priority:   document.getElementById('lab-priority').value,
-    mt:         document.getElementById('lab-mt').value,
-    tf:         document.getElementById('lab-tf').value.trim(),
-    price:      document.getElementById('lab-price').value.trim(),
-    source:     document.getElementById('lab-source').value.trim(),
-    myRating:   document.getElementById('lab-myrating').value,
-    buyUrl:     document.getElementById('lab-buyurl').value.trim(),
-    trackUrl:   document.getElementById('lab-trackurl').value.trim(),
-    telegram:   document.getElementById('lab-telegram').value.trim(),
-    screenshot: document.getElementById('lab-screenshot').value.trim(),
-    settings:   document.getElementById('lab-settings').value.trim(),
-    notes:      document.getElementById('lab-notes').value.trim(),
-    aiRating:   document.getElementById('lab-airating').value.trim(),
-  };
-  if (editId) {
-    const idx = data.findIndex(function(e){ return e.id === editId; });
-    if (idx >= 0) data[idx] = entry; else data.push(entry);
-  } else { data.push(entry); }
-  saveLabData(data);
-  document.getElementById('labForm').style.display = 'none';
-  renderLabTable();
-}
-
-function editLabEntry(id) {
-  const data = getLabData();
-  const e = data.find(function(x){ return x.id === id; });
-  if (!e) return;
-  document.getElementById('labFormTitle').textContent = 'EA bearbeiten';
-  document.getElementById('lab-edit-id').value = e.id;
-  document.getElementById('lab-name').value = e.name||'';
-  document.getElementById('lab-status').value = e.status||'watchlist';
-  document.getElementById('lab-priority').value = e.priority||'medium';
-  document.getElementById('lab-mt').value = e.mt||'MT4';
-  document.getElementById('lab-tf').value = e.tf||'';
-  document.getElementById('lab-price').value = e.price||'';
-  document.getElementById('lab-source').value = e.source||'';
-  document.getElementById('lab-myrating').value = e.myRating||'';
-  document.getElementById('lab-buyurl').value = e.buyUrl||'';
-  document.getElementById('lab-trackurl').value = e.trackUrl||'';
-  document.getElementById('lab-telegram').value = e.telegram||'';
-  document.getElementById('lab-screenshot').value = e.screenshot||'';
-  document.getElementById('lab-settings').value = e.settings||'';
-  document.getElementById('lab-notes').value = e.notes||'';
-  document.getElementById('lab-airating').value = e.aiRating||'';
-  document.getElementById('labForm').style.display = 'block';
-  document.getElementById('labForm').scrollIntoView({behavior:'smooth'});
-}
-
-function deleteLabEntry(id) {
-  if (!confirm('EA-Lab Eintrag löschen?')) return;
-  const data = getLabData().filter(function(e){ return e.id !== id; });
-  saveLabData(data);
-  renderLabTable();
-}
-
-
-function renderLabTable() {
-  const tbody = document.getElementById('labBody');
-  if (!tbody) return;
-  const data = getLabData();
-  const filtered = labFilter === 'all' ? data : data.filter(function(e){ return e.status === labFilter; });
-
-  const statusLabel = { live:'🟢 Live', testing:'🧪 Testing', watchlist:'👁 Watchlist', off:'⛔ Aussortiert' };
-  const statusColor = { live:'#1D9E75', testing:'#BA7517', watchlist:'#185FA5', off:'#5F5E5A' };
-  const prioLabel   = { high:'🔴 Hoch', medium:'🟡 Mittel', low:'🟢 Niedrig' };
-  const prioColor   = { high:'rgba(226,75,74,0.15)', medium:'rgba(186,117,23,0.15)', low:'rgba(136,135,128,0.15)' };
-  const prioText    = { high:'#A32D2D', medium:'#BA7517', low:'#5F5E5A' };
-  const mtColor     = { MT4:'#534AB7', MT5:'#993556', 'MT4 + MT5':'#185FA5' };
-
-  if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="empty">Keine Einträge.</td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = filtered.map(function(e) {
-    const sc = statusColor[e.status]||'#888';
-    const sl = statusLabel[e.status]||e.status;
-    const mc = mtColor[e.mt]||'#888';
-    const rating = (e.myRating||e.myrating) ? parseFloat(e.myRating||e.myrating).toFixed(1) : '–';
-    const links = (e.buyUrl ? '<a href="'+e.buyUrl+'" target="_blank" class="todo-link" title="Kaufen" style="font-size:13px">🛒</a>' : '') +
-                  (e.trackUrl ? '<a href="'+e.trackUrl+'" target="_blank" class="todo-link track" title="Tracking" style="font-size:13px">📊</a>' : '');
-    return '<tr style="cursor:pointer" onclick="toggleLabRow(\'' + e.id + '\')">' +
-      '<td style="font-weight:600;color:var(--accent)"><span id="lab-arrow-'+e.id+'" style="font-size:9px;color:var(--text3);margin-right:4px">▶</span>'+escHtml(e.name)+'</td>' +
-      '<td><span style="font-size:10px;padding:2px 8px;border-radius:4px;background:'+sc+'22;color:'+sc+';font-weight:500">'+sl+'</span></td>' +
-      '<td><span style="font-size:10px;padding:2px 8px;border-radius:4px;background:'+(prioColor[e.priority]||'#eee')+';color:'+(prioText[e.priority]||'#888')+';font-weight:500">'+(prioLabel[e.priority]||e.priority)+'</span></td>' +
-      '<td><span style="font-size:10px;padding:2px 8px;border-radius:4px;background:'+mc+'22;color:'+mc+';font-weight:500">'+(e.mt||'–')+'</span></td>' +
-      '<td style="color:var(--text2)">'+(e.tf||'–')+'</td>' +
-      '<td style="color:var(--text2)">'+(e.price||'–')+'</td>' +
-      '<td style="color:var(--text2)">'+(e.source||'–')+'</td>' +
-      '<td style="text-align:center;color:#BA7517">'+rating+'</td>' +
-      '<td style="text-align:center;color:var(--accent)">'+(e.aiRating||'–')+'</td>' +
-      '<td style="text-align:center">'+links+'</td>' +
-      '<td style="white-space:nowrap">' +
-        '<button class="icon-btn edit" onclick="event.stopPropagation();editLabEntry(\'' + e.id + '\')" title="Bearbeiten">✎</button>' +
-        '<button class="icon-btn" onclick="event.stopPropagation();deleteLabEntry(\'' + e.id + '\')" title="Löschen">✕</button>' +
-      '</td>' +
-    '</tr>' +
-    '<tr id="lab-detail-'+e.id+'" style="display:none">' +
-      '<td colspan="11" style="padding:0">' +
-        '<div style="background:var(--bg4);padding:14px 16px;border-top:1px solid var(--border)">' +
-          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:12px">' +
-            '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Telegram</div><div style="font-size:12px;color:var(--text2)">'+(e.telegram||'–')+'</div></div>' +
-            '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Settings</div><div style="font-size:12px;color:var(--text2)">'+(e.settings||'–')+'</div></div>' +
-            '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Screenshot</div><div style="font-size:12px">'+(e.screenshot?'<a href="'+e.screenshot+'" target="_blank" class="todo-link">🔗 öffnen</a>':'–')+'</div></div>' +
-          '</div>' +
-          '<div style="margin-bottom:10px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Notizen</div><div style="font-size:12px;color:var(--text2)">'+(e.notes||'–')+'</div></div>' +
-          (e.aiRating ? '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.6"><span style="font-size:10px;color:var(--accent);font-weight:600;margin-right:6px">KI-BEWERTUNG</span>'+escHtml(e.aiRating)+'</div>' : '') +
-        '</div>' +
-      '</td>' +
-    '</tr>';
-  }).join('');
-}
-
-
 function renderOverviewEaLab() {
   const el = document.getElementById('overviewEaLab');
   if (!el) return;
@@ -4093,7 +3794,7 @@ function renderDemoTab() {
       {label:'P&L Gesamt (Demo)',val:fmt(totalPnl), cls:cls(totalPnl)},
     ].map(c=>`<div class="sum-card ${c.cls}"><div class="sum-label">${c.label}</div><div class="sum-value ${c.cls}">${c.val}</div></div>`).join('');
   }
-  renderLabTable();
+  
 }
 
 function renderDemoCharts() {
@@ -4705,182 +4406,245 @@ function arToggle(id) {
 // EA LAB (from original)
 // ============================================================
 
-function renderLabTable() {
-  const tbody = document.getElementById('labBody');
+function escHtml(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+
+// ============================================================
+// EA TAB – kombinierter EA Manager
+// ============================================================
+var eaFilter = 'all';
+
+function migrateLabToEas() {
+  // Lab-Daten (localStorage) in DB.eas migrieren (einmalig, name-basiert)
+  var labRaw = localStorage.getItem('ea_hub_lab');
+  if (!labRaw) return;
+  try {
+    var labData = JSON.parse(labRaw);
+    var migrated = 0;
+    labData.forEach(function(lab) {
+      var existing = DB.eas.find(function(e) {
+        return e.name.toLowerCase().trim() === lab.name.toLowerCase().trim();
+      });
+      if (existing) {
+        // Merge Lab-Felder in bestehendes EA-Objekt
+        if (!existing.status)    existing.status    = lab.status    || 'watchlist';
+        if (!existing.priority)  existing.priority  = lab.priority  || 'medium';
+        if (!existing.mt)        existing.mt        = lab.mt        || 'MT4';
+        if (!existing.tf)        existing.tf        = lab.tf        || '';
+        if (!existing.price)     existing.price     = lab.price     || '';
+        if (!existing.source)    existing.source    = lab.source    || '';
+        if (!existing.myRating)  existing.myRating  = lab.myRating  || '';
+        if (!existing.aiRating)  existing.aiRating  = lab.aiRating  || '';
+        if (!existing.buyUrl)    existing.buyUrl    = lab.buyUrl    || '';
+        if (!existing.trackUrl)  existing.trackUrl  = lab.trackUrl  || '';
+        if (!existing.notes)     existing.notes     = lab.notes     || '';
+        migrated++;
+      } else {
+        // Neues EA-Objekt aus Lab-Daten
+        DB.eas.push({
+          id:        lab.id || Date.now().toString() + Math.random().toString(36).substr(2,5),
+          name:      lab.name,
+          status:    lab.status    || 'watchlist',
+          priority:  lab.priority  || 'medium',
+          mt:        lab.mt        || 'MT4',
+          tf:        lab.tf        || '',
+          price:     lab.price     || '',
+          source:    lab.source    || '',
+          myRating:  lab.myRating  || '',
+          aiRating:  lab.aiRating  || '',
+          buyUrl:    lab.buyUrl    || '',
+          trackUrl:  lab.trackUrl  || '',
+          notes:     lab.notes     || '',
+        });
+        migrated++;
+      }
+    });
+    if (migrated > 0) {
+      saveLocal();
+      localStorage.removeItem('ea_hub_lab');
+      console.log('[Migration] ' + migrated + ' EA Lab Einträge migriert');
+    }
+  } catch(e) { console.warn('[Migration] Fehler:', e); }
+}
+
+function setEaFilter(f, btn) {
+  eaFilter = f;
+  document.querySelectorAll('[id^="ea-btn-"]').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  renderEaTable();
+}
+
+function openEaForm() {
+  closeEaForm();
+  document.getElementById('eaFormTitle').textContent = 'EA hinzufügen';
+  document.getElementById('ea-edit-id').value = '';
+  ['ea-name','ea-tf','ea-price','ea-source','ea-buyurl','ea-trackurl','ea-notes'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.value = '';
+  });
+  document.getElementById('ea-status').value   = 'watchlist';
+  document.getElementById('ea-priority').value = 'medium';
+  document.getElementById('ea-mt').value       = 'MT4';
+  document.getElementById('ea-myrating').value = '';
+  document.getElementById('ea-airating').value = '';
+  document.getElementById('eaFormPanel').style.display = 'block';
+  document.getElementById('eaFormPanel').scrollIntoView({behavior:'smooth'});
+}
+
+function closeEaForm() {
+  document.getElementById('eaFormPanel').style.display = 'none';
+}
+
+async function saveEaEntry() {
+  var name = document.getElementById('ea-name').value.trim();
+  if (!name) { toast('⚠ Name ist Pflicht','err'); return; }
+  var editId = document.getElementById('ea-edit-id').value;
+  var obj = {
+    id:        editId || Date.now().toString(),
+    name:      name,
+    status:    document.getElementById('ea-status').value,
+    priority:  document.getElementById('ea-priority').value,
+    mt:        document.getElementById('ea-mt').value,
+    tf:        document.getElementById('ea-tf').value.trim(),
+    price:     document.getElementById('ea-price').value.trim(),
+    source:    document.getElementById('ea-source').value.trim(),
+    myRating:  document.getElementById('ea-myrating').value,
+    aiRating:  document.getElementById('ea-airating').value,
+    buyUrl:    document.getElementById('ea-buyurl').value.trim(),
+    trackUrl:  document.getElementById('ea-trackurl').value.trim(),
+    notes:     document.getElementById('ea-notes').value.trim(),
+  };
+  var idx = DB.eas.findIndex(function(e){ return e.id == obj.id; });
+  if (idx >= 0) DB.eas[idx] = obj; else DB.eas.push(obj);
+  saveLocal();
+  renderEaTable();
+  renderAll();
+  closeEaForm();
+  await api('upsert','EAs',obj);
+  toast('✅ EA gespeichert');
+}
+
+function editEaEntry(id) {
+  var ea = DB.eas.find(function(e){ return e.id == id; });
+  if (!ea) return;
+  document.getElementById('eaFormTitle').textContent = 'EA bearbeiten';
+  document.getElementById('ea-edit-id').value   = ea.id;
+  document.getElementById('ea-name').value       = ea.name      || '';
+  document.getElementById('ea-status').value     = ea.status    || 'watchlist';
+  document.getElementById('ea-priority').value   = ea.priority  || 'medium';
+  document.getElementById('ea-mt').value         = ea.mt        || 'MT4';
+  document.getElementById('ea-tf').value         = ea.tf        || '';
+  document.getElementById('ea-price').value      = ea.price     || '';
+  document.getElementById('ea-source').value     = ea.source    || '';
+  document.getElementById('ea-myrating').value   = ea.myRating  || '';
+  document.getElementById('ea-airating').value   = ea.aiRating  || '';
+  document.getElementById('ea-buyurl').value     = ea.buyUrl    || '';
+  document.getElementById('ea-trackurl').value   = ea.trackUrl  || '';
+  document.getElementById('ea-notes').value      = ea.notes     || '';
+  document.getElementById('eaFormPanel').style.display = 'block';
+  document.getElementById('eaFormPanel').scrollIntoView({behavior:'smooth'});
+}
+
+async function deleteEaEntry(id) {
+  if (!confirm('EA löschen? Alle P&L-Einträge bleiben erhalten.')) return;
+  DB.eas = DB.eas.filter(function(e){ return e.id != id; });
+  saveLocal();
+  renderEaTable();
+  renderAll();
+  await api('delete','EAs',null,id);
+  toast('🗑 EA gelöscht');
+}
+
+function toggleEaRow(id) {
+  var row = document.getElementById('ea-detail-' + id);
+  var arrow = document.getElementById('ea-arrow-' + id);
+  if (!row) return;
+  var open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : 'table-row';
+  if (arrow) arrow.textContent = open ? '▶' : '▼';
+}
+
+function renderEaTable() {
+  var tbody = document.getElementById('eaTableBody');
   if (!tbody) return;
-  const data = getLabData();
-  const filtered = labFilter === 'all' ? data : data.filter(function(e){ return e.status === labFilter; });
 
-  const statusLabel = { live:'🟢 Live', testing:'🧪 Testing', watchlist:'👁 Watchlist', off:'⛔ Aussortiert' };
-  const statusColor = { live:'#1D9E75', testing:'#BA7517', watchlist:'#185FA5', off:'#5F5E5A' };
-  const prioLabel   = { high:'🔴 Hoch', medium:'🟡 Mittel', low:'🟢 Niedrig' };
-  const prioColor   = { high:'rgba(226,75,74,0.15)', medium:'rgba(186,117,23,0.15)', low:'rgba(136,135,128,0.15)' };
-  const prioText    = { high:'#A32D2D', medium:'#BA7517', low:'#5F5E5A' };
-  const mtColor     = { MT4:'#534AB7', MT5:'#993556', 'MT4 + MT5':'#185FA5' };
+  var list = eaFilter === 'all'
+    ? DB.eas
+    : DB.eas.filter(function(e){ return (e.status||'watchlist') === eaFilter; });
 
-  if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="empty">Keine Einträge.</td></tr>';
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="10" class="empty">Keine EAs gefunden.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = filtered.map(function(e) {
-    const sc = statusColor[e.status]||'#888';
-    const sl = statusLabel[e.status]||e.status;
-    const mc = mtColor[e.mt]||'#888';
-    const rating = (e.myRating||e.myrating) ? parseFloat(e.myRating||e.myrating).toFixed(1) : '–';
-    const links = (e.buyUrl ? '<a href="'+e.buyUrl+'" target="_blank" class="todo-link" title="Kaufen" style="font-size:13px">🛒</a>' : '') +
-                  (e.trackUrl ? '<a href="'+e.trackUrl+'" target="_blank" class="todo-link track" title="Tracking" style="font-size:13px">📊</a>' : '');
-    return '<tr style="cursor:pointer" onclick="toggleLabRow(\'' + e.id + '\')">' +
-      '<td style="font-weight:600;color:var(--accent)"><span id="lab-arrow-'+e.id+'" style="font-size:9px;color:var(--text3);margin-right:4px">▶</span>'+escHtml(e.name)+'</td>' +
+  var statusLabel = { live:'🟢 Live', testing:'🧪 Testing', watchlist:'👁 Watchlist', off:'⛔ Aussortiert' };
+  var statusColor = { live:'#1D9E75', testing:'#BA7517', watchlist:'#185FA5', off:'#5F5E5A' };
+  var prioLabel   = { high:'🔴 Hoch', medium:'🟡 Mittel', low:'🟢 Niedrig' };
+  var prioColor   = { high:'rgba(226,75,74,0.15)', medium:'rgba(186,117,23,0.15)', low:'rgba(136,135,128,0.15)' };
+  var prioText    = { high:'#A32D2D', medium:'#BA7517', low:'#5F5E5A' };
+  var mtColor     = { MT4:'#534AB7', MT5:'#993556', 'beide':'#185FA5' };
+  var aiColor     = { Cent:'#BA7517', Demo:'#185FA5', Live:'#1D9E75', Aussortiert:'#5F5E5A' };
+
+  tbody.innerHTML = list.map(function(ea) {
+    var entries  = DB.pnl.filter(function(p){ return p.eaId == ea.id && (!p.entryType || p.entryType==='trade'); });
+    var sc  = statusColor[ea.status] || '#888';
+    var sl  = statusLabel[ea.status] || ea.status || 'Watchlist';
+    var mc  = mtColor[ea.mt] || '#888';
+    var rating = ea.myRating ? parseFloat(ea.myRating).toFixed(1) : '–';
+    var aiRat  = ea.aiRating || '–';
+    var aiC    = aiColor[ea.aiRating] || 'var(--text3)';
+    var links  = (ea.buyUrl   ? '<a href="'+ea.buyUrl+'"   target="_blank" class="todo-link" title="Kaufen"   style="font-size:13px">🛒</a>' : '') +
+                 (ea.trackUrl ? '<a href="'+ea.trackUrl+'" target="_blank" class="todo-link" title="Tracking" style="font-size:13px">📊</a>' : '');
+
+    var mainRow = '<tr style="cursor:pointer" data-eaid="'+ea.id+'" class="ea-main-row">' +
+      '<td style="font-weight:600;color:var(--accent)">' +
+        '<span id="ea-arrow-'+ea.id+'" style="font-size:9px;color:var(--text3);margin-right:4px">&#9658;</span>' +
+        escHtml(ea.name) +
+      '</td>' +
       '<td><span style="font-size:10px;padding:2px 8px;border-radius:4px;background:'+sc+'22;color:'+sc+';font-weight:500">'+sl+'</span></td>' +
-      '<td><span style="font-size:10px;padding:2px 8px;border-radius:4px;background:'+(prioColor[e.priority]||'#eee')+';color:'+(prioText[e.priority]||'#888')+';font-weight:500">'+(prioLabel[e.priority]||e.priority)+'</span></td>' +
-      '<td><span style="font-size:10px;padding:2px 8px;border-radius:4px;background:'+mc+'22;color:'+mc+';font-weight:500">'+(e.mt||'–')+'</span></td>' +
-      '<td style="color:var(--text2)">'+(e.tf||'–')+'</td>' +
-      '<td style="color:var(--text2)">'+(e.price||'–')+'</td>' +
-      '<td style="color:var(--text2)">'+(e.source||'–')+'</td>' +
-      '<td style="text-align:center;color:#BA7517">'+rating+'</td>' +
-      '<td style="text-align:center;color:var(--accent)">'+(e.aiRating||'–')+'</td>' +
+      '<td><span style="font-size:10px;padding:2px 8px;border-radius:4px;background:'+(prioColor[ea.priority]||'#eee')+';color:'+(prioText[ea.priority]||'#888')+';font-weight:500">'+(prioLabel[ea.priority]||'–')+'</span></td>' +
+      '<td><span style="font-size:10px;padding:2px 6px;border-radius:4px;background:'+mc+'22;color:'+mc+';font-weight:500">'+(ea.mt||'–')+'</span></td>' +
+      '<td style="color:var(--text2)">'+(ea.tf||'–')+'</td>' +
+      '<td style="text-align:center;color:var(--text)">'+entries.length+'</td>' +
+      '<td style="text-align:center;color:#BA7517;font-weight:600">'+rating+'</td>' +
+      '<td style="text-align:center;font-weight:600;font-size:11px;color:'+aiC+'">'+escHtml(aiRat)+'</td>' +
       '<td style="text-align:center">'+links+'</td>' +
       '<td style="white-space:nowrap">' +
-        '<button class="icon-btn edit" onclick="event.stopPropagation();editLabEntry(\'' + e.id + '\')" title="Bearbeiten">✎</button>' +
-        '<button class="icon-btn" onclick="event.stopPropagation();deleteLabEntry(\'' + e.id + '\')" title="Löschen">✕</button>' +
+        '<button class="icon-btn edit ea-edit-btn" data-eaid="'+ea.id+'" title="Bearbeiten">&#9998;</button>' +
+        '<button class="icon-btn ea-del-btn" data-eaid="'+ea.id+'" title="Löschen">&#10005;</button>' +
       '</td>' +
-    '</tr>' +
-    '<tr id="lab-detail-'+e.id+'" style="display:none">' +
-      '<td colspan="11" style="padding:0">' +
+    '</tr>';
+        var detailRow = '<tr id="ea-detail-'+ea.id+'" style="display:none">' +
+      '<td colspan="10" style="padding:0">' +
         '<div style="background:var(--bg4);padding:14px 16px;border-top:1px solid var(--border)">' +
-          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:12px">' +
-            '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Telegram</div><div style="font-size:12px;color:var(--text2)">'+(e.telegram||'–')+'</div></div>' +
-            '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Settings</div><div style="font-size:12px;color:var(--text2)">'+(e.settings||'–')+'</div></div>' +
-            '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Screenshot</div><div style="font-size:12px">'+(e.screenshot?'<a href="'+e.screenshot+'" target="_blank" class="todo-link">🔗 öffnen</a>':'–')+'</div></div>' +
+          '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:12px">' +
+            '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Preis</div><div style="font-size:12px;color:var(--text2)">'+(ea.price||'–')+'</div></div>' +
+            '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Quelle</div><div style="font-size:12px;color:var(--text2)">'+(ea.source||'–')+'</div></div>' +
+            (ea.buyUrl   ? '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Kauflink</div><div style="font-size:12px"><a href="'+ea.buyUrl+'" target="_blank" class="todo-link">🛒 Kaufen</a></div></div>' : '') +
+            (ea.trackUrl ? '<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Tracking</div><div style="font-size:12px"><a href="'+ea.trackUrl+'" target="_blank" class="todo-link">📊 Tracking</a></div></div>' : '') +
           '</div>' +
-          '<div style="margin-bottom:10px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">Notizen</div><div style="font-size:12px;color:var(--text2)">'+(e.notes||'–')+'</div></div>' +
-          (e.aiRating ? '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.6"><span style="font-size:10px;color:var(--accent);font-weight:600;margin-right:6px">KI-BEWERTUNG</span>'+escHtml(e.aiRating)+'</div>' : '') +
+          (ea.notes ? '<div style="margin-bottom:10px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Notizen</div><div style="font-size:12px;color:var(--text2);line-height:1.6">'+escHtml(ea.notes)+'</div></div>' : '') +
         '</div>' +
       '</td>' +
     '</tr>';
+
+    return mainRow + detailRow;
   }).join('');
-}
 
+  // Dropdowns im Analyse-Tab updaten
+  updateEaDetailDropdown();
 
-
-function toggleLabRow(id) {
-  const el = document.getElementById('lab-detail-'+id);
-  if (!el) return;
-  const open = el.style.display !== 'none';
-  el.style.display = open ? 'none' : 'table-row';
-  const arrow = document.getElementById('lab-arrow-'+id);
-  if (arrow) arrow.textContent = open ? '►' : '▼';
-}
-
-
-function setLabFilter(f, btn) {
-  labFilter = f;
-  document.querySelectorAll('[id^="lab-btn-"]').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  renderLabTable();
-}
-
-
-function getLabData() {
-  const saved = localStorage.getItem('ea_hub_lab');
-  if (saved) { try { return JSON.parse(saved); } catch(e) {} }
-  return [];
-}
-
-function saveLabEntry() {
-  const name = document.getElementById('lab-name').value.trim();
-  if (!name) { alert('Name ist Pflicht'); return; }
-  const data = getLabData();
-  const editId = document.getElementById('lab-edit-id').value;
-  const entry = {
-    id: editId || Date.now().toString(),
-    name,
-    status:     document.getElementById('lab-status').value,
-    priority:   document.getElementById('lab-priority').value,
-    mt:         document.getElementById('lab-mt').value,
-    tf:         document.getElementById('lab-tf').value.trim(),
-    price:      document.getElementById('lab-price').value.trim(),
-    source:     document.getElementById('lab-source').value.trim(),
-    myRating:   document.getElementById('lab-myrating').value,
-    buyUrl:     document.getElementById('lab-buyurl').value.trim(),
-    trackUrl:   document.getElementById('lab-trackurl').value.trim(),
-    telegram:   document.getElementById('lab-telegram').value.trim(),
-    screenshot: document.getElementById('lab-screenshot').value.trim(),
-    settings:   document.getElementById('lab-settings').value.trim(),
-    notes:      document.getElementById('lab-notes').value.trim(),
-    aiRating:   document.getElementById('lab-airating').value.trim(),
-  };
-  if (editId) {
-    const idx = data.findIndex(function(e){ return e.id === editId; });
-    if (idx >= 0) data[idx] = entry; else data.push(entry);
-  } else { data.push(entry); }
-  saveLabData(data);
-  document.getElementById('labForm').style.display = 'none';
-  renderLabTable();
-}
-
-
-function editLabEntry(id) {
-  const data = getLabData();
-  const e = data.find(function(x){ return x.id === id; });
-  if (!e) return;
-  document.getElementById('labFormTitle').textContent = 'EA bearbeiten';
-  document.getElementById('lab-edit-id').value = e.id;
-  document.getElementById('lab-name').value = e.name||'';
-  document.getElementById('lab-status').value = e.status||'watchlist';
-  document.getElementById('lab-priority').value = e.priority||'medium';
-  document.getElementById('lab-mt').value = e.mt||'MT4';
-  document.getElementById('lab-tf').value = e.tf||'';
-  document.getElementById('lab-price').value = e.price||'';
-  document.getElementById('lab-source').value = e.source||'';
-  document.getElementById('lab-myrating').value = e.myRating||'';
-  document.getElementById('lab-buyurl').value = e.buyUrl||'';
-  document.getElementById('lab-trackurl').value = e.trackUrl||'';
-  document.getElementById('lab-telegram').value = e.telegram||'';
-  document.getElementById('lab-screenshot').value = e.screenshot||'';
-  document.getElementById('lab-settings').value = e.settings||'';
-  document.getElementById('lab-notes').value = e.notes||'';
-  document.getElementById('lab-airating').value = e.aiRating||'';
-  document.getElementById('labForm').style.display = 'block';
-  document.getElementById('labForm').scrollIntoView({behavior:'smooth'});
-}
-
-
-function deleteLabEntry(id) {
-  if (!confirm('EA-Lab Eintrag löschen?')) return;
-  const data = getLabData().filter(function(e){ return e.id !== id; });
-  saveLabData(data);
-  renderLabTable();
-}
-
-
-function cancelLabEntry() { document.getElementById('labForm').style.display = 'none'; }
-
-
-function escHtml(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-function renderEAsTable() {
-  const tbody = document.getElementById('easTable');
-  if (!DB.eas.length) { tbody.innerHTML='<tr><td colspan="7" class="empty">Noch keine EAs.</td></tr>'; return; }
-  tbody.innerHTML = DB.eas.map((ea,i) => {
-    const trades = DB.pnl.filter(p => p.eaId == ea.id);
-    const wins = trades.filter(p => parseFloat(p.pnl) > 0).length;
-    const wr = trades.length ? ((wins/trades.length)*100).toFixed(0)+'%' : '–';
-    return `<tr>
-      <td>${i+1}</td>
-      <td style="color:var(--accent);font-weight:500">${ea.name}</td>
-      <td style="color:var(--text2)">${ea.strategy||'–'}</td>
-      <td style="color:var(--text2);font-size:10px">${ea.description||'–'}</td>
-      <td>${trades.length}</td>
-      <td class="${wins/trades.length>=0.5?'pos-val':'neg-val'}">${wr}</td>
-      <td style="display:flex;gap:4px">
-        <button class="icon-btn edit" onclick="editEA('${ea.id}')" title="Bearbeiten">✎</button>
-        <button class="icon-btn" onclick="deleteEA('${ea.id}')" title="Löschen">✕</button>
-      </td>
-    </tr>`;
-  }).join('');
-  renderLabTable();
+  // Event delegation für Zeilen-Toggle und Buttons
+  var t = document.getElementById('eaTableBody');
+  if (t) {
+    t.onclick = function(e) {
+      var editBtn = e.target.closest('.ea-edit-btn');
+      var delBtn  = e.target.closest('.ea-del-btn');
+      var row     = e.target.closest('.ea-main-row');
+      if (editBtn) { e.stopPropagation(); editEaEntry(editBtn.dataset.eaid); return; }
+      if (delBtn)  { e.stopPropagation(); deleteEaEntry(delBtn.dataset.eaid); return; }
+      if (row)     { toggleEaRow(row.dataset.eaid); }
+    };
+  }
 }
 
 </script>
