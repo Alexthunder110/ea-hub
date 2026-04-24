@@ -217,6 +217,13 @@ select option { background:var(--bg4); }
 .quick-bar { background:var(--bg3); border:1px solid var(--border2); border-radius:var(--radius); padding:14px 18px; margin-bottom:22px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
 .quick-bar .form-group { min-width:130px; }
 
+/* SORTIERBARE TABELLEN-HEADER (P&L-Tab) */
+th.pnl-sort { cursor:pointer; user-select:none; transition:color .15s; white-space:nowrap; }
+th.pnl-sort:hover { color:var(--accent); }
+th.pnl-sort .sort-arrow { display:inline-block; width:10px; margin-left:3px; color:var(--text3); font-size:9px; vertical-align:middle; }
+th.pnl-sort.active { color:var(--accent); }
+th.pnl-sort.active .sort-arrow { color:var(--accent); }
+
 /* MONATSKALENDER (Live-Tab) */
 .cal-wrap { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:22px; }
 .cal-hd { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px; }
@@ -655,7 +662,20 @@ select option { background:var(--bg4); }
     <button class="btn btn-secondary btn-sm" onclick="clearPnlFilters()">Reset</button>
   </div>
   <div class="table-wrap">
-    <table><thead><tr><th>Datum</th><th>Konto</th><th>EA</th><th>Strategie</th><th>P&L</th><th>DD</th><th>Equity</th><th>R/R</th><th>Ziel</th><th>Ziel um</th><th>Notiz</th><th></th></tr></thead>
+    <table id="pnlTableEl"><thead><tr>
+      <th class="pnl-sort" onclick="sortPnlTable('date')">Datum <span class="sort-arrow"></span></th>
+      <th class="pnl-sort" onclick="sortPnlTable('account')">Konto <span class="sort-arrow"></span></th>
+      <th class="pnl-sort" onclick="sortPnlTable('ea')">EA <span class="sort-arrow"></span></th>
+      <th class="pnl-sort" onclick="sortPnlTable('strategy')">Strategie <span class="sort-arrow"></span></th>
+      <th class="pnl-sort" onclick="sortPnlTable('pnl')">P&L <span class="sort-arrow"></span></th>
+      <th class="pnl-sort" onclick="sortPnlTable('dd')">DD <span class="sort-arrow"></span></th>
+      <th class="pnl-sort" onclick="sortPnlTable('equity')">Equity <span class="sort-arrow"></span></th>
+      <th>R/R</th>
+      <th class="pnl-sort" onclick="sortPnlTable('goal')">Ziel <span class="sort-arrow"></span></th>
+      <th class="pnl-sort" onclick="sortPnlTable('goaltime')">Ziel um <span class="sort-arrow"></span></th>
+      <th>Notiz</th>
+      <th></th>
+    </tr></thead>
     <tbody id="pnlTable"></tbody></table>
   </div>
 </div>
@@ -1350,6 +1370,19 @@ function clearPnlFilters() {
   renderPnlTable();
 }
 
+// Sortier-State (Default: Datum absteigend, neueste oben)
+var pnlSort = { col: 'date', dir: 'desc' };
+
+function sortPnlTable(col) {
+  if (pnlSort.col === col) {
+    pnlSort.dir = pnlSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    pnlSort.col = col;
+    pnlSort.dir = ['pnl','dd','equity','goal','date','goaltime'].indexOf(col) !== -1 ? 'desc' : 'asc';
+  }
+  renderPnlTable();
+}
+
 function renderPnlTable() {
   const fAcc = document.getElementById('f-account').value;
   const fEA  = document.getElementById('f-ea').value;
@@ -1364,6 +1397,45 @@ function renderPnlTable() {
     return acc && acc.type === fType;
   });
   if (fMon) entries = entries.filter(e => e.date && e.date.startsWith(fMon));
+
+  // Sort (ab v10)
+  try {
+    const col = pnlSort.col, dir = pnlSort.dir === 'asc' ? 1 : -1;
+    const accMap = new Map(DB.accounts.map(a => [String(a.id), a]));
+    const eaMap  = new Map(DB.eas.map(x => [String(x.id), x]));
+    entries.sort(function(a, b){
+      let va, vb;
+      switch(col) {
+        case 'date':     va = a.date||''; vb = b.date||''; break;
+        case 'account':  va = (accMap.get(String(a.accountId))||{}).number||''; vb = (accMap.get(String(b.accountId))||{}).number||''; break;
+        case 'ea':       va = (eaMap.get(String(a.eaId))||{}).name||''; vb = (eaMap.get(String(b.eaId))||{}).name||''; break;
+        case 'strategy': va = a.strategy||''; vb = b.strategy||''; break;
+        case 'pnl':      va = parseFloat(a.pnl)||0; vb = parseFloat(b.pnl)||0; break;
+        case 'dd':       va = parseFloat(a.dd)||0; vb = parseFloat(b.dd)||0; break;
+        case 'equity':   va = parseFloat(a.equity)||0; vb = parseFloat(b.equity)||0; break;
+        case 'goal':
+          var ga = parseFloat(a.dailyGoal)||0, gb = parseFloat(b.dailyGoal)||0;
+          va = ga ? ((parseFloat(a.pnl)||0)/ga) : -Infinity;
+          vb = gb ? ((parseFloat(b.pnl)||0)/gb) : -Infinity;
+          break;
+        case 'goaltime': va = a.goalTime||''; vb = b.goalTime||''; break;
+        default:         va = a.date||''; vb = b.date||'';
+      }
+      if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
+      return String(va).localeCompare(String(vb)) * dir;
+    });
+
+    // Sort-Arrows in Headern aktualisieren
+    document.querySelectorAll('#pnlTableEl th.pnl-sort').forEach(function(th){
+      th.classList.remove('active');
+      const arrow = th.querySelector('.sort-arrow'); if (arrow) arrow.textContent = '';
+      const onclk = th.getAttribute('onclick') || '';
+      if (onclk.indexOf("'"+col+"'") !== -1) {
+        th.classList.add('active');
+        if (arrow) arrow.textContent = (dir === 1) ? '▲' : '▼';
+      }
+    });
+  } catch(e) { console.error('[EAHub] pnl sort failed:', e); }
 
   const tbody = document.getElementById('pnlTable');
   if (!entries.length) { tbody.innerHTML='<tr><td colspan="12" class="empty">Keine Einträge gefunden.</td></tr>'; return; }
