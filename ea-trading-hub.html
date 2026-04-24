@@ -640,8 +640,6 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
       <div class="form-group"><label>P&L ($) *</label><input type="number" id="pnl-value" placeholder="+150" step="0.01"></div>
       <div class="form-group"><label>Max DD ($)</label><input type="number" id="pnl-dd" placeholder="max Drawdown" step="0.01"></div>
       <div class="form-group"><label>Equity danach ($)</label><input type="number" id="pnl-equity" placeholder="neues Guthaben" step="0.01"></div>
-      <div class="form-group"><label>Lots / Trades</label><input type="text" id="pnl-lots" placeholder="3 Trades, 0.5 Lot"></div>
-      <div class="form-group"><label>Risiko/Reward</label><input type="text" id="pnl-rr" placeholder="z.B. 1:2"></div>
       <div class="form-group"><label>Tagesziel ($)</label><input type="number" id="pnl-goal" placeholder="heutiges Ziel" step="0.01"></div>
       <div class="form-group"><label>Ziel erreicht um</label><input type="time" id="pnl-goaltime" placeholder="--:--"></div>
       <div class="form-group fg-3"><label>Notiz</label><input type="text" id="pnl-note" placeholder="Was ist heute passiert?"></div>
@@ -670,7 +668,6 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
       <th class="pnl-sort" onclick="sortPnlTable('pnl')">P&L <span class="sort-arrow"></span></th>
       <th class="pnl-sort" onclick="sortPnlTable('dd')">DD <span class="sort-arrow"></span></th>
       <th class="pnl-sort" onclick="sortPnlTable('equity')">Equity <span class="sort-arrow"></span></th>
-      <th>R/R</th>
       <th class="pnl-sort" onclick="sortPnlTable('goal')">Ziel <span class="sort-arrow"></span></th>
       <th class="pnl-sort" onclick="sortPnlTable('goaltime')">Ziel um <span class="sort-arrow"></span></th>
       <th>Notiz</th>
@@ -1304,6 +1301,9 @@ async function savePnl(fromQuick) {
   const accountId = document.getElementById('pnl-account').value;
   const equity = parseFloat(document.getElementById('pnl-equity').value);
 
+  // Legacy lots/rr aus bestehendem Eintrag behalten (seit v12 nicht mehr im UI)
+  const legacy = editId ? (DB.pnl.find(p => p.id == editId) || {}) : {};
+
   const obj = {
     id: editId || Date.now().toString(),
     date,
@@ -1314,8 +1314,8 @@ async function savePnl(fromQuick) {
     pnl,
     dd: parseFloat(document.getElementById('pnl-dd').value)||0,
     equity: isNaN(equity)?'':equity,
-    lots: document.getElementById('pnl-lots').value.trim(),
-    rr: document.getElementById('pnl-rr').value.trim(),
+    lots: legacy.lots || '',
+    rr:   legacy.rr   || '',
     note: document.getElementById('pnl-note').value.trim(),
     dailyGoal: parseFloat(document.getElementById('pnl-goal').value)||0,
     goalTime: document.getElementById('pnl-goaltime').value || '',
@@ -1366,8 +1366,6 @@ function editPnl(id) {
   document.getElementById('pnl-value').value = p.pnl||'';
   document.getElementById('pnl-dd').value = p.dd||'';
   document.getElementById('pnl-equity').value = p.equity||'';
-  document.getElementById('pnl-lots').value = p.lots||'';
-  document.getElementById('pnl-rr').value = p.rr||'';
   document.getElementById('pnl-note').value = p.note||'';
   document.getElementById('pnl-goal').value = p.dailyGoal||'';
   document.getElementById('pnl-goaltime').value = normalizeGoalTime(p.goalTime);
@@ -1383,7 +1381,9 @@ async function deletePnl(id) {
 }
 
 function resetPnlForm() {
-  ['pnl-value','pnl-dd','pnl-equity','pnl-lots','pnl-rr','pnl-note','pnl-goal','pnl-goaltime','pnl-strategy'].forEach(id => document.getElementById(id).value='');
+  ['pnl-value','pnl-dd','pnl-equity','pnl-note','pnl-goal','pnl-goaltime','pnl-strategy'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
   document.getElementById('pnl-edit-id').value='';
   document.getElementById('pnlFormTitle').textContent='Detaillierter Eintrag';
 }
@@ -1464,7 +1464,7 @@ function renderPnlTable() {
   } catch(e) { console.error('[EAHub] pnl sort failed:', e); }
 
   const tbody = document.getElementById('pnlTable');
-  if (!entries.length) { tbody.innerHTML='<tr><td colspan="12" class="empty">Keine Einträge gefunden.</td></tr>'; return; }
+  if (!entries.length) { tbody.innerHTML='<tr><td colspan="11" class="empty">Keine Einträge gefunden.</td></tr>'; return; }
 
   tbody.innerHTML = entries.map(e => {
     const acc = DB.accounts.find(a => a.id == e.accountId);
@@ -1484,7 +1484,6 @@ function renderPnlTable() {
       <td class="${pnl>=0?'pos-val':'neg-val'}">${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}</td>
       <td style="color:${dd>0?'var(--neg)':'var(--text3)'}">${dd?'-$'+dd.toFixed(2):'–'}</td>
       <td style="color:var(--text2)">${e.equity?'$'+fmt(e.equity):'–'}</td>
-      <td style="color:var(--text2)">${e.rr||'–'}</td>
       <td>${goalPct!==null?`<span style="color:${goalPct>=100?'var(--pos)':'var(--text2)'}">${goalPct}%</span>`:'–'}</td>
       <td style="color:${goalTimeTxt?'var(--pos)':'var(--text3)'};font-family:var(--font-mono)">${goalTimeTxt||'–'}</td>
       <td style="color:var(--text2);font-size:10px">${e.note||'–'}</td>
