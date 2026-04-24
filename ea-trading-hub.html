@@ -635,7 +635,8 @@ select option { background:var(--bg4); }
       <div class="form-group"><label>Equity danach ($)</label><input type="number" id="pnl-equity" placeholder="neues Guthaben" step="0.01"></div>
       <div class="form-group"><label>Lots / Trades</label><input type="text" id="pnl-lots" placeholder="3 Trades, 0.5 Lot"></div>
       <div class="form-group"><label>Risiko/Reward</label><input type="text" id="pnl-rr" placeholder="z.B. 1:2"></div>
-      <div class="form-group fg-2"><label>Tagesziel ($)</label><input type="number" id="pnl-goal" placeholder="heutiges Ziel" step="0.01"></div>
+      <div class="form-group"><label>Tagesziel ($)</label><input type="number" id="pnl-goal" placeholder="heutiges Ziel" step="0.01"></div>
+      <div class="form-group"><label>Ziel erreicht um</label><input type="time" id="pnl-goaltime" placeholder="--:--"></div>
       <div class="form-group fg-3"><label>Notiz</label><input type="text" id="pnl-note" placeholder="Was ist heute passiert?"></div>
     </div>
     <input type="hidden" id="pnl-edit-id">
@@ -654,7 +655,7 @@ select option { background:var(--bg4); }
     <button class="btn btn-secondary btn-sm" onclick="clearPnlFilters()">Reset</button>
   </div>
   <div class="table-wrap">
-    <table><thead><tr><th>Datum</th><th>Konto</th><th>EA</th><th>Strategie</th><th>P&L</th><th>DD</th><th>Equity</th><th>R/R</th><th>Ziel</th><th>Notiz</th><th></th></tr></thead>
+    <table><thead><tr><th>Datum</th><th>Konto</th><th>EA</th><th>Strategie</th><th>P&L</th><th>DD</th><th>Equity</th><th>R/R</th><th>Ziel</th><th>Ziel um</th><th>Notiz</th><th></th></tr></thead>
     <tbody id="pnlTable"></tbody></table>
   </div>
 </div>
@@ -1271,6 +1272,7 @@ async function savePnl(fromQuick) {
     rr: document.getElementById('pnl-rr').value.trim(),
     note: document.getElementById('pnl-note').value.trim(),
     dailyGoal: parseFloat(document.getElementById('pnl-goal').value)||0,
+    goalTime: document.getElementById('pnl-goaltime').value || '',
   };
 
   // Update account balance
@@ -1322,6 +1324,7 @@ function editPnl(id) {
   document.getElementById('pnl-rr').value = p.rr||'';
   document.getElementById('pnl-note').value = p.note||'';
   document.getElementById('pnl-goal').value = p.dailyGoal||'';
+  document.getElementById('pnl-goaltime').value = p.goalTime||'';
   document.getElementById('pnlFormTitle').textContent = 'P&L bearbeiten';
   document.getElementById('view-pnl').scrollIntoView({behavior:'smooth'});
 }
@@ -1334,7 +1337,7 @@ async function deletePnl(id) {
 }
 
 function resetPnlForm() {
-  ['pnl-value','pnl-dd','pnl-equity','pnl-lots','pnl-rr','pnl-note','pnl-goal','pnl-strategy'].forEach(id => document.getElementById(id).value='');
+  ['pnl-value','pnl-dd','pnl-equity','pnl-lots','pnl-rr','pnl-note','pnl-goal','pnl-goaltime','pnl-strategy'].forEach(id => document.getElementById(id).value='');
   document.getElementById('pnl-edit-id').value='';
   document.getElementById('pnlFormTitle').textContent='Detaillierter Eintrag';
 }
@@ -1363,7 +1366,7 @@ function renderPnlTable() {
   if (fMon) entries = entries.filter(e => e.date && e.date.startsWith(fMon));
 
   const tbody = document.getElementById('pnlTable');
-  if (!entries.length) { tbody.innerHTML='<tr><td colspan="11" class="empty">Keine Einträge gefunden.</td></tr>'; return; }
+  if (!entries.length) { tbody.innerHTML='<tr><td colspan="12" class="empty">Keine Einträge gefunden.</td></tr>'; return; }
 
   tbody.innerHTML = entries.map(e => {
     const acc = DB.accounts.find(a => a.id == e.accountId);
@@ -1384,6 +1387,7 @@ function renderPnlTable() {
       <td style="color:var(--text2)">${e.equity?'$'+fmt(e.equity):'–'}</td>
       <td style="color:var(--text2)">${e.rr||'–'}</td>
       <td>${goalPct!==null?`<span style="color:${goalPct>=100?'var(--pos)':'var(--text2)'}">${goalPct}%</span>`:'–'}</td>
+      <td style="color:${e.goalTime?'var(--pos)':'var(--text3)'};font-family:var(--font-mono)">${e.goalTime||'–'}</td>
       <td style="color:var(--text2);font-size:10px">${e.note||'–'}</td>
       <td style="display:flex;gap:4px">
         <button class="icon-btn edit" onclick="editPnl('${e.id}')" title="Bearbeiten">✎</button>
