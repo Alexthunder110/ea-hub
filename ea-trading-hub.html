@@ -217,13 +217,6 @@ select option { background:var(--bg4); }
 .quick-bar { background:var(--bg3); border:1px solid var(--border2); border-radius:var(--radius); padding:14px 18px; margin-bottom:22px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
 .quick-bar .form-group { min-width:130px; }
 
-/* SORTIERBARE TABELLEN-HEADER (P&L-Tab) */
-th.pnl-sort { cursor:pointer; user-select:none; transition:color .15s; white-space:nowrap; }
-th.pnl-sort:hover { color:var(--accent); }
-th.pnl-sort .sort-arrow { display:inline-block; width:10px; margin-left:3px; color:var(--text3); font-size:9px; vertical-align:middle; }
-th.pnl-sort.active { color:var(--accent); }
-th.pnl-sort.active .sort-arrow { color:var(--accent); }
-
 /* MONATSKALENDER (Live-Tab) */
 .cal-wrap { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:22px; }
 .cal-hd { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px; }
@@ -640,8 +633,9 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
       <div class="form-group"><label>P&L ($) *</label><input type="number" id="pnl-value" placeholder="+150" step="0.01"></div>
       <div class="form-group"><label>Max DD ($)</label><input type="number" id="pnl-dd" placeholder="max Drawdown" step="0.01"></div>
       <div class="form-group"><label>Equity danach ($)</label><input type="number" id="pnl-equity" placeholder="neues Guthaben" step="0.01"></div>
-      <div class="form-group"><label>Tagesziel ($)</label><input type="number" id="pnl-goal" placeholder="heutiges Ziel" step="0.01"></div>
-      <div class="form-group"><label>Ziel erreicht um</label><input type="time" id="pnl-goaltime" placeholder="--:--"></div>
+      <div class="form-group"><label>Lots / Trades</label><input type="text" id="pnl-lots" placeholder="3 Trades, 0.5 Lot"></div>
+      <div class="form-group"><label>Risiko/Reward</label><input type="text" id="pnl-rr" placeholder="z.B. 1:2"></div>
+      <div class="form-group fg-2"><label>Tagesziel ($)</label><input type="number" id="pnl-goal" placeholder="heutiges Ziel" step="0.01"></div>
       <div class="form-group fg-3"><label>Notiz</label><input type="text" id="pnl-note" placeholder="Was ist heute passiert?"></div>
     </div>
     <input type="hidden" id="pnl-edit-id">
@@ -660,22 +654,8 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
     <button class="btn btn-secondary btn-sm" onclick="clearPnlFilters()">Reset</button>
   </div>
   <div class="table-wrap">
-    <table id="pnlTableEl">
-      <thead><tr>
-        <th class="pnl-sort" onclick="sortPnlTable('date')">Datum <span class="sort-arrow"></span></th>
-        <th class="pnl-sort" onclick="sortPnlTable('account')">Konto <span class="sort-arrow"></span></th>
-        <th class="pnl-sort" onclick="sortPnlTable('ea')">EA <span class="sort-arrow"></span></th>
-        <th class="pnl-sort" onclick="sortPnlTable('strategy')">Strategie <span class="sort-arrow"></span></th>
-        <th class="pnl-sort" onclick="sortPnlTable('pnl')">P&L <span class="sort-arrow"></span></th>
-        <th class="pnl-sort" onclick="sortPnlTable('dd')">DD <span class="sort-arrow"></span></th>
-        <th class="pnl-sort" onclick="sortPnlTable('equity')">Equity <span class="sort-arrow"></span></th>
-        <th class="pnl-sort" onclick="sortPnlTable('goal')">Ziel % <span class="sort-arrow"></span></th>
-        <th class="pnl-sort" onclick="sortPnlTable('goaltime')">Ziel um <span class="sort-arrow"></span></th>
-        <th>Notiz</th>
-        <th></th>
-      </tr></thead>
-      <tbody id="pnlTable"></tbody>
-    </table>
+    <table><thead><tr><th>Datum</th><th>Konto</th><th>EA</th><th>Strategie</th><th>P&L</th><th>DD</th><th>Equity</th><th>R/R</th><th>Ziel</th><th>Notiz</th><th></th></tr></thead>
+    <tbody id="pnlTable"></tbody></table>
   </div>
 </div>
 
@@ -1277,9 +1257,6 @@ async function savePnl(fromQuick) {
   const accountId = document.getElementById('pnl-account').value;
   const equity = parseFloat(document.getElementById('pnl-equity').value);
 
-  // Legacy lots/rr aus bestehendem Eintrag behalten (seit v8 nicht mehr im UI)
-  const legacy = editId ? (DB.pnl.find(p => p.id == editId) || {}) : {};
-
   const obj = {
     id: editId || Date.now().toString(),
     date,
@@ -1290,11 +1267,10 @@ async function savePnl(fromQuick) {
     pnl,
     dd: parseFloat(document.getElementById('pnl-dd').value)||0,
     equity: isNaN(equity)?'':equity,
-    lots: legacy.lots || '',
-    rr:   legacy.rr   || '',
+    lots: document.getElementById('pnl-lots').value.trim(),
+    rr: document.getElementById('pnl-rr').value.trim(),
     note: document.getElementById('pnl-note').value.trim(),
     dailyGoal: parseFloat(document.getElementById('pnl-goal').value)||0,
-    goalTime: document.getElementById('pnl-goaltime').value || '',
   };
 
   // Update account balance
@@ -1342,9 +1318,10 @@ function editPnl(id) {
   document.getElementById('pnl-value').value = p.pnl||'';
   document.getElementById('pnl-dd').value = p.dd||'';
   document.getElementById('pnl-equity').value = p.equity||'';
+  document.getElementById('pnl-lots').value = p.lots||'';
+  document.getElementById('pnl-rr').value = p.rr||'';
   document.getElementById('pnl-note').value = p.note||'';
   document.getElementById('pnl-goal').value = p.dailyGoal||'';
-  document.getElementById('pnl-goaltime').value = p.goalTime||'';
   document.getElementById('pnlFormTitle').textContent = 'P&L bearbeiten';
   document.getElementById('view-pnl').scrollIntoView({behavior:'smooth'});
 }
@@ -1357,9 +1334,7 @@ async function deletePnl(id) {
 }
 
 function resetPnlForm() {
-  ['pnl-value','pnl-dd','pnl-equity','pnl-note','pnl-goal','pnl-goaltime','pnl-strategy'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
+  ['pnl-value','pnl-dd','pnl-equity','pnl-lots','pnl-rr','pnl-note','pnl-goal','pnl-strategy'].forEach(id => document.getElementById(id).value='');
   document.getElementById('pnl-edit-id').value='';
   document.getElementById('pnlFormTitle').textContent='Detaillierter Eintrag';
 }
@@ -1369,19 +1344,6 @@ function clearPnlFilters() {
   document.getElementById('f-ea').value='';
   document.getElementById('f-type').value='';
   document.getElementById('f-month').value=new Date().toISOString().substring(0,7);
-  renderPnlTable();
-}
-
-// Sortier-State P&L-Tabelle (Default: Datum absteigend)
-var pnlSort = { col: 'date', dir: 'desc' };
-
-function sortPnlTable(col) {
-  if (pnlSort.col === col) {
-    pnlSort.dir = pnlSort.dir === 'asc' ? 'desc' : 'asc';
-  } else {
-    pnlSort.col = col;
-    pnlSort.dir = ['pnl','dd','equity','goal','date','goaltime'].includes(col) ? 'desc' : 'asc';
-  }
   renderPnlTable();
 }
 
@@ -1400,49 +1362,12 @@ function renderPnlTable() {
   });
   if (fMon) entries = entries.filter(e => e.date && e.date.startsWith(fMon));
 
-  // Sort
-  const accMap = new Map(DB.accounts.map(a => [String(a.id), a]));
-  const eaMap  = new Map(DB.eas.map(x => [String(x.id), x]));
-  const col = pnlSort.col, dir = pnlSort.dir === 'asc' ? 1 : -1;
-  entries.sort(function(a, b) {
-    let va, vb;
-    switch(col) {
-      case 'date':      va = a.date||''; vb = b.date||''; break;
-      case 'account':   va = (accMap.get(String(a.accountId))||{}).number||''; vb = (accMap.get(String(b.accountId))||{}).number||''; break;
-      case 'ea':        va = (eaMap.get(String(a.eaId))||{}).name||''; vb = (eaMap.get(String(b.eaId))||{}).name||''; break;
-      case 'strategy':  va = a.strategy||''; vb = b.strategy||''; break;
-      case 'pnl':       va = parseFloat(a.pnl)||0; vb = parseFloat(b.pnl)||0; break;
-      case 'dd':        va = parseFloat(a.dd)||0; vb = parseFloat(b.dd)||0; break;
-      case 'equity':    va = parseFloat(a.equity)||0; vb = parseFloat(b.equity)||0; break;
-      case 'goal':
-        var ga = parseFloat(a.dailyGoal)||0, gb = parseFloat(b.dailyGoal)||0;
-        va = ga ? ((parseFloat(a.pnl)||0)/ga) : -Infinity;
-        vb = gb ? ((parseFloat(b.pnl)||0)/gb) : -Infinity;
-        break;
-      case 'goaltime':  va = a.goalTime||''; vb = b.goalTime||''; break;
-      default:          va = a.date||''; vb = b.date||'';
-    }
-    if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
-    return String(va).localeCompare(String(vb)) * dir;
-  });
-
-  // Sort-Arrows in Headers aktualisieren
-  document.querySelectorAll('#pnlTableEl th.pnl-sort').forEach(function(th){
-    th.classList.remove('active');
-    const arrow = th.querySelector('.sort-arrow'); if (arrow) arrow.textContent = '';
-    const onclk = th.getAttribute('onclick') || '';
-    if (onclk.indexOf("'"+col+"'") !== -1) {
-      th.classList.add('active');
-      if (arrow) arrow.textContent = (dir === 1) ? '▲' : '▼';
-    }
-  });
-
   const tbody = document.getElementById('pnlTable');
   if (!entries.length) { tbody.innerHTML='<tr><td colspan="11" class="empty">Keine Einträge gefunden.</td></tr>'; return; }
 
   tbody.innerHTML = entries.map(e => {
-    const acc = accMap.get(String(e.accountId));
-    const ea  = eaMap.get(String(e.eaId));
+    const acc = DB.accounts.find(a => a.id == e.accountId);
+    const ea  = DB.eas.find(x => x.id == e.eaId);
     const pnl = parseFloat(e.pnl)||0;
     const dd  = parseFloat(e.dd)||0;
     const goal= parseFloat(e.dailyGoal)||0;
@@ -1457,8 +1382,8 @@ function renderPnlTable() {
       <td class="${pnl>=0?'pos-val':'neg-val'}">${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}</td>
       <td style="color:${dd>0?'var(--neg)':'var(--text3)'}">${dd?'-$'+dd.toFixed(2):'–'}</td>
       <td style="color:var(--text2)">${e.equity?'$'+fmt(e.equity):'–'}</td>
+      <td style="color:var(--text2)">${e.rr||'–'}</td>
       <td>${goalPct!==null?`<span style="color:${goalPct>=100?'var(--pos)':'var(--text2)'}">${goalPct}%</span>`:'–'}</td>
-      <td style="color:${e.goalTime?'var(--pos)':'var(--text3)'};font-family:var(--font-mono)">${e.goalTime||'–'}</td>
       <td style="color:var(--text2);font-size:10px">${e.note||'–'}</td>
       <td style="display:flex;gap:4px">
         <button class="icon-btn edit" onclick="editPnl('${e.id}')" title="Bearbeiten">✎</button>
@@ -2151,11 +2076,11 @@ function updateSelects() {
 // CSV EXPORT
 // ============================================================
 function exportCSV() {
-  const rows = [['Datum','Konto','Broker','Typ','EA','Strategie','P&L','DD','Equity','R/R','Tagesziel','Ziel um','Notiz']];
+  const rows = [['Datum','Konto','Broker','Typ','EA','Strategie','P&L','DD','Equity','R/R','Tagesziel','Notiz']];
   DB.pnl.forEach(e => {
     const acc = DB.accounts.find(a=>a.id==e.accountId);
     const ea  = DB.eas.find(x=>x.id==e.eaId);
-    rows.push([e.date, acc?acc.number:'', acc?acc.broker:'', acc?acc.type:'', ea?ea.name:'', e.strategy||'', e.pnl, e.dd, e.equity||'', e.rr||'', e.dailyGoal, e.goalTime||'', e.note]);
+    rows.push([e.date, acc?acc.number:'', acc?acc.broker:'', acc?acc.type:'', ea?ea.name:'', e.strategy||'', e.pnl, e.dd, e.equity, e.rr, e.dailyGoal, e.note]);
   });
   const csv = rows.map(r => r.map(c => '"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
