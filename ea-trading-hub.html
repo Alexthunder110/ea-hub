@@ -3596,15 +3596,23 @@ function renderLiveTab() {
   // Today rows
   renderTodayRows();
   // Monatskalender (Live-Konten)
-  renderLiveCalendar();
+  try { renderLiveCalendar(); } catch(e) { console.error('[EAHub] renderLiveCalendar failed:', e); }
 }
 
 // ============================================================
-// MONATSKALENDER (Live-Tab)  — v5
+// MONATSKALENDER (Live-Tab)  — v5 / v6 (lazy init bugfix)
 // ============================================================
-var liveCalState = (function(){ var d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; })();
+var liveCalState = null;
+
+function _liveCalEnsureState() {
+  if (!liveCalState || typeof liveCalState.year !== 'number') {
+    var d = new Date();
+    liveCalState = { year: d.getFullYear(), month: d.getMonth() };
+  }
+}
 
 function liveCalShift(delta) {
+  _liveCalEnsureState();
   liveCalState.month += delta;
   if (liveCalState.month < 0)  { liveCalState.month = 11; liveCalState.year--; }
   if (liveCalState.month > 11) { liveCalState.month = 0;  liveCalState.year++; }
@@ -3613,12 +3621,12 @@ function liveCalShift(delta) {
 
 function liveCalToday() {
   var d = new Date();
-  liveCalState.year  = d.getFullYear();
-  liveCalState.month = d.getMonth();
+  liveCalState = { year: d.getFullYear(), month: d.getMonth() };
   renderLiveCalendar();
 }
 
 function renderLiveCalendar() {
+  _liveCalEnsureState();
   var wrap = document.getElementById('liveCalWrap');
   if (!wrap) return;
   var gridEl  = document.getElementById('liveCalGrid');
