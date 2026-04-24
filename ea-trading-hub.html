@@ -217,6 +217,37 @@ select option { background:var(--bg4); }
 .quick-bar { background:var(--bg3); border:1px solid var(--border2); border-radius:var(--radius); padding:14px 18px; margin-bottom:22px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
 .quick-bar .form-group { min-width:130px; }
 
+/* MONATSKALENDER (Live-Tab) */
+.cal-wrap { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:22px; }
+.cal-hd { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px; }
+.cal-nav { display:flex; align-items:center; gap:8px; }
+.cal-nav .cal-month { font-family:var(--font-head); font-size:14px; font-weight:700; color:#fff; letter-spacing:.3px; min-width:180px; text-align:center; }
+.cal-nav button { background:none; border:1px solid var(--border2); color:var(--text2); padding:4px 10px; border-radius:4px; cursor:pointer; font-family:var(--font-mono); font-size:12px; transition:all .15s; }
+.cal-nav button:hover { border-color:var(--accent); color:var(--accent); }
+.cal-nav button.today-btn { font-size:10px; letter-spacing:.5px; margin-left:6px; }
+.cal-sum { font-size:11px; color:var(--text2); display:flex; gap:14px; flex-wrap:wrap; }
+.cal-sum .chip { display:inline-flex; gap:4px; align-items:center; }
+.cal-sum .chip b { color:var(--pos); font-weight:500; }
+.cal-sum .chip b.neg { color:var(--neg); }
+.cal-dow { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:6px; }
+.cal-dow div { font-size:9px; color:var(--text3); letter-spacing:1px; text-align:center; padding:4px 0; }
+.cal-dow .we { opacity:.5; }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.cal-day { aspect-ratio:1.15/1; background:var(--bg4); border:1px solid var(--border); border-radius:5px; padding:6px 7px; display:flex; flex-direction:column; justify-content:space-between; min-height:58px; transition:border-color .15s; }
+.cal-day:hover { border-color:var(--border2); }
+.cal-day.empty { background:transparent; border:1px dashed var(--border); opacity:.25; pointer-events:none; }
+.cal-day.we { background:rgba(23,32,48,.4); border-color:#1a2331; }
+.cal-day.pos { background:linear-gradient(180deg,rgba(0,255,157,.15),rgba(0,255,157,.05)); border-color:rgba(0,255,157,.3); }
+.cal-day.neg { background:linear-gradient(180deg,rgba(255,64,96,.15),rgba(255,64,96,.05)); border-color:rgba(255,64,96,.3); }
+.cal-day.today { border:1px solid var(--accent); box-shadow:0 0 0 1px rgba(0,200,240,.25); }
+.cal-day .d-num { font-size:11px; color:var(--text2); font-weight:500; text-align:right; }
+.cal-day .d-num.we { color:var(--text3); }
+.cal-day .d-pnl { font-size:13px; font-weight:500; font-family:var(--font-mono); }
+.cal-day .d-pnl.pos { color:var(--pos); }
+.cal-day .d-pnl.neg { color:var(--neg); }
+.cal-day .d-trades { font-size:8px; color:var(--text3); letter-spacing:.5px; }
+.cal-empty-state { text-align:center; padding:30px 12px; color:var(--text3); font-size:11px; }
+
 /* TOAST */
 .toast { position:fixed; bottom:24px; right:24px; background:var(--bg4); border:1px solid var(--accent); border-radius:6px; padding:11px 18px; color:var(--accent); font-size:11px; z-index:9999; opacity:0; transform:translateY(8px); transition:all .25s; pointer-events:none; }
 .toast.show { opacity:1; transform:translateY(0); }
@@ -430,6 +461,22 @@ select option { background:var(--bg4); }
   <div class="table-wrap">
     <table><thead><tr><th>Konto</th><th>EA</th><th>Strategie</th><th>P&L</th><th>DD</th><th>Notiz</th></tr></thead>
     <tbody id="todayRows"></tbody></table>
+  </div>
+
+  <!-- Monatskalender (nur Live-Konten) -->
+  <div class="sh">Monatskalender · Live-Konten</div>
+  <div class="cal-wrap" id="liveCalWrap">
+    <div class="cal-hd">
+      <div class="cal-nav">
+        <button onclick="liveCalShift(-1)" title="vorheriger Monat">◀</button>
+        <div class="cal-month" id="liveCalMonth">–</div>
+        <button onclick="liveCalShift(1)" title="nächster Monat">▶</button>
+        <button class="today-btn" onclick="liveCalToday()" title="zu heute springen">HEUTE</button>
+      </div>
+      <div class="cal-sum" id="liveCalSum"></div>
+    </div>
+    <div class="cal-dow"><div>MO</div><div>DI</div><div>MI</div><div>DO</div><div>FR</div><div class="we">SA</div><div class="we">SO</div></div>
+    <div class="cal-grid" id="liveCalGrid"></div>
   </div>
 </div>
 
@@ -3548,6 +3595,122 @@ function renderLiveTab() {
   setTimeout(renderLiveCharts, 50);
   // Today rows
   renderTodayRows();
+  // Monatskalender (Live-Konten)
+  renderLiveCalendar();
+}
+
+// ============================================================
+// MONATSKALENDER (Live-Tab)  — v5
+// ============================================================
+var liveCalState = (function(){ var d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; })();
+
+function liveCalShift(delta) {
+  liveCalState.month += delta;
+  if (liveCalState.month < 0)  { liveCalState.month = 11; liveCalState.year--; }
+  if (liveCalState.month > 11) { liveCalState.month = 0;  liveCalState.year++; }
+  renderLiveCalendar();
+}
+
+function liveCalToday() {
+  var d = new Date();
+  liveCalState.year  = d.getFullYear();
+  liveCalState.month = d.getMonth();
+  renderLiveCalendar();
+}
+
+function renderLiveCalendar() {
+  var wrap = document.getElementById('liveCalWrap');
+  if (!wrap) return;
+  var gridEl  = document.getElementById('liveCalGrid');
+  var monthEl = document.getElementById('liveCalMonth');
+  var sumEl   = document.getElementById('liveCalSum');
+
+  var y = liveCalState.year, m = liveCalState.month;
+  var monthNames = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  monthEl.textContent = monthNames[m] + ' ' + y;
+
+  // Heute zum Markieren
+  var today = new Date();
+  var todayStr = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+
+  // Live-Konten-IDs ermitteln
+  var liveAccIds = new Set(DB.accounts.filter(function(a){ return a.type === 'Live'; }).map(function(a){ return a.id; }));
+
+  // Leading empty cells (Mo=1, So=0 → auf 0=Mo, 6=So mappen)
+  var first = new Date(y, m, 1);
+  var firstDow = first.getDay(); // 0=So..6=Sa
+  var leading  = (firstDow + 6) % 7; // 0=Mo..6=So
+  var daysInMonth = new Date(y, m+1, 0).getDate();
+
+  // Tages-Aggregation
+  var dayPnl = {}, dayTrades = {};
+  DB.pnl.forEach(function(p){
+    if (!p.date) return;
+    if (p.entryType && p.entryType !== 'trade') return;
+    if (!liveAccIds.has(p.accountId)) return;
+    if (!p.date.startsWith(y + '-' + String(m+1).padStart(2,'0') + '-')) return;
+    var v = parseFloat(p.pnl) || 0;
+    dayPnl[p.date]    = (dayPnl[p.date]    || 0) + v;
+    dayTrades[p.date] = (dayTrades[p.date] || 0) + 1;
+  });
+
+  // HTML aufbauen
+  var html = '';
+  for (var i = 0; i < leading; i++) html += '<div class="cal-day empty"></div>';
+
+  var monthTotal = 0, tradingDays = 0;
+  var bestDay = null, bestVal = -Infinity;
+  var worstDay = null, worstVal = Infinity;
+
+  for (var d = 1; d <= daysInMonth; d++) {
+    var iso = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    var date = new Date(y, m, d);
+    var dow = date.getDay(); // 0=So, 6=Sa
+    var isWe = (dow === 0 || dow === 6);
+    var isToday = (iso === todayStr);
+    var hasPnl = (iso in dayPnl);
+    var val = hasPnl ? dayPnl[iso] : null;
+    var trades = dayTrades[iso] || 0;
+
+    if (hasPnl) {
+      monthTotal += val;
+      tradingDays++;
+      if (val > bestVal)  { bestVal = val;  bestDay = d; }
+      if (val < worstVal) { worstVal = val; worstDay = d; }
+    }
+
+    var cls = 'cal-day';
+    if (isWe && !hasPnl) cls += ' we';
+    else if (hasPnl && val > 0) cls += ' pos';
+    else if (hasPnl && val < 0) cls += ' neg';
+    if (isToday) cls += ' today';
+
+    var numCls = (isWe ? 'd-num we' : 'd-num');
+    var body = '<div class="' + numCls + '">' + d + '</div>';
+    if (hasPnl) {
+      var sign = val >= 0 ? '+' : '-';
+      var amount = '$' + Math.abs(val).toFixed(0);
+      body += '<div class="d-pnl ' + (val>=0?'pos':'neg') + '">' + sign + amount + '</div>';
+      body += '<div class="d-trades">' + trades + ' ' + (trades===1?'trade':'trades') + '</div>';
+    }
+    html += '<div class="' + cls + '" title="' + iso + (hasPnl?(' · '+(val>=0?'+':'')+'$'+val.toFixed(2)+' · '+trades+' trades'):'') + '">' + body + '</div>';
+  }
+
+  gridEl.innerHTML = html;
+
+  // Summary-Chips
+  if (tradingDays === 0) {
+    sumEl.innerHTML = '<span class="chip" style="color:var(--text3)">keine Live-Einträge in diesem Monat</span>';
+  } else {
+    var totCls = monthTotal >= 0 ? '' : 'neg';
+    var totSign = monthTotal >= 0 ? '+' : '-';
+    var chips = [];
+    chips.push('<span class="chip">' + tradingDays + ' Trading-Tage</span>');
+    chips.push('<span class="chip">Monat: <b class="' + totCls + '">' + totSign + '$' + Math.abs(monthTotal).toFixed(2) + '</b></span>');
+    if (bestDay !== null)  chips.push('<span class="chip">Best: <b>+$' + bestVal.toFixed(2) + '</b> (' + String(bestDay).padStart(2,'0') + '.)</span>');
+    if (worstDay !== null && worstVal < 0) chips.push('<span class="chip">Worst: <b class="neg">-$' + Math.abs(worstVal).toFixed(2) + '</b> (' + String(worstDay).padStart(2,'0') + '.)</span>');
+    sumEl.innerHTML = chips.join('');
+  }
 }
 
 function drawGauge(canvasId, value, goal, valId, subId, label) {
