@@ -4073,22 +4073,20 @@ function renderEaDetail() {
         {
           label:'P&L Tag',
           data:pnl14,
-          backgroundColor:pnl14.map(function(v){ return v>=0?'rgba(0,255,157,0.65)':'rgba(255,71,87,0.65)'; }),
+          backgroundColor:pnl14.map(function(v){ return v>=0?'rgba(0,255,157,0.85)':'rgba(255,71,87,0.85)'; }),
           borderColor:pnl14.map(function(v){ return v>=0?'#00ff9d':'#ff4757'; }),
           borderWidth:1,
           borderRadius:3,
-          categoryPercentage:0.85,
-          barPercentage:0.9
+          stack:'s'
         },
         {
           label:'Tages-DD',
           data:dd14,
-          backgroundColor:'rgba(255,71,87,0.55)',
+          backgroundColor:'rgba(255,71,87,0.6)',
           borderColor:'#ff4757',
           borderWidth:1,
           borderRadius:3,
-          categoryPercentage:0.85,
-          barPercentage:0.9
+          stack:'s'
         }
       ]
     },
@@ -4109,10 +4107,15 @@ function renderEaDetail() {
       },
       scales:{
         y:{
+          stacked:true,
           grid:{color:'rgba(255,255,255,0.05)'},
           ticks:{font:{size:10},color:'#7f8c9a',callback:function(v){ return v + ' $'; }}
         },
-        x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{font:{size:10},color:'#7f8c9a',maxRotation:45}}
+        x:{
+          stacked:true,
+          grid:{color:'rgba(255,255,255,0.05)'},
+          ticks:{font:{size:10},color:'#7f8c9a',maxRotation:45}
+        }
       }
     }
   });
