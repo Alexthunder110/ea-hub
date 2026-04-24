@@ -977,6 +977,32 @@ function normalizeDate(val) {
   return `${y}-${m}-${day}`;
 }
 
+// v11: Google Sheets speichert "15:15" oft als Date-Objekt mit Epoch 1899-12-30
+// — beim Reload kommt ein ISO-String zurück. Diese Funktion holt HH:MM raus.
+function normalizeGoalTime(val) {
+  if (!val) return '';
+  if (typeof val === 'string') {
+    // Bereits im HH:MM-Format? → durchreichen
+    if (/^\d{1,2}:\d{2}$/.test(val)) {
+      const [h,m] = val.split(':');
+      return String(h).padStart(2,'0') + ':' + m;
+    }
+    // ISO-Datetime (z. B. "1899-12-30T09:15:00.000Z") → HH:MM aus UTC ziehen,
+    // dann ggf. in lokale Zeit umwandeln
+    const d = new Date(val);
+    if (!isNaN(d)) {
+      // Bei Epoch-Dates (1899/1900) ist die Zeit die eigentliche Information;
+      // nutze die UTC-Stunden/Minuten damit keine Timezone-Verschiebung passiert
+      if (d.getUTCFullYear() < 1950) {
+        return String(d.getUTCHours()).padStart(2,'0') + ':' + String(d.getUTCMinutes()).padStart(2,'0');
+      }
+      // Echtes Datum → lokale Uhrzeit
+      return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    }
+  }
+  return '';
+}
+
 function setDefaultDates() {
   const today = localToday();
   const month = today.substring(0,7);
@@ -1344,7 +1370,7 @@ function editPnl(id) {
   document.getElementById('pnl-rr').value = p.rr||'';
   document.getElementById('pnl-note').value = p.note||'';
   document.getElementById('pnl-goal').value = p.dailyGoal||'';
-  document.getElementById('pnl-goaltime').value = p.goalTime||'';
+  document.getElementById('pnl-goaltime').value = normalizeGoalTime(p.goalTime);
   document.getElementById('pnlFormTitle').textContent = 'P&L bearbeiten';
   document.getElementById('view-pnl').scrollIntoView({behavior:'smooth'});
 }
@@ -1418,7 +1444,7 @@ function renderPnlTable() {
           va = ga ? ((parseFloat(a.pnl)||0)/ga) : -Infinity;
           vb = gb ? ((parseFloat(b.pnl)||0)/gb) : -Infinity;
           break;
-        case 'goaltime': va = a.goalTime||''; vb = b.goalTime||''; break;
+        case 'goaltime': va = normalizeGoalTime(a.goalTime); vb = normalizeGoalTime(b.goalTime); break;
         default:         va = a.date||''; vb = b.date||'';
       }
       if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
@@ -1446,6 +1472,7 @@ function renderPnlTable() {
     const pnl = parseFloat(e.pnl)||0;
     const dd  = parseFloat(e.dd)||0;
     const goal= parseFloat(e.dailyGoal)||0;
+    const goalTimeTxt = normalizeGoalTime(e.goalTime);
     const goalPct = goal ? Math.min(100,(pnl/goal)*100).toFixed(0) : null;
     const typeLabels = { deposit:'💰 Einzahlung', withdrawal:'💸 Auszahlung', transfer:'🔄 Transfer' };
     const typeBadge = e.entryType && e.entryType !== 'trade' ? `<span style="font-size:9px;color:var(--text3);display:block">${typeLabels[e.entryType]||e.entryType}</span>` : '';
@@ -1459,7 +1486,7 @@ function renderPnlTable() {
       <td style="color:var(--text2)">${e.equity?'$'+fmt(e.equity):'–'}</td>
       <td style="color:var(--text2)">${e.rr||'–'}</td>
       <td>${goalPct!==null?`<span style="color:${goalPct>=100?'var(--pos)':'var(--text2)'}">${goalPct}%</span>`:'–'}</td>
-      <td style="color:${e.goalTime?'var(--pos)':'var(--text3)'};font-family:var(--font-mono)">${e.goalTime||'–'}</td>
+      <td style="color:${goalTimeTxt?'var(--pos)':'var(--text3)'};font-family:var(--font-mono)">${goalTimeTxt||'–'}</td>
       <td style="color:var(--text2);font-size:10px">${e.note||'–'}</td>
       <td style="display:flex;gap:4px">
         <button class="icon-btn edit" onclick="editPnl('${e.id}')" title="Bearbeiten">✎</button>
