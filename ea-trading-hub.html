@@ -4045,15 +4045,18 @@ function renderEaDetail() {
     '</div>';
   }).join('');
 
-  // Chart: letzte 14 Tage — v2: nur Tages-P&L + Tages-DD als gruppierte Balken
+  // Chart: letzte 14 Tage — v4: zwei Y-Achsen (P&L links, DD rechts) + Wochenenden schmaler
   var today = localToday();
-  var labels14 = [], pnl14 = [], dd14 = [];
+  var labels14 = [], pnl14 = [], dd14 = [], isWeekend14 = [];
 
   for (var i=13;i>=0;i--) {
     var d = new Date(today);
     d.setDate(d.getDate()-i);
     var ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
     labels14.push(d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}));
+    // Sa=6, So=0 → Wochenende
+    var dow = d.getDay();
+    isWeekend14.push(dow === 0 || dow === 6);
     var dayEntries = entries.filter(function(p){ return p.date===ds; });
     var dayPnl = dayEntries.reduce(function(s,p){ return s+(parseFloat(p.pnl)||0); },0);
     var dayDd  = dayEntries.reduce(function(s,p){ return Math.max(s,Math.abs(parseFloat(p.dd)||0)); },0);
@@ -4062,11 +4065,29 @@ function renderEaDetail() {
     dd14.push(dayDd>0 ? -parseFloat(dayDd.toFixed(2)) : 0);
   }
 
+  // Plugin: Wochenend-Balken auf 35% der Normalbreite schrumpfen (ohne Kategorie-Platz zu ändern)
+  var weekendSlimPlugin = {
+    id: 'weekendSlim',
+    afterUpdate: function(chart) {
+      var weekends = (chart.options.plugins.weekendSlim && chart.options.plugins.weekendSlim.weekends) || [];
+      chart.data.datasets.forEach(function(ds, di){
+        var meta = chart.getDatasetMeta(di);
+        if (!meta || !meta.data) return;
+        meta.data.forEach(function(bar, i){
+          if (weekends[i] && bar) {
+            bar.width = bar.width * 0.35;
+          }
+        });
+      });
+    }
+  };
+
   if(eaDetailChartInstance){ eaDetailChartInstance.destroy(); eaDetailChartInstance=null; }
   var ctx = document.getElementById('eaDetailChart');
   if(!ctx) return;
   eaDetailChartInstance = new Chart(ctx, {
     type:'bar',
+    plugins:[weekendSlimPlugin],
     data:{
       labels: labels14,
       datasets:[
@@ -4077,7 +4098,8 @@ function renderEaDetail() {
           borderColor:pnl14.map(function(v){ return v>=0?'#00ff9d':'#ff4757'; }),
           borderWidth:1,
           borderRadius:3,
-          stack:'s'
+          yAxisID:'yP',
+          grouped:false
         },
         {
           label:'Tages-DD',
@@ -4086,14 +4108,17 @@ function renderEaDetail() {
           borderColor:'#ff4757',
           borderWidth:1,
           borderRadius:3,
-          stack:'s'
+          yAxisID:'yD',
+          grouped:false
         }
       ]
     },
     options:{
       responsive:true,
+      maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
       plugins:{
+        weekendSlim:{ weekends: isWeekend14 },
         legend:{display:true,labels:{font:{size:10},boxWidth:10,padding:10,color:'#7f8c9a'}},
         tooltip:{
           callbacks:{
@@ -4106,15 +4131,41 @@ function renderEaDetail() {
         }
       },
       scales:{
-        y:{
-          stacked:true,
+        yP:{
+          position:'left',
+          min:0,
+          suggestedMax:100,
           grid:{color:'rgba(255,255,255,0.05)'},
-          ticks:{font:{size:10},color:'#7f8c9a',callback:function(v){ return v + ' $'; }}
+          ticks:{
+            stepSize:25,
+            font:{size:10},
+            color:'#00ff9d',
+            callback:function(v){ return v + ' $'; }
+          },
+          title:{display:false}
+        },
+        yD:{
+          position:'right',
+          max:0,
+          suggestedMin:-300,
+          grid:{display:false},
+          ticks:{
+            stepSize:50,
+            font:{size:10},
+            color:'#ff4757',
+            callback:function(v){ return v + ' $'; }
+          }
         },
         x:{
-          stacked:true,
           grid:{color:'rgba(255,255,255,0.05)'},
-          ticks:{font:{size:10},color:'#7f8c9a',maxRotation:45}
+          ticks:{
+            font:{size:10},
+            color:function(ctx){
+              var idx = ctx.index;
+              return isWeekend14[idx] ? '#3d5166' : '#7f8c9a';
+            },
+            maxRotation:45
+          }
         }
       }
     }
