@@ -311,6 +311,12 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
 .fv2-ea-table tfoot .sum-val.pos { color:var(--pos); }
 .fv2-ea-table tfoot .sum-val.neg { color:var(--neg); }
 
+/* v21: Break-Even Box */
+.fv2-breakeven { display:flex; flex-direction:column; gap:3px; padding:10px 16px; border-left:1px solid var(--border2); min-width:170px; }
+.fv2-breakeven .be-label { font-size:10px; color:var(--text3); letter-spacing:.6px; text-transform:uppercase; }
+.fv2-breakeven .be-val { font-family:var(--font-mono); font-size:22px; font-weight:500; color:var(--text2); }
+.fv2-breakeven .be-sub { font-size:10px; color:var(--text3); line-height:1.4; }
+
 /* FORECAST V2 — Events (v15) */
 .fv2-evt-btn { background:transparent; border:1px solid var(--border2); color:var(--text); padding:6px 11px; border-radius:5px; font-family:var(--font-mono); font-size:10px; cursor:pointer; letter-spacing:.4px; transition:all .15s; }
 .fv2-evt-btn:hover { background:var(--bg4); }
@@ -899,8 +905,13 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
         <input type="number" step="1" id="fv2-weekly-payout" value="0"
                oninput="forecastV2UpdatePlan('weeklyPayout',parseFloat(this.value)||0)">
       </div>
-      <div style="font-size:11px;color:var(--text3);max-width:380px;line-height:1.7">
-        Hier eintragen, Chart und Forecast aktualisieren sich live beim Tippen. Lot-Änderungen oder neue EAs unten in der Tabelle.
+      <div class="fv2-breakeven" id="fv2-breakeven">
+        <div class="be-label">Break-Even</div>
+        <div class="be-val" id="fv2-be-val">$0</div>
+        <div class="be-sub">max. ohne Kapitalverlust bei aktueller Performance</div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);max-width:280px;line-height:1.7">
+        Hier eintragen, Chart und Forecast aktualisieren sich live beim Tippen.
       </div>
     </div>
   </div>
@@ -3630,11 +3641,10 @@ function _fv2RenderIstKpis() {
 }
 
 // v20: Summen-Zeile in der EA-Tabelle (alle aktiven EAs)
+// v21: zusätzlich Break-Even-Wert für Wochenentnahme
 function _fv2RenderTotals() {
   var fv2 = getForecastV2();
   var foot = document.getElementById('fv2-ea-tfoot');
-  if (!foot) return;
-  if (!fv2.eas.length) { foot.innerHTML = ''; return; }
 
   var sumWeekIst = 0, sumWeekFc = 0;
   fv2.eas.forEach(function(ea){
@@ -3650,17 +3660,29 @@ function _fv2RenderTotals() {
   var sumMonthFc  = sumWeekFc  * (30/7);
   var fmt = function(v){ return v === 0 ? '–' : (v>=0?'+':'') + '$' + Math.abs(v).toLocaleString('de-DE',{minimumFractionDigits:0,maximumFractionDigits:0}); };
 
-  foot.innerHTML = '<tr>' +
-    '<td></td>' +
-    '<td class="sum-label">Σ aktive EAs</td>' +
-    '<td></td>' +
-    '<td class="sum-val pos">' + fmt(sumWeekIst)  + '</td>' +
-    '<td class="sum-val pos">' + fmt(sumMonthIst) + '</td>' +
-    '<td></td>' +
-    '<td class="sum-val pos">' + fmt(sumWeekFc)   + '</td>' +
-    '<td class="sum-val pos">' + fmt(sumMonthFc)  + '</td>' +
-    '<td></td>' +
-  '</tr>';
+  if (foot) {
+    if (!fv2.eas.length) { foot.innerHTML = ''; }
+    else {
+      foot.innerHTML = '<tr>' +
+        '<td></td>' +
+        '<td class="sum-label">Σ aktive EAs</td>' +
+        '<td></td>' +
+        '<td class="sum-val pos">' + fmt(sumWeekIst)  + '</td>' +
+        '<td class="sum-val pos">' + fmt(sumMonthIst) + '</td>' +
+        '<td></td>' +
+        '<td class="sum-val pos">' + fmt(sumWeekFc)   + '</td>' +
+        '<td class="sum-val pos">' + fmt(sumMonthFc)  + '</td>' +
+        '<td></td>' +
+      '</tr>';
+    }
+  }
+
+  // v21: Break-Even = Σ Plan-Wocheneinkünfte (sumWeekFc).
+  // Bei dieser Entnahme bleibt das Kapital konstant (bei aktueller Performance).
+  var beEl = document.getElementById('fv2-be-val');
+  if (beEl) {
+    beEl.textContent = '$' + Math.round(sumWeekFc).toLocaleString('de-DE');
+  }
 }
 
 function forecastV2DeleteEa(id) {
@@ -3916,7 +3938,7 @@ function _fv2RenderChart() {
       weekStart.setDate(weekStart.getDate() + (w-1) * 7 + 1);
       labels.push('KW +' + w + ' · ab ' + ('0'+weekStart.getDate()).slice(-2) + '.' + ('0'+(weekStart.getMonth()+1)).slice(-2));
       earnData.push(Math.round(weekIstSum));
-      payoutData.push(-Math.round(payoutPerWeek));
+      payoutData.push(Math.round(payoutPerWeek));
     }
 
     fv2ChartInstance = new Chart(canvas, {
@@ -3955,8 +3977,7 @@ function _fv2RenderChart() {
           tooltip: {
             callbacks: {
               label: function(ctx){
-                var v = ctx.parsed.y;
-                return ctx.dataset.label + ': ' + (v>=0?'+':'') + '$' + Math.abs(Math.round(v)).toLocaleString('de-DE');
+                return ctx.dataset.label + ': $' + Math.round(ctx.parsed.y).toLocaleString('de-DE');
               }
             }
           }
@@ -3964,7 +3985,8 @@ function _fv2RenderChart() {
         scales: {
           y: {
             grid: { color: 'rgba(255,255,255,0.05)' },
-            ticks: { color:'#7f8c9a', font:{ size:10, family:"'JetBrains Mono'" }, callback: function(v){ return (v>=0?'+':'-')+'$'+Math.abs(v).toLocaleString('de-DE'); } }
+            beginAtZero: true,
+            ticks: { color:'#7f8c9a', font:{ size:10, family:"'JetBrains Mono'" }, callback: function(v){ return '$'+v.toLocaleString('de-DE'); } }
           },
           x: {
             grid: { display:false },
