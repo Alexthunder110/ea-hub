@@ -262,6 +262,32 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
 .fv2-actions .btn-icon-sm:hover { color:var(--neg); border-color:var(--neg); }
 .fv2-empty { grid-column:1/-1; text-align:center; color:var(--text3); padding:40px 20px; font-size:12px; border:1px dashed var(--border2); border-radius:8px; }
 
+/* FORECAST V2 — EA-Tabelle (v17) */
+.fv2-ea-table { width:100%; border-collapse:collapse; font-size:12px; }
+.fv2-ea-table thead th { background:var(--bg4); color:var(--text3); font-size:9px; font-weight:600; letter-spacing:.6px; text-transform:uppercase; padding:9px 10px; border-bottom:1px solid var(--border2); white-space:nowrap; }
+.fv2-ea-table thead th.ist-col  { color:var(--accent); }
+.fv2-ea-table thead th.plan-col { color:var(--pos); }
+.fv2-ea-table tbody tr { border-bottom:1px solid var(--border); }
+.fv2-ea-table tbody tr:last-child { border-bottom:none; }
+.fv2-ea-table tbody tr.geplant td { opacity:.85; }
+.fv2-ea-table tbody tr.pausiert td { opacity:.45; }
+.fv2-ea-table tbody td { padding:8px 10px; vertical-align:middle; }
+.fv2-ea-table tbody td.derived { color:var(--text2); font-family:var(--font-mono); text-align:right; font-size:12px; white-space:nowrap; }
+.fv2-ea-table tbody td.derived.pos { color:var(--pos); }
+.fv2-ea-table tbody td.derived.fc-up   { color:var(--pos); font-weight:500; }
+.fv2-ea-table tbody td.derived.fc-down { color:var(--neg); font-weight:500; }
+.fv2-ea-table tbody td.derived.fc-eq   { color:var(--text2); }
+.fv2-ea-table input.fv2-cell { width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-family:var(--font-mono); font-size:12px; padding:5px 8px; }
+.fv2-ea-table input.fv2-cell:focus { outline:none; border-color:var(--accent); background:var(--bg3); }
+.fv2-ea-table input.fv2-cell.num { text-align:right; }
+.fv2-ea-table select.fv2-cell { background:var(--bg2); border:1px solid var(--border); border-radius:4px; color:var(--text); font-family:var(--font-mono); font-size:11px; padding:4px 6px; cursor:pointer; }
+.fv2-ea-table select.fv2-cell.aktiv    { color:var(--pos);   border-color:rgba(0,255,157,.35); }
+.fv2-ea-table select.fv2-cell.geplant  { color:var(--warn);  border-color:rgba(255,184,48,.35); }
+.fv2-ea-table select.fv2-cell.pausiert { color:var(--text3); }
+.fv2-ea-table .row-x { color:var(--text3); cursor:pointer; text-align:center; font-size:13px; }
+.fv2-ea-table .row-x:hover { color:var(--neg); }
+.fv2-ea-empty-row td { padding:30px; text-align:center; color:var(--text3); font-size:12px; }
+
 /* FORECAST V2 — Events (v15) */
 .fv2-evt-btn { background:transparent; border:1px solid var(--border2); color:var(--text); padding:6px 11px; border-radius:5px; font-family:var(--font-mono); font-size:10px; cursor:pointer; letter-spacing:.4px; transition:all .15s; }
 .fv2-evt-btn:hover { background:var(--bg4); }
@@ -890,13 +916,29 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
     </div>
   </div>
 
-  <!-- EAs -->
+  <!-- EAs (v17: Tabelle statt Karten) -->
   <div class="fv2-section">
     <div class="fv2-section-h">
-      <div class="fv2-section-title"><span class="fv2-tag ist">IST</span> EAs · Plan-Einheiten</div>
+      <div class="fv2-section-title">EAs · IST und Plan</div>
       <button class="btn btn-primary btn-sm" onclick="forecastV2AddEa()">+ Neuer EA</button>
     </div>
-    <div class="fv2-ea-grid" id="fv2-ea-grid"></div>
+    <div class="table-wrap" style="overflow-x:auto">
+      <table class="fv2-ea-table" id="fv2-ea-table">
+        <thead><tr>
+          <th style="width:90px">Status</th>
+          <th>Name</th>
+          <th style="text-align:right;width:90px">Kapital ($)</th>
+          <th class="ist-col" style="text-align:right;width:75px">Lot IST</th>
+          <th class="ist-col" style="text-align:right;width:90px">Woche IST</th>
+          <th class="ist-col" style="text-align:right;width:90px">Monat IST</th>
+          <th class="plan-col" style="text-align:right;width:75px">Lot Plan</th>
+          <th class="plan-col" style="text-align:right;width:90px">Woche FC</th>
+          <th class="plan-col" style="text-align:right;width:90px">Monat FC</th>
+          <th style="width:30px"></th>
+        </tr></thead>
+        <tbody id="fv2-ea-tbody"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -3352,10 +3394,20 @@ function getForecastV2() {
   if (!DB.settings.forecastV2) DB.settings.forecastV2 = {};
   var f = DB.settings.forecastV2;
   if (!f.eas) f.eas = [];
-  // v16: Events sind nicht mehr in Verwendung — bestehende Daten verwerfen
-  if (f.events && f.events.length) f.events = [];
+  if (f.events && f.events.length) f.events = []; // v16: Events deaktiviert
   if (typeof f.weeklyPayout !== 'number') f.weeklyPayout = 0;
   if (typeof f.oneTimeCost !== 'number') f.oneTimeCost = 0;
+  // v17: Migration zu weeklyProfit + lotPlan
+  f.eas.forEach(function(ea){
+    if (typeof ea.lot !== 'number') ea.lot = parseFloat(ea.lot) || 0;
+    if (typeof ea.lotPlan !== 'number') ea.lotPlan = parseFloat(ea.lot) || 0;
+    if (typeof ea.weeklyProfit !== 'number') {
+      // aus alter v14/v16-Struktur (perfPer001Lot) hochrechnen
+      var perf = parseFloat(ea.perfPer001Lot) || 0;
+      var lot  = parseFloat(ea.lot) || 0;
+      ea.weeklyProfit = lot > 0 && perf > 0 ? (lot / 0.01) * perf * 7 : 0;
+    }
+  });
   return f;
 }
 
@@ -3381,74 +3433,83 @@ function _fv2Money(v, signed) {
 function renderForecastV2() {
   var fv2 = getForecastV2();
 
-  // KPIs
-  var capTotal = 0, dayTotal = 0, activeCount = 0;
+  // IST-KPIs aus weeklyProfit + Lot ableiten
+  var capTotal = 0, weeklyTotal = 0, activeCount = 0;
   fv2.eas.forEach(function(ea){
     if (ea.status === 'aktiv') {
-      capTotal += parseFloat(ea.capital) || 0;
-      var lotMult = (parseFloat(ea.lot) || 0) / 0.01;
-      dayTotal += lotMult * (parseFloat(ea.perfPer001Lot) || 0);
+      capTotal    += parseFloat(ea.capital) || 0;
+      weeklyTotal += parseFloat(ea.weeklyProfit) || 0;
       activeCount++;
     }
   });
+  var dayTotal   = weeklyTotal / 7;
+  var monthTotal = weeklyTotal * (30 / 7);
 
-  var todayEl = document.getElementById('fv2-today');
-  if (todayEl) todayEl.textContent = new Date().toLocaleDateString('de-DE');
-  var capEl = document.getElementById('fv2-kpi-cap');
-  if (capEl) capEl.textContent = _fv2Money(capTotal, false);
-  var capSubEl = document.getElementById('fv2-kpi-cap-sub');
-  if (capSubEl) capSubEl.textContent = activeCount + ' aktive EA' + (activeCount === 1 ? '' : 's');
-  var dayEl = document.getElementById('fv2-kpi-day');
-  if (dayEl) dayEl.textContent = _fv2Money(dayTotal, true);
-  var weekEl = document.getElementById('fv2-kpi-week');
-  if (weekEl) weekEl.textContent = _fv2Money(dayTotal * 7, true);
-  var monthEl = document.getElementById('fv2-kpi-month');
-  if (monthEl) monthEl.textContent = _fv2Money(dayTotal * 30, true);
+  var todayEl  = document.getElementById('fv2-today');     if (todayEl)  todayEl.textContent  = new Date().toLocaleDateString('de-DE');
+  var capEl    = document.getElementById('fv2-kpi-cap');   if (capEl)    capEl.textContent    = _fv2Money(capTotal, false);
+  var capSubEl = document.getElementById('fv2-kpi-cap-sub'); if (capSubEl) capSubEl.textContent = activeCount + ' aktive EA' + (activeCount === 1 ? '' : 's');
+  var dayEl    = document.getElementById('fv2-kpi-day');   if (dayEl)    dayEl.textContent    = _fv2Money(dayTotal, true);
+  var weekEl   = document.getElementById('fv2-kpi-week');  if (weekEl)   weekEl.textContent   = _fv2Money(weeklyTotal, true);
+  var monthEl  = document.getElementById('fv2-kpi-month'); if (monthEl)  monthEl.textContent  = _fv2Money(monthTotal, true);
 
-  // EA-Karten
-  var grid = document.getElementById('fv2-ea-grid');
-  if (!grid) return;
+  // EA-Tabelle
+  var tbody = document.getElementById('fv2-ea-tbody');
+  if (!tbody) return;
   if (fv2.eas.length === 0) {
-    grid.innerHTML = '<div class="fv2-empty">Noch keine EAs angelegt. Klick auf <b>+ Neuer EA</b> um zu starten.</div>';
-    return;
-  }
+    tbody.innerHTML = '<tr class="fv2-ea-empty-row"><td colspan="10">Noch keine EAs angelegt. Klick auf <b>+ Neuer EA</b> um zu starten.</td></tr>';
+  } else {
+    tbody.innerHTML = fv2.eas.map(function(ea){
+      var lotIst   = parseFloat(ea.lot) || 0;
+      var lotPlan  = parseFloat(ea.lotPlan) || 0;
+      var weekIst  = parseFloat(ea.weeklyProfit) || 0;
+      var monthIst = weekIst * (30/7);
+      var lotRatio = lotIst > 0 ? (lotPlan / lotIst) : (lotPlan > 0 ? 1 : 0);
+      var weekFc   = weekIst * lotRatio;
+      var monthFc  = weekFc * (30/7);
+      var statusCls = ea.status === 'geplant' ? 'geplant' : (ea.status === 'pausiert' ? 'pausiert' : '');
+      var fmtMoney = function(v){ return v === 0 ? '–' : (v>=0?'+':'') + '$' + Math.abs(v).toLocaleString('de-DE',{minimumFractionDigits:0,maximumFractionDigits:0}); };
+      var fcCls = function(istVal, fcVal){
+        if (istVal === 0 && fcVal === 0) return 'fc-eq';
+        if (Math.abs(fcVal - istVal) < 0.5) return 'fc-eq';
+        return fcVal > istVal ? 'fc-up' : 'fc-down';
+      };
 
-  grid.innerHTML = fv2.eas.map(function(ea){
-    var lotNum  = parseFloat(ea.lot) || 0;
-    var perfNum = parseFloat(ea.perfPer001Lot) || 0;
-    var dayProfit = (lotNum / 0.01) * perfNum;
-    var statusKlass = ea.status === 'geplant' ? 'geplant' : (ea.status === 'pausiert' ? 'pausiert' : '');
-    return '<div class="fv2-ea-card ' + statusKlass + '" data-eaid="' + ea.id + '">' +
-      '<div class="fv2-ea-h">' +
-        '<input type="text" class="fv2-ea-name" value="' + escHtml(ea.name||'') + '" onchange="forecastV2UpdateEa(\'' + ea.id + '\',\'name\',this.value)">' +
-        '<select class="fv2-ea-status ' + (ea.status||'aktiv') + '" onchange="forecastV2UpdateEa(\'' + ea.id + '\',\'status\',this.value)">' +
+      return '<tr class="' + statusCls + '" data-eaid="' + ea.id + '">' +
+        // Status
+        '<td><select class="fv2-cell ' + (ea.status||'aktiv') + '" onchange="forecastV2UpdateEa(\'' + ea.id + '\',\'status\',this.value)">' +
           '<option value="aktiv"'    + (ea.status==='aktiv'   ?' selected':'') + '>Aktiv</option>' +
           '<option value="geplant"'  + (ea.status==='geplant' ?' selected':'') + '>Geplant</option>' +
           '<option value="pausiert"' + (ea.status==='pausiert'?' selected':'') + '>Pausiert</option>' +
-        '</select>' +
-      '</div>' +
-      '<div class="fv2-edit-row">' +
-        '<div class="fv2-field"><label>Kapital ($)</label><input type="number" step="0.01" value="' + (parseFloat(ea.capital)||0) + '" onchange="forecastV2UpdateEa(\'' + ea.id + '\',\'capital\',parseFloat(this.value)||0)"></div>' +
-        '<div class="fv2-field"><label>Lot</label><input type="number" step="0.01" value="' + (parseFloat(ea.lot)||0) + '" onchange="forecastV2UpdateEa(\'' + ea.id + '\',\'lot\',parseFloat(this.value)||0)"></div>' +
-      '</div>' +
-      '<div class="fv2-edit-row">' +
-        '<div class="fv2-field"><label>$ pro 0,01 Lot/Tag</label><input type="number" step="0.01" value="' + (parseFloat(ea.perfPer001Lot)||0) + '" onchange="forecastV2UpdateEa(\'' + ea.id + '\',\'perfPer001Lot\',parseFloat(this.value)||0)"></div>' +
-        '<div class="fv2-field"><label>Notiz</label><input type="text" value="' + escHtml(ea.note||'') + '" onchange="forecastV2UpdateEa(\'' + ea.id + '\',\'note\',this.value)"></div>' +
-      '</div>' +
-      '<div class="fv2-derived"><span>→ Tagesgewinn</span><b>' + _fv2Money(dayProfit, true) + '</b></div>' +
-      '<div class="fv2-actions">' +
-        '<button class="btn-icon-sm" onclick="forecastV2DeleteEa(\'' + ea.id + '\')">✕ Löschen</button>' +
-      '</div>' +
-    '</div>';
-  }).join('');
+        '</select></td>' +
+        // Name
+        '<td><input type="text" class="fv2-cell" value="' + escHtml(ea.name||'') + '" onchange="forecastV2UpdateEa(\'' + ea.id + '\',\'name\',this.value)"></td>' +
+        // Kapital
+        '<td><input type="number" step="1" class="fv2-cell num" value="' + (parseFloat(ea.capital)||0) + '" onchange="forecastV2UpdateEa(\'' + ea.id + '\',\'capital\',parseFloat(this.value)||0)"></td>' +
+        // Lot IST
+        '<td><input type="number" step="0.01" class="fv2-cell num" value="' + lotIst + '" onchange="forecastV2UpdateEa(\'' + ea.id + '\',\'lot\',parseFloat(this.value)||0)"></td>' +
+        // Woche IST (editierbar — der zentrale Eingabe-Wert)
+        '<td><input type="number" step="1" class="fv2-cell num" value="' + Math.round(weekIst) + '" onchange="forecastV2UpdateEa(\'' + ea.id + '\',\'weeklyProfit\',parseFloat(this.value)||0)"></td>' +
+        // Monat IST (berechnet)
+        '<td class="derived ' + (monthIst > 0 ? 'pos' : '') + '">' + fmtMoney(monthIst) + '</td>' +
+        // Lot Plan
+        '<td><input type="number" step="0.01" class="fv2-cell num" value="' + lotPlan + '" onchange="forecastV2UpdateEa(\'' + ea.id + '\',\'lotPlan\',parseFloat(this.value)||0)"></td>' +
+        // Woche FC
+        '<td class="derived ' + fcCls(weekIst, weekFc) + '">' + fmtMoney(weekFc) + '</td>' +
+        // Monat FC
+        '<td class="derived ' + fcCls(monthIst, monthFc) + '">' + fmtMoney(monthFc) + '</td>' +
+        // Löschen
+        '<td><span class="row-x" onclick="forecastV2DeleteEa(\'' + ea.id + '\')" title="EA löschen">✕</span></td>' +
+      '</tr>';
+    }).join('');
+  }
 
-  // Plan-Eingaben in Inputs spiegeln (ohne Re-Render des EA-Grids)
+  // Plan-Eingaben in Inputs spiegeln
   var wp = document.getElementById('fv2-weekly-payout');
   if (wp && document.activeElement !== wp) wp.value = parseFloat(fv2.weeklyPayout) || 0;
   var ot = document.getElementById('fv2-onetime-cost');
   if (ot && document.activeElement !== ot) ot.value = parseFloat(fv2.oneTimeCost) || 0;
 
-  // v16: Chart (Events-Liste komplett entfernt)
+  // Chart neu rendern
   try { _fv2RenderChart(); } catch(e) { console.error('[EAHub] fv2 chart render failed:', e); }
 }
 
@@ -3461,6 +3522,8 @@ function forecastV2AddEa() {
     status: 'aktiv',
     capital: 0,
     lot: 0.01,
+    lotPlan: 0.01,
+    weeklyProfit: 0,
     perfPer001Lot: 0,
     note: ''
   });
@@ -3494,19 +3557,24 @@ function forecastV2DeleteEa(id) {
 function _fv2DeepCopy(obj) { return JSON.parse(JSON.stringify(obj)); }
 
 function _fv2Simulate(scenario, monthsAhead) {
-  // v16: vereinfachte Simulation
-  // 'basis' = nur EAs (kein Plan-Eingriff)
-  // 'plan'  = EAs + wöchentliche Entnahme + einmalige Kosten heute
+  // v17: vereinfachte Simulation mit Plan-Lot
+  // 'basis' = aktuelle Lots, keine Entnahme/Kosten
+  // 'plan'  = Plan-Lots, Entnahme + einmalige Kosten heute
   var fv2 = getForecastV2();
   var today = new Date(); today.setHours(0,0,0,0);
 
-  // EA-State initial
+  // EA-State initial — Tagesgewinn aus weeklyProfit, je nach Szenario skaliert mit Lot-Faktor
   var state = {};
   fv2.eas.forEach(function(ea){
+    var lot       = parseFloat(ea.lot)     || 0;
+    var lotPlan   = parseFloat(ea.lotPlan) || 0;
+    var weekIst   = parseFloat(ea.weeklyProfit) || 0;
+    var dailyIst  = weekIst / 7;
+    var lotRatio  = lot > 0 ? (lotPlan / lot) : (lotPlan > 0 ? 1 : 0);
+    var dailyPlan = dailyIst * lotRatio;
     state[ea.id] = {
       capital: parseFloat(ea.capital) || 0,
-      lot:     parseFloat(ea.lot)     || 0,
-      perf:    parseFloat(ea.perfPer001Lot) || 0,
+      daily:   scenario === 'plan' ? dailyPlan : dailyIst,
       active:  ea.status === 'aktiv'
     };
   });
@@ -3515,9 +3583,9 @@ function _fv2Simulate(scenario, monthsAhead) {
   var oneTimeCost  = scenario === 'plan' ? (parseFloat(fv2.oneTimeCost)  || 0) : 0;
   var dailyPayout  = weeklyPayout / 7;
 
-  var cumPayout = 0;
-  var cumOneTime = oneTimeCost; // wird sofort am Tag 0 abgezogen
-  var snapshots = [];
+  var cumPayout  = 0;
+  var cumOneTime = oneTimeCost; // sofort am Tag 0 abgezogen
+  var snapshots  = [];
 
   var endDate = new Date(today);
   endDate.setMonth(endDate.getMonth() + monthsAhead);
@@ -3527,12 +3595,10 @@ function _fv2Simulate(scenario, monthsAhead) {
     var iso = cur.toISOString().slice(0,10);
 
     if (cur.getTime() > today.getTime()) {
-      // Tagesgewinn
       Object.keys(state).forEach(function(id){
         var s = state[id];
-        if (s.active) s.capital += (s.lot / 0.01) * s.perf;
+        if (s.active) s.capital += s.daily;
       });
-      // Tägliche Entnahme (anteilig aus wöchentlich)
       cumPayout += dailyPayout;
     }
 
