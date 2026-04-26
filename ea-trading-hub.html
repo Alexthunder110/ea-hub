@@ -459,6 +459,58 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
   .form-grid { grid-template-columns:1fr 1fr; }
   .fg-2, .fg-3 { grid-column:span 2; }
 }
+
+/* v24: Mobile-Polish — Breakpoint iPhone (~700 px) */
+@media(max-width:700px) {
+  body { padding:12px 14px; font-size:13px; }
+
+  /* Header: zwei Zeilen, Datum verstecken, Buttons kompakt */
+  .header { flex-wrap:wrap; gap:10px; padding:10px 14px; }
+  .header-right { gap:8px; flex-wrap:wrap; }
+  .header-date { display:none; }
+  .btn-icon { padding:8px 10px; min-height:38px; min-width:38px; font-size:11px; }
+
+  /* Nav-Tabs scrollbar */
+  .nav { overflow-x:auto; flex-wrap:nowrap; padding:6px 10px; gap:6px; -webkit-overflow-scrolling:touch; }
+  .nav::-webkit-scrollbar { display:none; }
+  .nav-tab { white-space:nowrap; flex-shrink:0; padding:8px 12px; font-size:11px; min-height:40px; }
+
+  /* KPI-Grids: dichteres Stacking */
+  .fv2-kpis { grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px; }
+  .fv2-kpi { padding:11px 12px; }
+  .fv2-kpi .v { font-size:18px; }
+
+  /* Sections: weniger Innen-Padding */
+  .fv2-section { padding:14px 14px; margin-bottom:14px; }
+  .fv2-section-h { margin-bottom:12px; }
+  .fv2-section-title { font-size:12px; letter-spacing:.6px; }
+
+  /* Plan-Eingabe: nicht mehr 22 px Schrift, kompakter */
+  .fv2-field-big input { font-size:18px; padding:10px 12px; min-width:140px; }
+  .fv2-breakeven { padding:8px 12px; min-width:auto; border-left:none; border-top:1px solid var(--border2); padding-top:10px; margin-top:6px; }
+  .fv2-breakeven .be-val { font-size:18px; }
+
+  /* Tabellen-Inputs Touch-friendlich (40 px Mindesthöhe) */
+  input, select, textarea { min-height:40px; font-size:14px; }
+  input[type="time"], input[type="date"], input[type="month"] { min-height:40px; }
+  .fv2-cell { min-height:38px; }
+
+  /* P&L Quick-Bar: Felder untereinander statt nebeneinander */
+  .quick-bar { gap:8px; padding:12px; }
+  .quick-bar .form-group { min-width:100%; }
+  .quick-bar .form-group input,
+  .quick-bar .form-group select { width:100% !important; }
+
+  /* P&L Filter-Reihe */
+  .filter-row { flex-wrap:wrap; gap:6px; }
+  .filter-row select, .filter-row input { width:100% !important; min-width:auto; }
+
+  /* Modal-Boxen */
+  .login-box, .setup-box { width:92% !important; padding:24px; }
+
+  /* Live-Tab Gauges: kleiner */
+  canvas { max-width:100%; }
+}
 </style>
 </head>
 <body>
@@ -1092,6 +1144,20 @@ if (localStorage.getItem(LOGIN_HASH) === '1') {
   // Focus password field
   setTimeout(() => { const el = document.getElementById('loginPw'); if(el) el.focus(); }, 100);
 }
+
+// v24: Allen Number-Inputs inputmode=decimal verpassen (numerische Tastatur auf Mobile)
+function _addInputMode() {
+  document.querySelectorAll('input[type="number"]:not([inputmode])').forEach(function(inp){
+    inp.setAttribute('inputmode', 'decimal');
+  });
+}
+_addInputMode();
+// Nach jedem render erneut nachziehen (für dynamisch erzeugte Inputs)
+document.addEventListener('input', function(e){
+  if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'number' && !e.target.hasAttribute('inputmode')) {
+    e.target.setAttribute('inputmode', 'decimal');
+  }
+});
 
 // ============================================================
 // STATE
