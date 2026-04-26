@@ -304,6 +304,13 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
 .fv2-ea-table input.fv2-cell, .fv2-ea-table select.fv2-cell { padding:8px 10px; font-size:13px; }
 .fv2-ea-table input.fv2-cell.num { font-size:14px; font-weight:500; }
 
+/* v20: Summen-Footer */
+.fv2-ea-table tfoot td { padding:12px 12px; background:var(--bg4); border-top:2px solid var(--border2); font-weight:500; font-family:var(--font-mono); }
+.fv2-ea-table tfoot .sum-label { color:var(--text2); font-size:10px; text-transform:uppercase; letter-spacing:.6px; font-weight:600; }
+.fv2-ea-table tfoot .sum-val { color:var(--text); font-size:13px; text-align:right; white-space:nowrap; }
+.fv2-ea-table tfoot .sum-val.pos { color:var(--pos); }
+.fv2-ea-table tfoot .sum-val.neg { color:var(--neg); }
+
 /* FORECAST V2 — Events (v15) */
 .fv2-evt-btn { background:transparent; border:1px solid var(--border2); color:var(--text); padding:6px 11px; border-radius:5px; font-family:var(--font-mono); font-size:10px; cursor:pointer; letter-spacing:.4px; transition:all .15s; }
 .fv2-evt-btn:hover { background:var(--bg4); }
@@ -925,10 +932,7 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
       </div>
     </div>
     <div style="position:relative;height:340px"><canvas id="fv2-chart"></canvas></div>
-    <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:var(--text2);margin-top:10px">
-      <span><span style="display:inline-block;width:24px;height:0;border-top:2px dashed #7f8c9a;margin-right:6px;vertical-align:middle"></span>Basis (echte Performance ohne Plan-Lot &amp; Entnahme)</span>
-      <span><span style="display:inline-block;width:24px;height:3px;background:#00ff9d;margin-right:6px;vertical-align:middle;border-radius:2px"></span>Plan (mit Plan-Lot &amp; Entnahme)</span>
-    </div>
+    <div id="fv2-chart-legend" style="display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:var(--text2);margin-top:10px"></div>
   </div>
 
   <!-- EAs (v17: Tabelle · v18: + Live-EA Import) -->
@@ -954,6 +958,7 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
           <th style="width:30px"></th>
         </tr></thead>
         <tbody id="fv2-ea-tbody"></tbody>
+        <tfoot id="fv2-ea-tfoot"></tfoot>
       </table>
     </div>
   </div>
@@ -3536,6 +3541,8 @@ function renderForecastV2() {
   var ot = document.getElementById('fv2-onetime-cost');
   if (ot && document.activeElement !== ot) ot.value = parseFloat(fv2.oneTimeCost) || 0;
 
+  // v20: Summen-Footer
+  _fv2RenderTotals();
   // Chart neu rendern
   try { _fv2RenderChart(); } catch(e) { console.error('[EAHub] fv2 chart render failed:', e); }
 }
@@ -3568,6 +3575,7 @@ function forecastV2UpdateEa(id, field, value) {
   // nur die berechneten Spalten dieser Zeile + Chart + IST-KPIs aktualisieren
   _fv2RenderRowDerived(id);
   _fv2RenderIstKpis();
+  _fv2RenderTotals();
   try { _fv2RenderChart(); } catch(e) { console.error('[EAHub] fv2 chart render failed:', e); }
 }
 
@@ -3619,6 +3627,40 @@ function _fv2RenderIstKpis() {
   var dayEl   = document.getElementById('fv2-kpi-day');   if (dayEl)   dayEl.textContent   = _fv2Money(dayTotal, true);
   var weekEl  = document.getElementById('fv2-kpi-week');  if (weekEl)  weekEl.textContent  = _fv2Money(weeklyTotal, true);
   var monthEl = document.getElementById('fv2-kpi-month'); if (monthEl) monthEl.textContent = _fv2Money(monthTotal, true);
+}
+
+// v20: Summen-Zeile in der EA-Tabelle (alle aktiven EAs)
+function _fv2RenderTotals() {
+  var fv2 = getForecastV2();
+  var foot = document.getElementById('fv2-ea-tfoot');
+  if (!foot) return;
+  if (!fv2.eas.length) { foot.innerHTML = ''; return; }
+
+  var sumWeekIst = 0, sumWeekFc = 0;
+  fv2.eas.forEach(function(ea){
+    if (ea.status !== 'aktiv') return;
+    var lot     = parseFloat(ea.lot) || 0;
+    var lotPlan = parseFloat(ea.lotPlan) || 0;
+    var weekIst = parseFloat(ea.weeklyProfit) || 0;
+    var ratio   = (lot > 0 && lotPlan > 0) ? (lotPlan / lot) : 1;
+    sumWeekIst += weekIst;
+    sumWeekFc  += weekIst * ratio;
+  });
+  var sumMonthIst = sumWeekIst * (30/7);
+  var sumMonthFc  = sumWeekFc  * (30/7);
+  var fmt = function(v){ return v === 0 ? '–' : (v>=0?'+':'') + '$' + Math.abs(v).toLocaleString('de-DE',{minimumFractionDigits:0,maximumFractionDigits:0}); };
+
+  foot.innerHTML = '<tr>' +
+    '<td></td>' +
+    '<td class="sum-label">Σ aktive EAs</td>' +
+    '<td></td>' +
+    '<td class="sum-val pos">' + fmt(sumWeekIst)  + '</td>' +
+    '<td class="sum-val pos">' + fmt(sumMonthIst) + '</td>' +
+    '<td></td>' +
+    '<td class="sum-val pos">' + fmt(sumWeekFc)   + '</td>' +
+    '<td class="sum-val pos">' + fmt(sumMonthFc)  + '</td>' +
+    '<td></td>' +
+  '</tr>';
 }
 
 function forecastV2DeleteEa(id) {
@@ -3810,41 +3852,14 @@ function _fv2RenderChart() {
   if (!canvas) return;
   if (typeof Chart === 'undefined') return;
 
+  // 12M-KPIs werden immer aus der Tagessimulation berechnet (für die KPI-Karten)
   var basisSnap = _fv2Simulate('basis', 12);
   var planSnap  = _fv2Simulate('plan',  12);
-
-  // v19: Auflösung W/M umschaltbar
-  var basisAgg, planAgg, labels;
-  if (fv2ChartPeriod === 'W') {
-    basisAgg = _fv2AggregateWeekly(basisSnap);
-    planAgg  = _fv2AggregateWeekly(planSnap);
-    labels = basisAgg.map(function(r){
-      var d = new Date(r.label);
-      return ('0'+d.getDate()).slice(-2) + '.' + ('0'+(d.getMonth()+1)).slice(-2);
-    });
-  } else {
-    basisAgg = _fv2AggregateMonthly(basisSnap);
-    planAgg  = _fv2AggregateMonthly(planSnap);
-    var monthNames = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
-    labels = basisAgg.map(function(r){
-      var p = r.label.split('-');
-      return monthNames[parseInt(p[1])-1] + ' ' + p[0].slice(2);
-    });
-  }
-  var basisData = basisAgg.map(function(r){ return Math.round(r.total); });
-  var planData  = planAgg.map(function(r){ return Math.round(r.total); });
-
-  // KPIs Basis/Plan/Δ (12M = letzter Wert)
-  var basis12 = basisData[basisData.length-1] || 0;
-  var plan12  = planData[planData.length-1]  || 0;
-  var delta   = plan12 - basis12;
-  var fmt = function(v){
-    var prefix = v < 0 ? '-$' : '$';
-    return prefix + Math.abs(v).toLocaleString('de-DE');
-  };
-  var fmtSigned = function(v){
-    return (v >= 0 ? '+' : '-') + '$' + Math.abs(v).toLocaleString('de-DE');
-  };
+  var basis12   = Math.round(basisSnap[basisSnap.length-1].total);
+  var plan12    = Math.round(planSnap[planSnap.length-1].total);
+  var delta     = plan12 - basis12;
+  var fmt       = function(v){ return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString('de-DE'); };
+  var fmtSigned = function(v){ return (v >= 0 ? '+' : '-') + '$' + Math.abs(v).toLocaleString('de-DE'); };
   var be = document.getElementById('fv2-kpi-basis');  if (be) be.textContent = fmt(basis12);
   var pe = document.getElementById('fv2-kpi-plan');   if (pe) pe.textContent = fmt(plan12);
   var de = document.getElementById('fv2-kpi-delta');  if (de) de.textContent = fmtSigned(delta);
@@ -3853,7 +3868,6 @@ function _fv2RenderChart() {
     var fv2sub = getForecastV2();
     var parts = [];
     if (fv2sub.weeklyPayout) parts.push('-$' + fv2sub.weeklyPayout + '/Woche');
-    // Lot-Plan-Eingriffe zählen
     var lotChanges = (fv2sub.eas||[]).filter(function(ea){
       var lot = parseFloat(ea.lot) || 0, lp = parseFloat(ea.lotPlan) || 0;
       return ea.status === 'aktiv' && lot > 0 && lp > 0 && Math.abs(lot - lp) > 0.0001;
@@ -3863,6 +3877,115 @@ function _fv2RenderChart() {
   }
 
   if (fv2ChartInstance) { fv2ChartInstance.destroy(); fv2ChartInstance = null; }
+
+  // Legende setzen
+  var legendEl = document.getElementById('fv2-chart-legend');
+  if (legendEl) {
+    if (fv2ChartPeriod === 'W') {
+      legendEl.innerHTML =
+        '<span><span style="display:inline-block;width:14px;height:14px;background:rgba(0,255,157,0.65);border:1px solid #00ff9d;margin-right:6px;vertical-align:middle;border-radius:2px"></span>Wöchentliche Einkünfte (alle aktiven EAs, mit Plan-Lot)</span>' +
+        '<span><span style="display:inline-block;width:14px;height:14px;background:rgba(255,64,96,0.65);border:1px solid #ff4060;margin-right:6px;vertical-align:middle;border-radius:2px"></span>Wöchentliche Entnahme</span>';
+    } else {
+      legendEl.innerHTML =
+        '<span><span style="display:inline-block;width:24px;height:0;border-top:2px dashed #7f8c9a;margin-right:6px;vertical-align:middle"></span>Basis (echte Performance ohne Plan-Lot &amp; Entnahme)</span>' +
+        '<span><span style="display:inline-block;width:24px;height:3px;background:#00ff9d;margin-right:6px;vertical-align:middle;border-radius:2px"></span>Plan (mit Plan-Lot &amp; Entnahme)</span>';
+    }
+  }
+
+  if (fv2ChartPeriod === 'W') {
+    // ===== Bar-Chart: 6 Wochen, 2 Balken pro Woche (Einkünfte / Entnahme) =====
+    var fv2 = getForecastV2();
+    var weekIstSum = 0;
+    fv2.eas.forEach(function(ea){
+      if (ea.status !== 'aktiv') return;
+      var lot     = parseFloat(ea.lot) || 0;
+      var lotPlan = parseFloat(ea.lotPlan) || 0;
+      var weekIst = parseFloat(ea.weeklyProfit) || 0;
+      var ratio   = (lot > 0 && lotPlan > 0) ? (lotPlan / lot) : 1;
+      weekIstSum += weekIst * ratio;  // Plan-Wochengewinn (mit Lot-Plan-Skalierung)
+    });
+    var payoutPerWeek = parseFloat(fv2.weeklyPayout) || 0;
+
+    // 6 Wochen ab heute (kommende 6 Wochen)
+    var labels = [];
+    var earnData = [];
+    var payoutData = [];
+    var today = new Date(); today.setHours(0,0,0,0);
+    for (var w = 1; w <= 6; w++) {
+      var weekStart = new Date(today);
+      weekStart.setDate(weekStart.getDate() + (w-1) * 7 + 1);
+      labels.push('KW +' + w + ' · ab ' + ('0'+weekStart.getDate()).slice(-2) + '.' + ('0'+(weekStart.getMonth()+1)).slice(-2));
+      earnData.push(Math.round(weekIstSum));
+      payoutData.push(-Math.round(payoutPerWeek));
+    }
+
+    fv2ChartInstance = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Einkünfte',
+            data: earnData,
+            backgroundColor: 'rgba(0,255,157,0.65)',
+            borderColor: '#00ff9d',
+            borderWidth: 1,
+            borderRadius: 3,
+            barPercentage: 1.0,
+            categoryPercentage: 0.85
+          },
+          {
+            label: 'Entnahme',
+            data: payoutData,
+            backgroundColor: 'rgba(255,64,96,0.65)',
+            borderColor: '#ff4060',
+            borderWidth: 1,
+            borderRadius: 3,
+            barPercentage: 1.0,
+            categoryPercentage: 0.85
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode:'index', intersect:false },
+        plugins: {
+          legend: { display:false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx){
+                var v = ctx.parsed.y;
+                return ctx.dataset.label + ': ' + (v>=0?'+':'') + '$' + Math.abs(Math.round(v)).toLocaleString('de-DE');
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color:'#7f8c9a', font:{ size:10, family:"'JetBrains Mono'" }, callback: function(v){ return (v>=0?'+':'-')+'$'+Math.abs(v).toLocaleString('de-DE'); } }
+          },
+          x: {
+            grid: { display:false },
+            ticks: { color:'#7f8c9a', font:{ size:10, family:"'JetBrains Mono'" }, maxRotation: 0 }
+          }
+        }
+      }
+    });
+    return;
+  }
+
+  // ===== Line-Chart: 12 Monate (Default) =====
+  var basisAgg = _fv2AggregateMonthly(basisSnap);
+  var planAgg  = _fv2AggregateMonthly(planSnap);
+  var monthNames = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  var labels = basisAgg.map(function(r){
+    var p = r.label.split('-');
+    return monthNames[parseInt(p[1])-1] + ' ' + p[0].slice(2);
+  });
+  var basisData = basisAgg.map(function(r){ return Math.round(r.total); });
+  var planData  = planAgg.map(function(r){ return Math.round(r.total); });
 
   fv2ChartInstance = new Chart(canvas, {
     type: 'line',
