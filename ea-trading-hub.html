@@ -84,7 +84,7 @@ body::after {
   border-bottom:1px solid var(--border);
   padding:14px 24px;
   display:flex; align-items:center; justify-content:space-between;
-  position:sticky; top:0; z-index:100;
+  /* v26: nicht mehr sticky — scrollt mit */
 }
 .logo { font-family:var(--font-head); font-size:18px; font-weight:800; color:#fff; display:flex; align-items:center; gap:10px; }
 .logo span { color:var(--accent); }
@@ -99,7 +99,7 @@ body::after {
 .btn-icon:hover { border-color:var(--accent); color:var(--accent); }
 
 /* NAV */
-.nav { background:var(--bg2); border-bottom:1px solid var(--border); padding:0 24px; display:flex; gap:0; overflow-x:auto; }
+.nav { background:var(--bg2); border-bottom:1px solid var(--border); padding:0 24px; display:flex; gap:0; overflow-x:auto; position:sticky; top:0; z-index:100; }
 .nav::-webkit-scrollbar { height:2px; }
 .nav::-webkit-scrollbar-track { background:transparent; }
 .nav::-webkit-scrollbar-thumb { background:var(--border); }
