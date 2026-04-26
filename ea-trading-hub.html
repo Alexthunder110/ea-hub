@@ -510,6 +510,29 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
 
   /* Live-Tab Gauges: kleiner */
   canvas { max-width:100%; }
+
+  /* v25: Live-Tab — 3 Tachos und 3 Charts gestapelt statt nebeneinander */
+  .live-gauges { grid-template-columns:1fr !important; gap:10px !important; }
+  .live-gauges .form-panel { padding:14px; }
+  .live-gauges canvas { width:auto !important; max-width:240px !important; height:auto !important; }
+  .live-charts { grid-template-columns:1fr !important; gap:12px !important; }
+  .live-charts .chart-wrap { padding:14px; }
+
+  /* EA-Kacheln-Grid kompakter */
+  #liveEaCards { grid-template-columns:1fr !important; gap:10px !important; }
+
+  /* v25: Monatskalender — Header umbruchfähig, Inhalte kompakter */
+  .cal-wrap { padding:12px; }
+  .cal-hd { gap:8px; }
+  .cal-nav .cal-month { min-width:auto !important; flex:1; font-size:13px; }
+  .cal-nav button { min-height:34px; }
+  .cal-day { min-height:48px !important; padding:4px 5px !important; aspect-ratio:auto !important; }
+  .cal-day .d-num { font-size:10px; }
+  .cal-day .d-pnl { font-size:11px; }
+  .cal-day .d-trades { display:none; }   /* Trade-Count auf Mobile zu eng */
+  .cal-dow div { padding:3px 0; font-size:8px; }
+  .cal-grid { gap:3px; }
+  .cal-sum { font-size:10px; gap:8px; }
 }
 </style>
 </head>
@@ -597,8 +620,9 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
     <div id="liveGoalProgress"></div>
   </div>
 
+
   <!-- 3 Tachometer -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:22px">
+  <div class="live-gauges" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:22px">
     <div class="form-panel" style="margin:0;text-align:center">
       <div class="sh" style="margin-bottom:12px;font-size:11px">⚡ Heute</div>
       <canvas id="gaugeToday" width="220" height="130"></canvas>
@@ -624,7 +648,7 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
   <div id="liveEaCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:22px"></div>
 
   <!-- Live Charts -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:22px">
+  <div class="live-charts" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:22px">
     <div class="chart-wrap">
       <div class="chart-title">Diese Woche nach Tag (Live)</div>
       <canvas id="liveWeekDayChart"></canvas>
