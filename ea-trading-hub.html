@@ -3471,9 +3471,28 @@ function forecastV2SetPeriod(p) {
   }, 10);
 }
 
+// v23: Debounced Auto-Sync ans Sheet (2s nach letzter Änderung)
+var _fv2SyncTimer = null;
+
 function saveForecastV2() {
   saveLocal();
-  // Sync mit Sheets passiert über api(), aber forecastV2 ist Teil von Settings → wird über pushAll/Settings-Sync mitgeführt
+  // Lokale Änderung sofort sicher. Push ans Sheet debounced — mehrere schnelle Eingaben
+  // werden zu einem einzigen API-Call zusammengefasst.
+  if (_fv2SyncTimer) clearTimeout(_fv2SyncTimer);
+  _fv2SyncTimer = setTimeout(_fv2PushSettings, 2000);
+}
+
+function _fv2PushSettings() {
+  _fv2SyncTimer = null;
+  if (typeof api !== 'function') return;
+  if (!API_URL) return; // Demo-Modus: kein Push
+  api('pushAll', 'Settings', [
+    { key: 'settings', value: JSON.stringify(DB.settings || {}) },
+    { key: 'strategy', value: localStorage.getItem('ea_hub_strategy') || '{}' },
+    { key: 'ealab',    value: localStorage.getItem('ea_hub_lab') || '[]' }
+  ]).catch(function(e){
+    console.error('[EAHub] forecast auto-sync failed:', e);
+  });
 }
 
 function _fv2Money(v, signed) {
