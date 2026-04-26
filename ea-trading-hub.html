@@ -916,11 +916,14 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
     </div>
   </div>
 
-  <!-- EAs (v17: Tabelle statt Karten) -->
+  <!-- EAs (v17: Tabelle · v18: + Live-EA Import) -->
   <div class="fv2-section">
     <div class="fv2-section-h">
       <div class="fv2-section-title">EAs · IST und Plan</div>
-      <button class="btn btn-primary btn-sm" onclick="forecastV2AddEa()">+ Neuer EA</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" onclick="forecastV2ImportLiveEas()" title="Holt alle EAs mit Status 'live' aus deinem EAs-Tab und berechnet Wochengewinn aus den letzten 30 Tagen P&amp;L">↻ Live-EAs aus Hub laden</button>
+        <button class="btn btn-primary btn-sm" onclick="forecastV2AddEa()">+ Neuer EA (manuell)</button>
+      </div>
     </div>
     <div class="table-wrap" style="overflow-x:auto">
       <table class="fv2-ea-table" id="fv2-ea-table">
@@ -3433,6 +3436,12 @@ function _fv2Money(v, signed) {
 function renderForecastV2() {
   var fv2 = getForecastV2();
 
+  // v18: Auto-Import beim ersten Öffnen, falls Forecast leer ist und es Live-EAs gibt
+  if (fv2.eas.length === 0 && DB.eas && DB.eas.some(function(e){ return e.status === 'live'; })) {
+    forecastV2ImportLiveEas(true); // silent = true, kein Toast
+    return; // forecastV2ImportLiveEas ruft renderForecastV2 erneut auf
+  }
+
   // IST-KPIs aus weeklyProfit + Lot ableiten
   var capTotal = 0, weeklyTotal = 0, activeCount = 0;
   fv2.eas.forEach(function(ea){
@@ -3549,6 +3558,93 @@ function forecastV2DeleteEa(id) {
   fv2.events = (fv2.events||[]).filter(function(ev){ return ev.eaId !== id; });
   saveForecastV2();
   renderForecastV2();
+}
+
+// ============================================================
+// FORECAST V2 — Live-EA Import (v18)
+// ============================================================
+// Berechnet den durchschnittlichen Wochengewinn eines EA aus echten P&L-Daten
+function _fv2WeeklyProfitFromHub(eaId, days) {
+  if (!days) days = 30;
+  if (!DB.pnl || !DB.accounts) return 0;
+  var liveAccIds = new Set(DB.accounts.filter(function(a){ return a.type === 'Live'; }).map(function(a){ return String(a.id); }));
+  if (!liveAccIds.size) return 0;
+  var cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
+  var cutoffIso = cutoff.toISOString().slice(0,10);
+
+  var sum = 0, daysWithEntries = new Set();
+  DB.pnl.forEach(function(p){
+    if (!p.date || p.date < cutoffIso) return;
+    if (p.entryType && p.entryType !== 'trade') return;
+    if (String(p.eaId) !== String(eaId)) return;
+    if (!liveAccIds.has(String(p.accountId))) return;
+    sum += parseFloat(p.pnl) || 0;
+    daysWithEntries.add(p.date);
+  });
+  if (!daysWithEntries.size) return 0;
+  var avgPerDay = sum / daysWithEntries.size;
+  return Math.round(avgPerDay * 7 * 100) / 100;
+}
+
+// Letzte Lot-Größe aus den jüngsten Live-Trades versuchen zu lesen (heuristisch)
+function _fv2LastLotFromHub(eaId) {
+  if (!DB.pnl || !DB.accounts) return 0;
+  var liveAccIds = new Set(DB.accounts.filter(function(a){ return a.type === 'Live'; }).map(function(a){ return String(a.id); }));
+  var sorted = DB.pnl
+    .filter(function(p){ return p.lots && String(p.eaId) === String(eaId) && liveAccIds.has(String(p.accountId)); })
+    .sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+  if (!sorted.length) return 0;
+  var match = String(sorted[0].lots).match(/(\d+[.,]\d+)/);
+  if (!match) return 0;
+  return parseFloat(match[1].replace(',', '.')) || 0;
+}
+
+// Importiert alle DB.eas mit status='live' in forecastV2.eas. Bestehende verknüpfte
+// werden aktualisiert (Name + weeklyProfit), neue hinzugefügt. Manuelle EAs
+// (ohne linkedHubEaId) bleiben unangetastet.
+function forecastV2ImportLiveEas(silent) {
+  var fv2 = getForecastV2();
+  if (!DB.eas) return 0;
+  var liveEas = DB.eas.filter(function(e){ return e.status === 'live'; });
+
+  var added = 0, updated = 0;
+  liveEas.forEach(function(hubEa){
+    var hubId = String(hubEa.id);
+    var existing = fv2.eas.find(function(e){ return String(e.linkedHubEaId) === hubId; });
+    var weeklyP = _fv2WeeklyProfitFromHub(hubEa.id, 30);
+    var lastLot = _fv2LastLotFromHub(hubEa.id);
+
+    if (existing) {
+      existing.name = hubEa.name || existing.name;
+      existing.weeklyProfit = weeklyP;
+      if (lastLot > 0 && (!existing.lot || existing.lot === 0)) {
+        existing.lot = lastLot;
+        if (!existing.lotPlan) existing.lotPlan = lastLot;
+      }
+      updated++;
+    } else {
+      fv2.eas.push({
+        id: 'fv2_imp_' + hubId + '_' + Date.now(),
+        linkedHubEaId: hubId,
+        name: hubEa.name || ('EA ' + hubId),
+        status: 'aktiv',
+        capital: 0,
+        lot: lastLot || 0,
+        lotPlan: lastLot || 0,
+        weeklyProfit: weeklyP,
+        perfPer001Lot: 0,
+        note: 'aus EAs-Tab'
+      });
+      added++;
+    }
+  });
+
+  saveForecastV2();
+  if (!silent && typeof toast === 'function') {
+    toast('✓ ' + added + ' neu, ' + updated + ' aktualisiert · Live-EAs · 30 Tage');
+  }
+  renderForecastV2();
+  return added + updated;
 }
 
 // ============================================================
