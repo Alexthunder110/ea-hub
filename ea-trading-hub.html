@@ -262,6 +262,37 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
 .fv2-actions .btn-icon-sm:hover { color:var(--neg); border-color:var(--neg); }
 .fv2-empty { grid-column:1/-1; text-align:center; color:var(--text3); padding:40px 20px; font-size:12px; border:1px dashed var(--border2); border-radius:8px; }
 
+/* FORECAST V2 — Events (v15) */
+.fv2-evt-btn { background:transparent; border:1px solid var(--border2); color:var(--text); padding:6px 11px; border-radius:5px; font-family:var(--font-mono); font-size:10px; cursor:pointer; letter-spacing:.4px; transition:all .15s; }
+.fv2-evt-btn:hover { background:var(--bg4); }
+.fv2-evt-btn.in    { color:var(--pos);   border-color:rgba(0,255,157,.4); }
+.fv2-evt-btn.cost  { color:var(--warn);  border-color:rgba(255,184,48,.4); }
+.fv2-evt-btn.out   { color:var(--neg);   border-color:rgba(255,64,96,.4); }
+.fv2-evt-btn.lot   { color:var(--accent);border-color:rgba(0,200,240,.4); }
+.fv2-evt-btn.start { color:#a070ff;       border-color:rgba(160,112,255,.4); }
+
+.fv2-events { display:flex; flex-direction:column; gap:1px; background:var(--border); border-radius:6px; overflow:hidden; }
+.fv2-event { background:var(--bg3); padding:10px 14px; display:grid; grid-template-columns:90px 110px 1fr 30px; gap:14px; align-items:center; font-size:12px; }
+.fv2-event.past { opacity:.55; }
+.fv2-event.today { background:var(--bg4); border-left:2px solid var(--accent); }
+.fv2-event .date { color:var(--text2); font-size:11px; }
+.fv2-event .amt { font-weight:500; font-family:var(--font-mono); font-size:13px; }
+.fv2-event .amt.in   { color:var(--pos); }
+.fv2-event .amt.out  { color:var(--neg); }
+.fv2-event .amt.cost { color:var(--warn); }
+.fv2-event .amt.lot  { color:var(--accent); }
+.fv2-event .amt.start{ color:#a070ff; }
+.fv2-event .target { color:var(--text); font-size:12px; }
+.fv2-event .target small { color:var(--text3); font-size:10px; }
+.fv2-event .x { color:var(--text3); text-align:right; cursor:pointer; }
+.fv2-event .x:hover { color:var(--neg); }
+
+.fv2-modal-field { margin-bottom:12px; }
+.fv2-modal-field label { display:block; font-size:9px; color:var(--text3); letter-spacing:.5px; text-transform:uppercase; margin-bottom:5px; }
+.fv2-modal-field input, .fv2-modal-field select, .fv2-modal-field textarea { width:100%; background:var(--bg3); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-family:var(--font-mono); font-size:13px; padding:7px 10px; }
+.fv2-modal-field input:focus, .fv2-modal-field select:focus, .fv2-modal-field textarea:focus { outline:none; border-color:var(--accent); }
+.fv2-modal-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
 /* MONATSKALENDER (Live-Tab) */
 .cal-wrap { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:22px; }
 .cal-hd { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px; }
@@ -809,6 +840,51 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
     </div>
   </div>
 
+  <!-- Forecast: Basis vs. Plan -->
+  <div class="fv2-section">
+    <div class="fv2-section-h">
+      <div class="fv2-section-title">Forecast · Basis vs. Plan</div>
+    </div>
+    <div class="fv2-kpis" style="margin-bottom:16px">
+      <div class="fv2-kpi" style="border-left:3px solid var(--text2)">
+        <div class="k"><span class="fv2-tag" style="background:rgba(127,140,154,.15);color:var(--text2)">BASIS</span> 12M ohne Eingriff</div>
+        <div class="v warn" id="fv2-kpi-basis">$0</div>
+        <div class="sub">heutige EAs laufen weiter</div>
+      </div>
+      <div class="fv2-kpi" style="border-left:3px solid var(--pos)">
+        <div class="k"><span class="fv2-tag plan">PLAN</span> 12M mit Events</div>
+        <div class="v pos" id="fv2-kpi-plan">$0</div>
+        <div class="sub" id="fv2-kpi-plan-sub">0 Plan-Events</div>
+      </div>
+      <div class="fv2-kpi" style="border-left:3px solid var(--accent)">
+        <div class="k">Δ Wirkung deines Plans</div>
+        <div class="v" style="color:var(--accent)" id="fv2-kpi-delta">$0</div>
+        <div class="sub">über 12 Monate</div>
+      </div>
+    </div>
+    <div style="position:relative;height:340px"><canvas id="fv2-chart"></canvas></div>
+    <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:var(--text2);margin-top:10px">
+      <span><span style="display:inline-block;width:24px;height:0;border-top:2px dashed #7f8c9a;margin-right:6px;vertical-align:middle"></span>Basis (ohne Eingriff)</span>
+      <span><span style="display:inline-block;width:24px;height:3px;background:#00ff9d;margin-right:6px;vertical-align:middle;border-radius:2px"></span>Plan (mit Events)</span>
+      <span><span style="display:inline-block;width:14px;height:14px;background:rgba(0,255,157,0.12);border:1px solid rgba(0,255,157,.35);margin-right:6px;vertical-align:middle"></span>Differenz = was dein Plan bringt</span>
+    </div>
+  </div>
+
+  <!-- Plan-Events -->
+  <div class="fv2-section">
+    <div class="fv2-section-h">
+      <div class="fv2-section-title"><span class="fv2-tag plan">PLAN</span> Events · chronologisch</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="fv2-evt-btn in"   onclick="forecastV2OpenEventModal('deposit')">+ Einzahlung</button>
+        <button class="fv2-evt-btn lot"  onclick="forecastV2OpenEventModal('lot')">+ Lot-Anpassung</button>
+        <button class="fv2-evt-btn start" onclick="forecastV2OpenEventModal('activate')">+ EA aktivieren</button>
+        <button class="fv2-evt-btn cost" onclick="forecastV2OpenEventModal('purchase')">+ Kauf</button>
+        <button class="fv2-evt-btn out"  onclick="forecastV2OpenEventModal('withdrawal')">+ Auszahlung</button>
+      </div>
+    </div>
+    <div id="fv2-events-list"></div>
+  </div>
+
   <!-- EAs -->
   <div class="fv2-section">
     <div class="fv2-section-h">
@@ -819,8 +895,23 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
   </div>
 
   <!-- Hinweis Roadmap -->
-  <div class="fv2-section" style="text-align:center;color:var(--text3);font-size:11px;padding:24px">
-    Plan-Events &amp; Forecast-Chart kommen in v15 · Pills (W/M) und Tabelle in v16
+  <div class="fv2-section" style="text-align:center;color:var(--text3);font-size:11px;padding:18px">
+    Pills (Wochen/Monat-Auflösung) und Tabelle kommen in v16
+  </div>
+
+  <!-- Event-Modal -->
+  <div id="fv2-modal" style="display:none;position:fixed;inset:0;background:rgba(7,9,13,0.88);z-index:9999;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:22px;width:100%;max-width:460px;box-shadow:0 4px 24px rgba(0,0,0,0.5)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="fv2-section-title" id="fv2-modal-title" style="margin:0">Event</div>
+        <button class="btn-icon-sm" onclick="forecastV2CloseEventModal()">✕</button>
+      </div>
+      <div id="fv2-modal-body"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+        <button class="btn" onclick="forecastV2CloseEventModal()">Abbrechen</button>
+        <button class="btn" style="background:rgba(0,200,240,.1);border-color:var(--accent);color:var(--accent)" onclick="forecastV2SaveEvent()">Speichern</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -3353,6 +3444,10 @@ function renderForecastV2() {
       '</div>' +
     '</div>';
   }).join('');
+
+  // v15: Events + Chart
+  try { _fv2RenderEventsList(); } catch(e) { console.error('[EAHub] fv2 events render failed:', e); }
+  try { _fv2RenderChart(); }       catch(e) { console.error('[EAHub] fv2 chart render failed:', e); }
 }
 
 function forecastV2AddEa() {
@@ -3386,8 +3481,360 @@ function forecastV2DeleteEa(id) {
   if (!ea) return;
   if (!confirm('EA "' + (ea.name||'') + '" aus dem Forecast löschen?\n(Andere Daten bleiben unberührt.)')) return;
   fv2.eas = fv2.eas.filter(function(e){ return e.id !== id; });
+  fv2.events = (fv2.events||[]).filter(function(ev){ return ev.eaId !== id; });
   saveForecastV2();
   renderForecastV2();
+}
+
+// ============================================================
+// FORECAST V2 — Events (v15)
+// ============================================================
+var fv2EventEditing = null; // { type, id (optional bei edit), … draft }
+
+function forecastV2OpenEventModal(type, editId) {
+  var fv2 = getForecastV2();
+  var existing = editId ? fv2.events.find(function(e){ return e.id === editId; }) : null;
+  fv2EventEditing = existing ? Object.assign({}, existing) : {
+    type: type,
+    date: new Date().toISOString().slice(0,10),
+    eaId: '',
+    amount: '',
+    newLot: '',
+    perfPer001Lot: '',
+    note: ''
+  };
+  var titles = {
+    deposit:    '💰 Einzahlung',
+    lot:        '🎚 Lot-Anpassung',
+    activate:   '▶ EA aktivieren',
+    purchase:   '🛒 Kauf',
+    withdrawal: '💸 Auszahlung'
+  };
+  document.getElementById('fv2-modal-title').textContent = (existing ? 'Bearbeiten · ' : '') + (titles[type] || 'Event');
+  _fv2RenderModalBody();
+  document.getElementById('fv2-modal').style.display = 'flex';
+}
+
+function _fv2RenderModalBody() {
+  var draft = fv2EventEditing;
+  if (!draft) return;
+  var fv2 = getForecastV2();
+  var eaOptions = '<option value="">— wähle EA —</option>' + fv2.eas.map(function(e){
+    return '<option value="' + e.id + '"' + (draft.eaId === e.id ? ' selected' : '') + '>' + escHtml(e.name) + ' (' + e.status + ')</option>';
+  }).join('');
+
+  var html = '<div class="fv2-modal-row">' +
+    '<div class="fv2-modal-field"><label>Datum</label><input type="date" id="fv2-mod-date" value="' + (draft.date||'') + '"></div>' +
+    '<div class="fv2-modal-field"><label>Notiz</label><input type="text" id="fv2-mod-note" value="' + escHtml(draft.note||'') + '" placeholder="optional"></div>' +
+    '</div>';
+
+  switch(draft.type) {
+    case 'deposit':
+      html += '<div class="fv2-modal-field"><label>EA</label><select id="fv2-mod-ea">' + eaOptions + '</select></div>';
+      html += '<div class="fv2-modal-field"><label>Betrag ($)</label><input type="number" step="0.01" id="fv2-mod-amount" value="' + (draft.amount||'') + '" placeholder="z.B. 1000"></div>';
+      break;
+    case 'lot':
+      html += '<div class="fv2-modal-field"><label>EA</label><select id="fv2-mod-ea">' + eaOptions + '</select></div>';
+      html += '<div class="fv2-modal-field"><label>Neues Lot</label><input type="number" step="0.01" id="fv2-mod-newlot" value="' + (draft.newLot||'') + '" placeholder="z.B. 0.06"></div>';
+      break;
+    case 'activate':
+      html += '<div class="fv2-modal-field"><label>EA (Status muss "geplant" sein)</label><select id="fv2-mod-ea">' + eaOptions + '</select></div>';
+      html += '<div class="fv2-modal-row">' +
+        '<div class="fv2-modal-field"><label>Start-Kapital ($)</label><input type="number" step="0.01" id="fv2-mod-amount" value="' + (draft.amount||'') + '" placeholder="z.B. 500"></div>' +
+        '<div class="fv2-modal-field"><label>Start-Lot</label><input type="number" step="0.01" id="fv2-mod-newlot" value="' + (draft.newLot||'') + '" placeholder="z.B. 0.01"></div>' +
+        '</div>';
+      html += '<div class="fv2-modal-field"><label>Performance pro 0,01 Lot/Tag ($)</label><input type="number" step="0.01" id="fv2-mod-perf" value="' + (draft.perfPer001Lot||'') + '" placeholder="z.B. 4.00"></div>';
+      break;
+    case 'purchase':
+      html += '<div class="fv2-modal-field"><label>EA (optional, nur Anzeige)</label><select id="fv2-mod-ea">' + eaOptions + '</select></div>';
+      html += '<div class="fv2-modal-field"><label>Betrag ($)</label><input type="number" step="0.01" id="fv2-mod-amount" value="' + (draft.amount||'') + '" placeholder="z.B. 299"></div>';
+      break;
+    case 'withdrawal':
+      html += '<div class="fv2-modal-field"><label>Betrag ($)</label><input type="number" step="0.01" id="fv2-mod-amount" value="' + (draft.amount||'') + '" placeholder="z.B. 300"></div>';
+      break;
+  }
+  document.getElementById('fv2-modal-body').innerHTML = html;
+}
+
+function forecastV2CloseEventModal() {
+  fv2EventEditing = null;
+  document.getElementById('fv2-modal').style.display = 'none';
+}
+
+function forecastV2SaveEvent() {
+  var draft = fv2EventEditing;
+  if (!draft) return;
+  var date = document.getElementById('fv2-mod-date').value;
+  var note = document.getElementById('fv2-mod-note').value.trim();
+  if (!date) { alert('Datum bitte angeben'); return; }
+
+  var ev = { id: draft.id || 'fv2ev_' + Date.now(), type: draft.type, date: date, note: note };
+  var eaSel = document.getElementById('fv2-mod-ea');
+  if (eaSel) ev.eaId = eaSel.value;
+  var amtEl = document.getElementById('fv2-mod-amount');
+  if (amtEl) ev.amount = parseFloat(amtEl.value) || 0;
+  var lotEl = document.getElementById('fv2-mod-newlot');
+  if (lotEl) ev.newLot = parseFloat(lotEl.value) || 0;
+  var perfEl = document.getElementById('fv2-mod-perf');
+  if (perfEl) ev.perfPer001Lot = parseFloat(perfEl.value) || 0;
+
+  // Mini-Validierung
+  if (['deposit','lot','activate'].indexOf(ev.type) !== -1 && !ev.eaId) { alert('EA bitte auswählen'); return; }
+  if (['deposit','withdrawal','purchase'].indexOf(ev.type) !== -1 && !ev.amount) { alert('Betrag bitte angeben'); return; }
+  if (ev.type === 'lot' && !ev.newLot) { alert('Neues Lot bitte angeben'); return; }
+  if (ev.type === 'activate' && (!ev.amount || !ev.newLot)) { alert('Start-Kapital und Start-Lot bitte angeben'); return; }
+
+  var fv2 = getForecastV2();
+  var idx = fv2.events.findIndex(function(e){ return e.id === ev.id; });
+  if (idx >= 0) fv2.events[idx] = ev;
+  else fv2.events.push(ev);
+  saveForecastV2();
+  forecastV2CloseEventModal();
+  renderForecastV2();
+}
+
+function forecastV2DeleteEvent(id) {
+  if (!confirm('Event löschen?')) return;
+  var fv2 = getForecastV2();
+  fv2.events = fv2.events.filter(function(e){ return e.id !== id; });
+  saveForecastV2();
+  renderForecastV2();
+}
+
+function _fv2RenderEventsList() {
+  var fv2 = getForecastV2();
+  var el = document.getElementById('fv2-events-list');
+  if (!el) return;
+  if (!fv2.events.length) {
+    el.innerHTML = '<div class="fv2-empty">Noch keine Plan-Events. Lege oben eine Aktion an, um zu sehen wie sich dein Plan auswirkt.</div>';
+    return;
+  }
+  var todayIso = new Date().toISOString().slice(0,10);
+  var sorted = [...fv2.events].sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+  var labels = {
+    deposit:    {emoji:'💰', label:'Einzahlung', cls:'in'},
+    lot:        {emoji:'🎚', label:'Lot-Anpassung', cls:'lot'},
+    activate:   {emoji:'▶',  label:'EA aktivieren', cls:'start'},
+    purchase:   {emoji:'🛒', label:'Kauf', cls:'cost'},
+    withdrawal: {emoji:'💸', label:'Auszahlung', cls:'out'}
+  };
+  var rows = sorted.map(function(ev){
+    var meta = labels[ev.type] || {emoji:'•', label:ev.type, cls:''};
+    var ea = ev.eaId ? fv2.eas.find(function(e){ return e.id === ev.eaId; }) : null;
+    var amtTxt = '';
+    switch(ev.type) {
+      case 'deposit':    amtTxt = '+$' + (ev.amount||0).toLocaleString('de-DE'); break;
+      case 'withdrawal': amtTxt = '-$' + (ev.amount||0).toLocaleString('de-DE'); break;
+      case 'purchase':   amtTxt = '-$' + (ev.amount||0).toLocaleString('de-DE'); break;
+      case 'lot':        amtTxt = '→ ' + ev.newLot; break;
+      case 'activate':   amtTxt = '+$' + (ev.amount||0).toLocaleString('de-DE'); break;
+    }
+    var target = ea ? ea.name : '—';
+    if (ev.type === 'lot' && ea) target = ea.name + ' · neues Lot ' + ev.newLot;
+    if (ev.type === 'activate' && ea) target = ea.name + ' · Start ' + ev.newLot + ' Lot · ' + (ev.perfPer001Lot||0) + ' $/0,01 Lot';
+    if (ev.type === 'withdrawal') target = 'global';
+    if (ev.note) target += ' · <small>' + escHtml(ev.note) + '</small>';
+    var cls = 'fv2-event';
+    if (ev.date < todayIso) cls += ' past';
+    if (ev.date === todayIso) cls += ' today';
+    return '<div class="' + cls + '">' +
+      '<span class="date">' + ev.date + '</span>' +
+      '<span class="amt ' + meta.cls + '">' + amtTxt + '</span>' +
+      '<span class="target">' + meta.emoji + ' ' + meta.label + ' · ' + target + '</span>' +
+      '<span class="x" onclick="forecastV2DeleteEvent(\'' + ev.id + '\')">✕</span>' +
+    '</div>';
+  });
+  el.innerHTML = '<div class="fv2-events">' + rows.join('') + '</div>';
+}
+
+// ============================================================
+// FORECAST V2 — Engine + Chart (v15)
+// ============================================================
+function _fv2DeepCopy(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+function _fv2Simulate(scenario, monthsAhead) {
+  // Tagesweise Simulation. scenario = 'basis' | 'plan'
+  // Returns array of {date: 'YYYY-MM-DD', total: number}
+  var fv2 = getForecastV2();
+  var today = new Date(); today.setHours(0,0,0,0);
+
+  // EA-State initial
+  var state = {};
+  fv2.eas.forEach(function(ea){
+    state[ea.id] = {
+      capital: parseFloat(ea.capital) || 0,
+      lot:     parseFloat(ea.lot)     || 0,
+      perf:    parseFloat(ea.perfPer001Lot) || 0,
+      active:  ea.status === 'aktiv'
+    };
+  });
+
+  var events = scenario === 'plan'
+    ? [...fv2.events].filter(function(e){ return e.date; }).sort(function(a,b){ return a.date.localeCompare(b.date); })
+    : [];
+
+  var cumPayout = 0, cumPurchase = 0;
+  var evIdx = 0;
+  var snapshots = [];
+
+  var endDate = new Date(today);
+  endDate.setMonth(endDate.getMonth() + monthsAhead);
+
+  var cur = new Date(today);
+  while (cur <= endDate) {
+    var iso = cur.toISOString().slice(0,10);
+
+    // Wende alle Events bis incl. heute an, die noch nicht angewandt wurden
+    while (evIdx < events.length && events[evIdx].date <= iso) {
+      var ev = events[evIdx];
+      var t = state[ev.eaId];
+      switch(ev.type) {
+        case 'deposit':    if (t) t.capital += parseFloat(ev.amount)||0; break;
+        case 'withdrawal': cumPayout += parseFloat(ev.amount)||0; break;
+        case 'purchase':   cumPurchase += parseFloat(ev.amount)||0; break;
+        case 'lot':        if (t) t.lot = parseFloat(ev.newLot)||0; break;
+        case 'activate':
+          if (t) {
+            t.active = true;
+            if (ev.amount) t.capital = parseFloat(ev.amount);
+            if (ev.newLot) t.lot = parseFloat(ev.newLot);
+            if (ev.perfPer001Lot) t.perf = parseFloat(ev.perfPer001Lot);
+          }
+          break;
+      }
+      evIdx++;
+    }
+
+    // Tagesgewinn (außer am Tag 0 = heute)
+    if (cur.getTime() > today.getTime()) {
+      Object.keys(state).forEach(function(id){
+        var s = state[id];
+        if (s.active) s.capital += (s.lot / 0.01) * s.perf;
+      });
+    }
+
+    var total = -cumPayout - cumPurchase;
+    Object.keys(state).forEach(function(id){
+      var s = state[id];
+      if (s.active) total += s.capital;
+    });
+    snapshots.push({ date: iso, total: total });
+
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  return snapshots;
+}
+
+function _fv2AggregateMonthly(snapshots) {
+  // pro Monat: nimm den letzten Snapshot des Monats
+  var byMonth = {};
+  snapshots.forEach(function(s){
+    var m = s.date.slice(0,7);
+    byMonth[m] = s; // wird vom letzten überschrieben
+  });
+  var months = Object.keys(byMonth).sort();
+  return months.map(function(m){ return { month: m, total: byMonth[m].total }; });
+}
+
+var fv2ChartInstance = null;
+
+function _fv2RenderChart() {
+  var canvas = document.getElementById('fv2-chart');
+  if (!canvas) return;
+  if (typeof Chart === 'undefined') return;
+
+  var basisSnap = _fv2Simulate('basis', 12);
+  var planSnap  = _fv2Simulate('plan',  12);
+  var basisM = _fv2AggregateMonthly(basisSnap);
+  var planM  = _fv2AggregateMonthly(planSnap);
+
+  var labels = basisM.map(function(r){
+    var p = r.month.split('-');
+    var monthNames = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+    return monthNames[parseInt(p[1])-1] + ' ' + p[0].slice(2);
+  });
+  var basisData = basisM.map(function(r){ return Math.round(r.total); });
+  var planData  = planM.map(function(r){ return Math.round(r.total); });
+
+  // KPIs Basis/Plan/Δ (12M = letzter Wert)
+  var basis12 = basisData[basisData.length-1] || 0;
+  var plan12  = planData[planData.length-1]  || 0;
+  var delta   = plan12 - basis12;
+  var fmt = function(v){
+    var prefix = v < 0 ? '-$' : '$';
+    return prefix + Math.abs(v).toLocaleString('de-DE');
+  };
+  var fmtSigned = function(v){
+    return (v >= 0 ? '+' : '-') + '$' + Math.abs(v).toLocaleString('de-DE');
+  };
+  var be = document.getElementById('fv2-kpi-basis');  if (be) be.textContent = fmt(basis12);
+  var pe = document.getElementById('fv2-kpi-plan');   if (pe) pe.textContent = fmt(plan12);
+  var de = document.getElementById('fv2-kpi-delta');  if (de) de.textContent = fmtSigned(delta);
+  var psub = document.getElementById('fv2-kpi-plan-sub');
+  if (psub) {
+    var n = (getForecastV2().events||[]).length;
+    psub.textContent = n + ' Plan-Event' + (n === 1 ? '' : 's');
+  }
+
+  if (fv2ChartInstance) { fv2ChartInstance.destroy(); fv2ChartInstance = null; }
+
+  fv2ChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Plan',
+          data: planData,
+          borderColor: '#00ff9d',
+          backgroundColor: 'rgba(0,255,157,0.10)',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointBackgroundColor: '#00ff9d',
+          tension: 0.3,
+          fill: '+1'
+        },
+        {
+          label: 'Basis',
+          data: basisData,
+          borderColor: '#7f8c9a',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [6,4],
+          pointRadius: 2,
+          pointBackgroundColor: '#7f8c9a',
+          tension: 0.3,
+          fill: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { display:false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx){
+              return ctx.dataset.label + ': $' + Math.round(ctx.parsed.y).toLocaleString('de-DE');
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { color:'#7f8c9a', font:{ size:10, family:"'JetBrains Mono'" }, callback: function(v){ return '$'+v.toLocaleString('de-DE'); } }
+        },
+        x: {
+          grid: { display:false },
+          ticks: { color:'#7f8c9a', font:{ size:10, family:"'JetBrains Mono'" }, maxRotation: 0 }
+        }
+      }
+    }
+  });
 }
 
 
