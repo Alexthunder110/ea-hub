@@ -3453,6 +3453,7 @@ function forecastV2UpdatePlan(field, value) {
 }
 
 // v19: Toggle für Chart-Auflösung (W = Wochen, M = Monate)
+// v22: nur Chart neu, ohne EA-Tabelle anzufassen (würde Inputs zurücksetzen)
 var fv2ChartPeriod = 'M';
 function forecastV2SetPeriod(p) {
   fv2ChartPeriod = (p === 'W') ? 'W' : 'M';
@@ -3460,7 +3461,14 @@ function forecastV2SetPeriod(p) {
     var el = document.getElementById(id);
     if (el) el.classList.toggle('active', (id === 'fv2-pill-' + p.toLowerCase()));
   });
-  try { _fv2RenderChart(); } catch(e) { console.error('[EAHub] fv2 chart render failed:', e); }
+  // Doppelter Schutz: erst aktuelle Chart-Instance hart killen, dann auf nächsten Tick neu bauen
+  if (typeof fv2ChartInstance !== 'undefined' && fv2ChartInstance) {
+    try { fv2ChartInstance.destroy(); } catch(_) {}
+    fv2ChartInstance = null;
+  }
+  setTimeout(function(){
+    try { _fv2RenderChart(); } catch(e) { console.error('[EAHub] fv2 toggle chart failed:', e); }
+  }, 10);
 }
 
 function saveForecastV2() {
@@ -3952,7 +3960,6 @@ function _fv2RenderChart() {
             backgroundColor: 'rgba(0,255,157,0.65)',
             borderColor: '#00ff9d',
             borderWidth: 1,
-            borderRadius: 3,
             barPercentage: 1.0,
             categoryPercentage: 0.85
           },
@@ -3962,7 +3969,6 @@ function _fv2RenderChart() {
             backgroundColor: 'rgba(255,64,96,0.65)',
             borderColor: '#ff4060',
             borderWidth: 1,
-            borderRadius: 3,
             barPercentage: 1.0,
             categoryPercentage: 0.85
           }
