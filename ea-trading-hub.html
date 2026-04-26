@@ -98,8 +98,9 @@ body::after {
 .btn-icon { background:none; border:1px solid var(--border); border-radius:5px; color:var(--text2); padding:6px 10px; cursor:pointer; font-size:11px; font-family:var(--font-mono); transition:all .15s; }
 .btn-icon:hover { border-color:var(--accent); color:var(--accent); }
 
-/* NAV */
-.nav { background:var(--bg2); border-bottom:1px solid var(--border); padding:0 24px; display:flex; gap:0; overflow-x:auto; position:sticky; top:0; z-index:100; }
+/* NAV — v27: Sticky auf Wrapper, damit iOS Safari mitspielt */
+.nav-sticky { position:-webkit-sticky; position:sticky; top:0; z-index:100; background:var(--bg2); border-bottom:1px solid var(--border); }
+.nav { background:var(--bg2); padding:0 24px; display:flex; gap:0; overflow-x:auto; }
 .nav::-webkit-scrollbar { height:2px; }
 .nav::-webkit-scrollbar-track { background:transparent; }
 .nav::-webkit-scrollbar-thumb { background:var(--border); }
@@ -597,14 +598,16 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
 </div>
 
 <!-- NAV -->
-<nav class="nav">
-  <button class="nav-tab active" onclick="showView('live',this)">📈 Live</button>
-  <button class="nav-tab" onclick="showView('accounts',this)">🏦 Konten</button>
-  <button class="nav-tab" onclick="showView('eas',this)">🤖 EAs</button>
-  <button class="nav-tab" onclick="showView('pnl',this)">📊 P&amp;L</button>
-  <button class="nav-tab" onclick="showView('analytics',this)">📉 Analyse</button>
-  <button class="nav-tab" onclick="showView('forecast',this)">💰 Forecast</button>
-</nav>
+<div class="nav-sticky">
+  <nav class="nav">
+    <button class="nav-tab active" onclick="showView('live',this)">📈 Live</button>
+    <button class="nav-tab" onclick="showView('accounts',this)">🏦 Konten</button>
+    <button class="nav-tab" onclick="showView('eas',this)">🤖 EAs</button>
+    <button class="nav-tab" onclick="showView('pnl',this)">📊 P&amp;L</button>
+    <button class="nav-tab" onclick="showView('analytics',this)">📉 Analyse</button>
+    <button class="nav-tab" onclick="showView('forecast',this)">💰 Forecast</button>
+  </nav>
+</div>
 
 <div class="main">
 
