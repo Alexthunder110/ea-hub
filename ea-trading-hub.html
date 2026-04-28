@@ -1052,6 +1052,31 @@ th.pnl-sort.active .sort-arrow { color:var(--accent); }
       </table>
     </div>
   </div>
+
+  <!-- Ziele setzen (v28: zurück) -->
+  <div class="fv2-section">
+    <div class="fv2-section-h">
+      <div class="fv2-section-title">Ziele setzen</div>
+    </div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
+      <div class="fv2-field" style="min-width:160px">
+        <label>Tagesziel ($)</label>
+        <input type="number" id="inc-goal-day" placeholder="z.B. 75" step="0.01">
+      </div>
+      <div class="fv2-field" style="min-width:160px">
+        <label>Wochenziel ($)</label>
+        <input type="number" id="inc-goal-week" placeholder="z.B. 375" step="0.01">
+      </div>
+      <div class="fv2-field" style="min-width:160px">
+        <label>Monatsziel ($)</label>
+        <input type="number" id="inc-goal-month" placeholder="z.B. 1200" step="0.01">
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="saveIncomeGoals()">💾 Speichern</button>
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin-top:10px;line-height:1.6">
+      Wirkt sich auf den Ziel-Fortschrittsbalken im Live-Tab aus.
+    </div>
+  </div>
 </div>
 
 
@@ -3671,6 +3696,13 @@ function renderForecastV2() {
   if (wp && document.activeElement !== wp) wp.value = parseFloat(fv2.weeklyPayout) || 0;
   var ot = document.getElementById('fv2-onetime-cost');
   if (ot && document.activeElement !== ot) ot.value = parseFloat(fv2.oneTimeCost) || 0;
+
+  // v28: Ziel-Eingaben mit gespeicherten Werten füllen (DB.settings.incomeGoals)
+  var goals = (DB.settings && DB.settings.incomeGoals) || {};
+  ['day','week','month'].forEach(function(k){
+    var el = document.getElementById('inc-goal-' + k);
+    if (el && document.activeElement !== el) el.value = parseFloat(goals[k]) || '';
+  });
 
   // v20: Summen-Footer
   _fv2RenderTotals();
